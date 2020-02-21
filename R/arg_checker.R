@@ -61,7 +61,7 @@ show_progress <- function(verbose, iter, data) {
     message(paste('Starting iteration', iter, 'of FLAME'))
   }
   else if (verbose == 2) {
-    if (iter %% 10 == 0) {
+    if (iter %% 5 == 0) {
       message(paste('Starting iteration', iter, 'of FLAME'))
       message(paste(sum(!data$matched), 'unmatched units remaining'))
     }

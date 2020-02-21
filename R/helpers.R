@@ -83,6 +83,7 @@ organize_data <- function(data, holdout,
   return(list(data = data,
               holdout = holdout,
               covs = covs,
+              n_covs = n_covs,
               n_levels = n_levels,
               cov_names = cov_names,
               original_colnames = original_colnames,
@@ -90,9 +91,11 @@ organize_data <- function(data, holdout,
 }
 
 early_stop <- function(iter, data, early_stop_iterations,
-                       store_pe, store_bf, stop_unmatched_c=FALSE, early_stop_un_c_frac = 0.1,
-                       stop_unmatched_t=FALSE, early_stop_un_t_frac = 0.1,
-                       early_stop_pe = FALSE, early_stop_pe_frac = 0.01) {
+                       store_pe, store_bf,
+                       stop_unmatched_c, early_stop_un_c_frac,
+                       stop_unmatched_t, early_stop_un_t_frac,
+                       early_stop_bf, early_stop_bf_frac,
+                       early_stop_pe, early_stop_pe_frac) {
 
   if (iter >= early_stop_iterations) {
     return(TRUE)
@@ -117,12 +120,13 @@ early_stop <- function(iter, data, early_stop_iterations,
       return(TRUE)
     }
   }
-  if (sum(data$treated == 0 & !data$matched) / sum(data$treated == 0) >
+  if (sum(data$treated == 0 & !data$matched) / sum(data$treated == 0) <
       early_stop_un_c_frac) {
     return(TRUE)
   }
-  if (sum(data$treated == 1 & !data$matched) / sum(data$treated == 1) >
+  if (sum(data$treated == 1 & !data$matched) / sum(data$treated == 1) <
       early_stop_un_t_frac) {
     return(TRUE)
   }
+  return(FALSE)
 }

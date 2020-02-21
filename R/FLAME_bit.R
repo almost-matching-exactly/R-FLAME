@@ -38,7 +38,8 @@ update_matched_bit <- function(data, covs, n_levels) {
   match_index = mapply(function(x,y) (x != y) && (x >= 2) && (y >= 1), c_u, c_u_plus)
   index = b_u[match_index]
 
-  return(list(match_index, index))
+  return(list(match_index = match_index,
+              index = index))
 }
 
 #match_quality function takes holdout dataset, number of total covariates,
@@ -48,7 +49,6 @@ update_matched_bit <- function(data, covs, n_levels) {
 
 get_match_quality <- function(cov_to_drop, data, matched, repeats, holdout, covs, n_levels, C,
                               PE_method, alpha) {
-
   ### Compute Balancing Factor
 
   # Calculate number of units unmatched (available)
@@ -60,15 +60,17 @@ get_match_quality <- function(cov_to_drop, data, matched, repeats, holdout, covs
     match_index <-
       update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
       extract2('match_index')
+    units_matched <- which(matched_index)
   }
   else {
     match_index <-
       update_matched_bit(data[!matched, ], covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
       extract2('match_index')
+    units_matched <- which(!matched)[match_index]
   }
 
-  num_control_matched <- sum(data$treated[match_index] == 0)
-  num_treated_matched <- sum(data$treated[match_index] == 1)
+  num_control_matched <- sum(data$treated[units_matched] == 0)
+  num_treated_matched <- sum(data$treated[units_matched] == 1)
 
   BF <- if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
                 0,
@@ -83,12 +85,11 @@ get_match_quality <- function(cov_to_drop, data, matched, repeats, holdout, covs
   else {
     stop("I don't recognize this prediction method")
   }
-
   return(list(BF = BF,
               PE = PE))
 }
 
-make_MGs <- function(data, index, match_index, covs, cov_names) {
+make_MGs <- function(data, index, matched_units, covs, cov_names) {
   # Takes all the units that were matched on these p' covariates and separates them
   # into matched groups based off their unique values of those covariates
   # Returns a list with three items:
@@ -98,7 +99,6 @@ make_MGs <- function(data, index, match_index, covs, cov_names) {
   ##  and their values that the units in the corresponding MG matched on
   unique_MGs <- unique(index)
   n_MGs <- length(unique_MGs)
-  matched_units <- which(match_index)
 
   MGs <- vector('list', length = n_MGs)
   CATEs <- vector('numeric', length = n_MGs)
@@ -126,15 +126,19 @@ process_matches <- function(data, matched, repeats, covs, n_levels, MGs, matched
   ###### AND NOT PASS MATCHED #############
   if (repeats) {
     c(match_index, index) %<-% update_matched_bit(data, covs, n_levels)
+    units_matched <- which(match_index)
   }
   else {
     c(match_index, index) %<-% update_matched_bit(data[!matched, ], covs, n_levels)
+    # adjusts for fact that match_index returned by update_matched bit is
+    # with respect to the unmatched subset of data
+    units_matched <- which(!matched)[match_index]
   }
 
   made_matches <- sum(match_index) > 0
 
   if (made_matches) {
-    new_MGs <- make_MGs(data, index, match_index, covs, cov_names)
+    new_MGs <- make_MGs(data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
     CATE <- c(CATE, new_MGs$CATEs)
     matched_on <- c(matched_on, new_MGs$matched_on)
@@ -144,7 +148,7 @@ process_matches <- function(data, matched, repeats, covs, n_levels, MGs, matched
   return(list(CATE = CATE,
               MGs = MGs,
               matched_on = matched_on,
-              units_matched = which(match_index),
+              units_matched = units_matched,
               made_matches = made_matches))
 }
 
@@ -209,8 +213,8 @@ FLAME_bit <- function(data,
              missing_data_replace, missing_holdout_replace,
              missing_holdout_imputations, missing_data_imputations)
 
-  c(data, holdout,
-    covs, n_levels, cov_names, original_colnames, sorting_order) %<-%
+  c(data, holdout, covs, n_covs, n_levels,
+    cov_names, original_colnames, sorting_order) %<-%
     organize_data(data, holdout, treatment_column_name, outcome_column_name)
 
   c(data, holdout) %<-%
@@ -233,28 +237,24 @@ FLAME_bit <- function(data,
 
   # Try and make matches on all covariates
   c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-    process_matches(data, matched, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names)
+    process_matches(data, matched, repeats, covs, n_levels, MGs,
+                    matched_on, matching_covs, CATE, cov_names)
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
     matched[units_matched] <- TRUE
   }
-
   store_pe <- NULL
   store_bf <- NULL
 
   iter <- 0
-  while (length(covs) > 1) {
+  while (length(covs) > 1 & !(all(matched))) {
     iter <- iter + 1
-
-    show_progress(verbose, iter, data)
 
     # Compute the match quality associated with dropping each covariate
     MQ <- lapply(covs, get_match_quality, data, matched, repeats, holdout, covs, n_levels,
                  C, PE_method, alpha)
-
     # (First, in unlikely case of ties) covariate yielding the highest match quality
-    browser()
     drop <-
       sapply(MQ, function(x) C * x$BF - x$PE) %>%
       which.max()
@@ -270,16 +270,17 @@ FLAME_bit <- function(data,
     ## Ideally should just return this from MQ so you don't have to redo it
     c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
       process_matches(data, matched, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names)
-
     if (made_matches) {
-      data[units_matched, setdiff(1:n_covs, covs)] <- '*'
+      data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs?
+      data$matched[units_matched] <- TRUE
       matched[units_matched] <- TRUE
     }
-
+    show_progress(verbose, iter, data)
     if (early_stop(iter, data, early_stop_iterations,
                    store_pe, store_bf,
                    stop_unmatched_c, early_stop_un_c_frac,
                    stop_unmatched_t, early_stop_un_t_frac,
+                   early_stop_bf, early_stop_bf_frac,
                    early_stop_pe, early_stop_pe_frac)) {
       break
     }
@@ -298,10 +299,10 @@ FLAME_bit <- function(data,
                    matching_covs = matching_covs)
 
   if (want_pe) {
-    ret_list %<>% c('PE' = store_pe)
+    ret_list %<>% c('PE' = list(store_pe))
   }
   if (want_bf) {
-    ret_list %<>% c('BF' = store_bf)
+    ret_list %<>% c('BF' = list(store_bf))
   }
 
   return(ret_list)
