@@ -1,0 +1,21 @@
+Package: FLAME
+Type: Package
+Title: Fast Large-scale Almost Matching Exactly
+Version: 0.1.0
+Authors@R: as.person(c(
+    'Vittorio Orlandi <vdo@duke.edu> [aut, cre]', 
+    'Sudeepa Roy <sudeepa@cs.duke.edu> [aut]', 
+    'Cynthia Rudin <cynthia@cs.duke.edu> [aut]', 
+    'Alexander Volfovsky <alexander.volfovsky@duke.edu> [aut]'
+  ))
+BugReports: https://github.com/vittorioorlandi/FLAME/issues
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Imports:
+  dplyr,
+  magrittr,
+  mice,
+  
