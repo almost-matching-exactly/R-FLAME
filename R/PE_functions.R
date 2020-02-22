@@ -1,13 +1,13 @@
 setup_preds <- function(holdout, cov_to_drop) {
   Y_treat <-
     holdout %>%
-    filter(treated == 1) %>%
-    pull(outcome)
+    dplyr::filter(treated == 1) %>%
+    dplyr::pull(outcome)
 
   Y_control <-
     holdout %>%
-    filter(treated == 0) %>%
-    pull(outcome)
+    dplyr::filter(treated == 0) %>%
+    dplyr::pull(outcome)
 
   covs_treat <-
     holdout %>%

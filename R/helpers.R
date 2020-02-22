@@ -78,7 +78,7 @@ organize_data <- function(data, holdout,
   covs <- 1:n_covs
 
   # Denotes the number of covariates each unit is matched on
-  data$matched <- rep(0, n)
+  data$matched <- rep(FALSE, n)
 
   return(list(data = data,
               holdout = holdout,

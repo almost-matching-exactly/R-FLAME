@@ -13,14 +13,14 @@ aggregate_table <- function(list) {
 
 update_matched_bit <- function(data, covs, n_levels) {
   data_wo_t <- as.bigz(as.matrix(data[, covs]))
-######## DO a massive dataset to check this
+######## Do a massive dataset to check this
 
   # Compute b_u
   multiplier <- pow.bigz(n_levels, seq_along(n_levels) - 1)
 
   b_u <- gmp::`%*%`(data_wo_t, multiplier) %>%
     as.vector()
-
+  # browser()
   # Compute b_u+
   multiplier <- pow.bigz(n_levels, seq_along(n_levels))
 
@@ -29,6 +29,8 @@ update_matched_bit <- function(data, covs, n_levels) {
     add.bigz(data$treated) %>%
     as.vector()
 
+  # browser()
+  # browser()
   # Compute c_u
   c_u = aggregate_table(b_u)
 
@@ -47,7 +49,7 @@ update_matched_bit <- function(data, covs, n_levels) {
 #parameter as input. The function then computes Balancing Factor and Predictive Error,
 #returning Match Quality.
 
-get_match_quality <- function(cov_to_drop, data, matched, repeats, holdout, covs, n_levels, C,
+get_match_quality <- function(cov_to_drop, data, repeats, holdout, covs, n_levels, C,
                               PE_method, alpha) {
   ### Compute Balancing Factor
 
@@ -60,13 +62,13 @@ get_match_quality <- function(cov_to_drop, data, matched, repeats, holdout, covs
     match_index <-
       update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
       extract2('match_index')
-    units_matched <- which(matched_index)
+    units_matched <- which(match_index)
   }
   else {
     match_index <-
-      update_matched_bit(data[!matched, ], covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
+      update_matched_bit(dplyr::filter(data, !matched), covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
       extract2('match_index')
-    units_matched <- which(!matched)[match_index]
+    units_matched <- which(!data$matched)[match_index]
   }
 
   num_control_matched <- sum(data$treated[units_matched] == 0)
@@ -120,19 +122,17 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
               matched_on = matched_on))
 }
 
-process_matches <- function(data, matched, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names) {
+process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names) {
   column <- colnames(data)
-  ####### SHOULD BE ABLE TO JUST FILTER DATA BY COL MATCHED ##############
-  ###### AND NOT PASS MATCHED #############
   if (repeats) {
     c(match_index, index) %<-% update_matched_bit(data, covs, n_levels)
     units_matched <- which(match_index)
   }
   else {
-    c(match_index, index) %<-% update_matched_bit(data[!matched, ], covs, n_levels)
+    c(match_index, index) %<-% update_matched_bit(dplyr::filter(data, !matched), covs, n_levels)
     # adjusts for fact that match_index returned by update_matched bit is
     # with respect to the unmatched subset of data
-    units_matched <- which(!matched)[match_index]
+    units_matched <- which(!data$matched)[match_index]
   }
 
   made_matches <- sum(match_index) > 0
@@ -232,27 +232,23 @@ FLAME_bit <- function(data,
   # List of covariates used to match at each level
   matching_covs <- list()
 
-  # Indicator of which units in the data have previously been matched
-  matched <- rep(FALSE, nrow(data))
-
   # Try and make matches on all covariates
   c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-    process_matches(data, matched, repeats, covs, n_levels, MGs,
+    process_matches(data, repeats, covs, n_levels, MGs,
                     matched_on, matching_covs, CATE, cov_names)
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
-    matched[units_matched] <- TRUE
   }
   store_pe <- NULL
   store_bf <- NULL
 
   iter <- 0
-  while (length(covs) > 1 & !(all(matched))) {
+  while (length(covs) > 1 & !(all(data$matched))) {
     iter <- iter + 1
 
     # Compute the match quality associated with dropping each covariate
-    MQ <- lapply(covs, get_match_quality, data, matched, repeats, holdout, covs, n_levels,
+    MQ <- lapply(covs, get_match_quality, data, repeats, holdout, covs, n_levels,
                  C, PE_method, alpha)
     # (First, in unlikely case of ties) covariate yielding the highest match quality
     drop <-
@@ -269,11 +265,10 @@ FLAME_bit <- function(data,
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
     c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-      process_matches(data, matched, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names)
+      process_matches(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names)
     if (made_matches) {
       data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs?
       data$matched[units_matched] <- TRUE
-      matched[units_matched] <- TRUE
     }
     show_progress(verbose, iter, data)
     if (early_stop(iter, data, early_stop_iterations,
