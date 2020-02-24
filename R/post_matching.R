@@ -39,10 +39,37 @@ te_of_unit <- function(unit, flame_obj) {
   stop('Unit not matched')
 }
 
+
+CATE <- function(units, flame_obj) {
+  if (any(!(units %in% 1:nrow(flame_obj$data)))) {
+    stop('Unit not in dataset')
+  }
+  matched_units <- units[units %in% which(flame_obj$data$matched)]
+  if (length(matched_units) == 0) {
+    stop('None of the supplied units were matched by FLAME')
+  }
+
+  MGs <- flame_obj$MGs
+  sizes <- NULL
+  weighted_CATE_sum <- 0
+  for (unit in matched_units) {
+    for (i in 1:length(MGs)) {
+      if (unit %in% MGs[[i]]) {
+        MG_size <- length(MGs[[i]])
+        sizes %<>% c(MG_size)
+        weighted_CATE_sum %<>% add(flame_obj$CATE[i] * MG_size)
+        break
+      }
+    }
+  }
+  return(weighted_CATE_sum / sum(sizes))
+}
+
 #' Compute the ATE of a matched dataset.
 #'
-#' \code{ATE} Computes the ATE of a matched dataset via a weighted (by size)
-#' average of the CATEs of each matched group in the matched dataset.
+#' \code{ATE} Computes the average treatment effect (ATE) of a matched dataset
+#' via a weighted (by size) average of the CATEs of each matched group in the
+#' matched dataset.
 #'
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
 ATE <- function(flame_obj) {
@@ -50,4 +77,31 @@ ATE <- function(flame_obj) {
   MGs <- flame_obj$MGs
   size <- sapply(MGs, length)
   return(sum(size * CATE) / sum(size))
+}
+
+#' Compute the ATT of a matched dataset.
+#'
+#' \code{ATT} Computes the average treatment effect on the treated (ATT) of a matched dataset.
+#'
+#' For each treated unit, its counterfactual outcome is estimated via the mean
+#' outcome of control units in its matched group. This value is then averaged
+#' across all treated units.
+#' @param flame_obj An object returned by running \code{FLAME_bit}.
+ATT <- function(flame_obj) {
+  matched_treated <- with(flame_obj$data, which(matched & treated == 1))
+  controls <- which(flame_obj$data$treated == 0)
+  outcomes <- flame_obj$data$outcome
+  MGs <- flame_obj$MGs
+  sum_TT <- 0
+  for (j in matched_treated) {
+    for (i in 1:length(MGs)) {
+      MG <- MGs[[i]]
+      if (j %in% MG) {
+        controls <- MG[MG %in% controls]
+        sum_TT %<>% add(outcomes[j] - mean(outcomes[controls]))
+        break
+      }
+    }
+  }
+  return(sum_TT / length(matched_treated))
 }

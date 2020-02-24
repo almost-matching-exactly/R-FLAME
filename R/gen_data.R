@@ -1,4 +1,5 @@
-gen_data <- function(n, p) {
+#' @export
+gen_data <- function(n = 50, p = 5) {
   require(magrittr)
   TE <- 5
   covs <-

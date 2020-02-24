@@ -52,10 +52,11 @@ via elastic nets.}
 will prioritize more matches and lower C will prioritize not dropping
 important covariates.}
 
-\item{holdout}{Data to be used to compute predictive error. If FALSE
-(default), 10% of \code{data} will be used for this purpose and only the
-remaining 90% of \code{data} will be matched. Otherwise, a dataframe or a
-path to a csv file.}
+\item{holdout}{Data to be used to compute predictive error. If a numeric
+scalar between 0 and 1 (default = 0.1), that proportion of \code{data} will
+made into a holdout set to compute predictive error and only the remaining
+proportion of \code{data} will be matched. Otherwise, a dataframe or a path
+to a csv file.}
 
 \item{repeats}{A logical scalar. If true, allows the same unit to be matched
 multiple times, on different numbers of covariates.}

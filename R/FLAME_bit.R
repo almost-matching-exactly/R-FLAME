@@ -66,6 +66,7 @@ get_match_quality <- function(cov_to_drop, data, repeats, holdout, covs, n_level
     match_index <-
       update_matched_bit(data, setdiff(covs, covs_to_drop), n_levels[-which(covs == cov_to_drop)], opt = opt) %>%
       extract2('match_index')
+
     # match_index <-
     #   update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop], opt = opt) %>%
     #   extract2('match_index')
@@ -131,7 +132,6 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
 }
 
 process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names, opt) {
-  column <- colnames(data)
   if (repeats) {
     c(match_index, index) %<-% update_matched_bit(data, covs, n_levels, opt = opt)
     units_matched <- which(match_index)
@@ -160,10 +160,25 @@ process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matc
               made_matches = made_matches))
 }
 
-get_PE <- function(cov_to_drop, covs, holdout, alpha, PE_method) {
-  if (PE_method == 'elasticnet') {
-    PE <- predict_elasticnet(holdout, covs, cov_to_drop, alpha)
+get_PE <- function(cov_to_drop, covs, holdout, PE_method, user_PE_func, PE_func_params) {
+  if (!is.null(user_PE_func)) {
+    PE_func <- user_PE_func
   }
+  else {
+    if (PE_method == 'elasticnet') {
+      PE_func <- glmnet::glmnet
+      PE_func_params <- list(alpha = 0, lambda = 0.1)
+    }
+    else if (PE_method == 'xgb') {
+      PE_func <- xgboost::xgboost
+      PE_func_params <- list(nrounds = 100, verbose = 0)
+    }
+    else {
+      stop('PE_method not recognized. To supply your own function, use user_PE_func.')
+    }
+  }
+
+  PE <- predict_master(holdout, covs, cov_to_drop, PE_func, PE_func_params)
   return(PE)
 }
 
@@ -210,10 +225,11 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
 #'
 #' @param data Data to be matched. Either a dataframe or a path to a .csv file
 #'   to be read into a dataframe.
-#' @param holdout Data to be used to compute predictive error. If FALSE
-#'   (default), 10% of \code{data} will be used for this purpose and only the
-#'   remaining 90% of \code{data} will be matched. Otherwise, a dataframe or a
-#'   path to a csv file.
+#' @param holdout Data to be used to compute predictive error. If a numeric
+#'   scalar between 0 and 1 (default = 0.1), that proportion of \code{data} will
+#'   made into a holdout set to compute predictive error and only the remaining
+#'   proportion of \code{data} will be matched. Otherwise, a dataframe or a path
+#'   to a csv file.
 #' @param treatment_column_name A character with the name of the treatment
 #'   column in \code{data}.
 #' @param outcome_column_name A character with the name of the outcomee column
@@ -412,11 +428,12 @@ FLAME_bit <- function(data,
 FLAME_bit_new <- function(data,
                       treatment_column_name = 'treated',
                       outcome_column_name='outcome',
-                      PE_method = 'elasticnet',
-                      alpha = 0.1, C = 0.1, holdout = FALSE,
+                      PE_method = 'elasticnet', user_PE_func = NULL,
+                      PE_func_params = NULL,
+                      C = 0.1, holdout = 0.1,
                       repeats = FALSE, verbose = 2, want_pe = TRUE, early_stop_iterations = Inf,
-                      stop_unmatched_c = FALSE, early_stop_un_c_frac = 0.1,
-                      stop_unmatched_t = FALSE, early_stop_un_t_frac = 0.1,
+                      stop_unmatched_c = FALSE, early_stop_un_c_frac = 0,
+                      stop_unmatched_t = FALSE, early_stop_un_t_frac = 0,
                       early_stop_pe = FALSE, early_stop_pe_frac = 0.01,
                       want_bf = FALSE, early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
                       missing_data_replace = 0, missing_holdout_replace = 0,
@@ -430,7 +447,7 @@ FLAME_bit_new <- function(data,
   c(data, holdout) %<-% read_data(data, holdout)
 
   check_args(data, treatment_column_name, outcome_column_name,
-             alpha, C, holdout,
+             C, holdout,
              repeats, verbose, want_pe, early_stop_iterations,
              stop_unmatched_c, early_stop_un_c_frac,
              stop_unmatched_t, early_stop_un_t_frac,
@@ -440,7 +457,7 @@ FLAME_bit_new <- function(data,
              missing_holdout_imputations, missing_data_imputations)
 
   c(data, holdout, covs, n_covs, n_levels,
-    cov_names, original_colnames, sorting_order) %<-%
+    cov_names, sorting_order) %<-%
     organize_data(data, holdout, treatment_column_name, outcome_column_name)
 
   c(data, holdout) %<-%
@@ -466,23 +483,31 @@ FLAME_bit_new <- function(data,
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
+    matching_covs %<>% c(list(order_cov_names(cov_names[covs],
+                                              cov_names,
+                                              sorting_order)))
   }
   store_pe <- NULL
   store_bf <- NULL
 
   iter <- 0
 
-  while (length(covs) > 1 & !(all(data$matched))) {
+  while (!early_stop(verbose, iter, covs, data, early_stop_iterations,
+                     store_pe, store_bf,
+                     stop_unmatched_c, early_stop_un_c_frac,
+                     stop_unmatched_t, early_stop_un_t_frac,
+                     early_stop_bf, early_stop_bf_frac,
+                     early_stop_pe, early_stop_pe_frac)) {
     iter <- iter + 1
 
     # Compute the match quality associated with dropping each covariate
     # MQ <- lapply(covs, get_match_quality, data, repeats, holdout, covs, n_levels,
     #              C, PE_method, alpha)
-    PE <- sapply(covs, get_PE, covs, holdout, alpha, PE_method)
-
+    PE <- sapply(covs, get_PE, covs, holdout, PE_method, user_PE_func, PE_func_params)
+    # browser()
     best_lower_bound <- max(-PE)
     upper_bound <- 2 * C - PE
-    # browser()
+
     drop_candidates <- which(upper_bound >= best_lower_bound) # Should this be strictly greater than?
     PE <- PE[drop_candidates]
 
@@ -498,14 +523,21 @@ FLAME_bit_new <- function(data,
     # store_bf %<>% c(MQ[[drop]]$BF)
     store_pe %<>% c(PE[drop])
     store_bf %<>% c(BF[drop])
-######## drop_candidates[drop] is the **entry** of covs that we drop
+
+    # drop_candidates[drop] is the *entry* of covs that we drop and so we drop
+    #   covs[drop_candidates[drop]]
+
     # Update covariates to match on
     # covs <- covs[-drop]
     # n_levels <- n_levels[-drop]
-    # browser()
-    covs_dropped <- c(covs_dropped, cov_names[drop_candidates[drop]])
+
+    covs_dropped <- c(covs_dropped, cov_names[covs[drop_candidates[drop]]])
     covs <- covs[-drop_candidates[drop]]
-    n_levels <- n_levels[-drop_candidates[drop]] # drop covs[dropcands[drop]]
+    n_levels <- n_levels[-drop_candidates[drop]]
+
+    matching_covs %<>% c(list(order_cov_names(cov_names[covs],
+                                              cov_names,
+                                              sorting_order)))
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
@@ -515,22 +547,27 @@ FLAME_bit_new <- function(data,
       data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs?
       data$matched[units_matched] <- TRUE
     }
-    show_progress(verbose, iter, data)
-    if (early_stop(iter, data, early_stop_iterations,
-                   store_pe, store_bf,
-                   stop_unmatched_c, early_stop_un_c_frac,
-                   stop_unmatched_t, early_stop_un_t_frac,
-                   early_stop_bf, early_stop_bf_frac,
-                   early_stop_pe, early_stop_pe_frac)) {
-      break
-    }
+    # show_progress(verbose, iter, data)
+    # if (early_stop(iter, data, early_stop_iterations,
+    #                store_pe, store_bf,
+    #                stop_unmatched_c, early_stop_un_c_frac,
+    #                stop_unmatched_t, early_stop_un_t_frac,
+    #                early_stop_bf, early_stop_bf_frac,
+    #                early_stop_pe, early_stop_pe_frac)) {
+    #   break
+    # }
   }
 
   # Done matching!
 
+  # Substitute covariate values of all unmatched units with the unmatched
+  # covariate symbol '*'
+  data[!data$matched, 1:n_covs] <- '*'
+
   # Reorder the data according to the original column order
   data[, 1:n_covs] %<>% dplyr::select(order(sorting_order))
-  colnames(data) <- c(original_colnames, 'matched')
+  colnames(data) <-
+    c(colnames(data)[1:n_covs][order(sorting_order)], 'outcome', 'treated', 'matched')
 
   ret_list <- list(MGs = MGs,
                    CATE = CATE,

@@ -17,8 +17,8 @@ read_data <- function(data, holdout) {
     )
   }
 
-  if (is.logical(holdout)) {
-      holdout_inds <- sample(1:nrow(data), size = round(0.1 * nrow(data)))
+  if (is.numeric(holdout) & length(holdout) == 1) {
+      holdout_inds <- sample(1:nrow(data), size = round(holdout * nrow(data)))
       holdout <- data[holdout_inds, ]
       data <- data[-holdout_inds, ]
   }

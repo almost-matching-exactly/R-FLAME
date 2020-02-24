@@ -19,3 +19,8 @@ Imports:
   magrittr,
   mice,
 RoxygenNote: 7.0.2
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

@@ -1,7 +1,7 @@
 check_args <- function(data,
                       treatment_column_name,
                       outcome_column_name,
-                      alpha, C, holdout,
+                      C, holdout,
                       repeats, verbose, want_pe, early_stop_iterations,
                       stop_unmatched_c, early_stop_un_c_frac,
                       stop_unmatched_t, early_stop_un_t_frac,
@@ -29,7 +29,6 @@ check_args <- function(data,
               outcome_column_name %in% holdout_cols)
 
   stopifnot(is.numeric(C) & C >= 0)
-  stopifnot(is.numeric(alpha) & alpha >= 0)
   stopifnot(is.logical(repeats))
   stopifnot(verbose %in% c(0, 1, 2, 3))
 
@@ -37,7 +36,7 @@ check_args <- function(data,
   stopifnot(is.logical(early_stop_pe))
 
   ## Early stop parameters
-  stopifnot(is.numeric(early_stop_iterations) & early_stop_iterations > 0)
+  stopifnot(is.numeric(early_stop_iterations) & early_stop_iterations >= 0)
   stopifnot(is.logical(stop_unmatched_c))
   stopifnot(is.numeric(early_stop_un_c_frac) &
               (early_stop_un_c_frac >= 0 & early_stop_un_c_frac <= 1))
@@ -54,20 +53,4 @@ check_args <- function(data,
   stopifnot(is.numeric(missing_holdout_replace) & missing_holdout_replace %in% c(0, 1, 2))
   stopifnot(is.numeric(missing_data_imputations) & missing_data_imputations >= 0)
   stopifnot(is.numeric(missing_holdout_imputations) & missing_holdout_imputations >= 0)
-}
-
-show_progress <- function(verbose, iter, data) {
-  if (verbose == 1) {
-    message(paste('Starting iteration', iter, 'of FLAME'))
-  }
-  else if (verbose == 2) {
-    if (iter %% 5 == 0) {
-      message(paste('Starting iteration', iter, 'of FLAME'))
-      message(paste(sum(!data$matched), 'unmatched units remaining'))
-    }
-  }
-  else if (verbose == 3) {
-    message(paste('Starting iteration', iter, 'of FLAME'))
-    message(paste(sum(!data$matched), 'unmatched units remaining'))
-  }
 }

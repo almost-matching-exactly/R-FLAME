@@ -1,0 +1,119 @@
+---
+title: "Introduction to FLAME"
+author: "Vittorio Orlandi"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to FLAME}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# Overview
+FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable matching method for causal inference. It matches units via a learned, weighted Hamming distance that determines what covariates are more important to match on. 
+
+We can start by loading FLAME...
+```{r setup}
+devtools::load_all()
+```
+
+... and generating some toy data:
+```{r}
+set.seed(44)
+data <- gen_data() # Data we would like to match
+holdout <- gen_data() # Data we will train on, to compute PE 
+```
+
+
+To run FLAME with its default settings:
+```{r}
+FLAME_out <- FLAME_bit_new(data = data, holdout = holdout)
+```
+
+By default, `FLAME` returns a list with *6* entries:
+```{r}
+names(FLAME_out)
+```
+
+The first, `FLAME_out$data` contains the original data frame with two modifications:
+
+1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not the corresponding unit was matched. This can be useful if you'd like to use only the matched data for subsequent analysis:
+```{r}
+matched_data <- dplyr::filter(FLAME_out$data, matched)
+```
+
+2. Units that were matched, but not on all covariates, will have a \* in place of their covariate value for all covariates for which they were not matched. 
+```{r}
+head(FLAME_out$data)
+```
+The above, for example, implies that while unit 1 was matched to units that also had values (X1, X2, X3, X4, X5) = (1, 1, 0, 0, 0), unit 3 was matched to units that shared values of (X2, X3) = (1, 0), but that differed in their values of X1, X4, and X5. Units 3 and 4 were not matched at all.
+
+The second, `MGs` is a list, each entry of which contains the units in a single matched group. 
+```{r}
+FLAME_out$MGs[[1]]
+length(FLAME_out$MGs)
+```
+That is, units 1, 15, 23, and 41 were all matched together and there are 13 matched groups total. 
+
+The third, `CATE`, complements `MGs` by supplying the CATE for each matched group. For example, the CATE for the matched group above, of units 1, 15, 23, and 41, is given by:
+```{r}
+FLAME_out$CATE[1]
+```
+
+The fourth, `matched_on`, is a list also corresponding to `MGs` that gives the covariates, and their values, on which units in each matched group were matched. 
+```{r}
+FLAME_out$matched_on[[1]]
+```
+The above shows that each of the units in the first matched group had covariate values (X1, X2, X3, X4, X5) = (1, 1, 0, 0, 0). For matched groups not formed on all covariates, some of these entries will be missing:
+```{r}
+FLAME_out$matched_on[[7]]
+```
+Thus, the units in the seventh matched group, as defined by `MGs[[7]]`, shared the same values of X1, X2, X3, and X4, but not of X5. 
+
+The fifth, `matching_covs` is a list, which shows the covariates that were used to match on every iteration of FLAME:
+```{r}
+FLAME_out$matching_covs
+```
+Thus, first, some units were matched on covariates X1, X2, X3, X4, X5. Then, more units were matched on all covariates but X5, and so on. 
+
+The sixth, `dropped` describes the order in which covariates were dropped:
+```{r}
+FLAME_out$dropped
+```
+Thus, first covariate X5 was dropped, then X4, and so on. This information is directly inferrable from `matching_covs`, but for large numbers of covariates, `dropped` provides an easier way of identifying the order in which covariates were dropped. 
+
+
+# Post-Matching Analysis
+After `FLAME` has been run, the matched data can be used for a variety of purposes. The FLAME package provides functionality for a few quick, post-matching analyses, via the functions `CATE`, `ATE`, `ATT`, and `MG`.
+
+`CATE(units, flame_obj)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `flame_obj`. Note that you may supply only a single unit for the `units` argument and that the units will be indexed _with respect to the original data frame passed to_ `FLAME`. That is, values outside of [1, `nrow(flame_obj$data)`] will cause an error.
+
+In this way, we can find the treatment effect for a unit of interest, say, unit 5...
+```{r,eval=FALSE}
+CATE(units = 5, flame_obj = FLAME_out)
+```
+
+... or for a class of units for which the treatment effect is of particular interest:
+```{r,eval=FALSE}
+CATE(units = which(data$age < 30 & data$treated == 1), flame_obj = FLAME_out)
+```
+
+`ATE(flame_obj)` and `ATT(flame_obj)` return the estimated average treatment effect and the estimated average treatment effect on the treated, respectively. 
+```{r,eval=FALSE}
+ATE(flame_obj = FLAME_out)
+ATT(flame_obj = FLAME_out)
+```
+
+Lastly, we can use `MG(units, flame_obj)` to get a list of the members of the matched groups of all units in `units`:
+```{r, eval = FALSE}
+MG(units = 5, flame_obj = FLAME_out)
+MG(units = which(data$age < 30 & data$treated == 1), flame_obj = FLAME_out)
+```
+
+
