@@ -39,7 +39,7 @@ to be read into a dataframe.}
 \item{treatment_column_name}{A character with the name of the treatment
 column in \code{data}.}
 
-\item{outcome_column_name}{A character with the name of the outcomee column
+\item{outcome_column_name}{A character with the name of the outcome column
 in \code{data}.}
 
 \item{PE_method}{One of "elasticnet", .... Denotes the method to be used for

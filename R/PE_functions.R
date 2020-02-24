@@ -64,7 +64,6 @@ predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) 
 }
 
 predict_xgb <- function(holdout, covs, cov_to_drop) {
-  require(xgboost)
   c(X_treat, X_control, Y_treat, Y_control) %<-%
     setup_preds(holdout, covs, cov_to_drop)
 

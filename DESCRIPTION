@@ -18,6 +18,11 @@ Imports:
   dplyr,
   magrittr,
   mice,
+  glmnet,
+  gmp,
+  zeallot,
+  rlang,
+  xgboost
 RoxygenNote: 7.0.2
 Suggests: 
     testthat,

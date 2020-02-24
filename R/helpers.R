@@ -24,30 +24,30 @@ organize_data <- function(data, holdout,
   # Rearrange data
   treatment_col <-
     data %>%
-    dplyr::select(!!enquo(treatment_column_name))
+    dplyr::select(!!rlang::enquo(treatment_column_name))
 
   outcome_col <-
     data %>%
-    dplyr::select(!!enquo(outcome_column_name))
+    dplyr::select(!!rlang::enquo(outcome_column_name))
 
   data %<>%
-    dplyr::select(-c(!!enquo(treatment_column_name),
-                     !!enquo(outcome_column_name))) %>%
+    dplyr::select(-c(!!rlang::enquo(treatment_column_name),
+                     !!rlang::enquo(outcome_column_name))) %>%
     cbind(outcome_col) %>%
     cbind(treatment_col)
 
   ##
   treatment_col <-
     holdout %>%
-    dplyr::select(!!enquo(treatment_column_name))
+    dplyr::select(!!rlang::enquo(treatment_column_name))
 
   outcome_col <-
     holdout %>%
-    dplyr::select(!!enquo(outcome_column_name))
+    dplyr::select(!!rlang::enquo(outcome_column_name))
 
   holdout %<>%
-    dplyr::select(-c(!!enquo(treatment_column_name),
-                     !!enquo(outcome_column_name))) %>%
+    dplyr::select(-c(!!rlang::enquo(treatment_column_name),
+                     !!rlang::enquo(outcome_column_name))) %>%
     cbind(outcome_col) %>%
     cbind(treatment_col)
   ##

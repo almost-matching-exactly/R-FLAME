@@ -16,25 +16,27 @@ aggregate_table <- function(vec, opt) {
 # value), and a list of indices for the matched units (the second return value)
 
 update_matched_bit <- function(data, covs, n_levels, opt) {
-  data_wo_t <- as.bigz(as.matrix(data[, covs]))
+  data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
 ######## Do a massive dataset to check this
 
   # Compute b_u
-  multiplier <- pow.bigz(n_levels, seq_along(n_levels) - 1)
+  multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
 
-  b_u <- gmp::`%*%`(data_wo_t, multiplier) %>%
+  b_u <-
+    gmp::`%*%`(data_wo_t, multiplier) %>%
     as.vector()
-  # browser()
+
+  stopifnot(gmp::is.bigz(b_u))
+
   # Compute b_u+
-  multiplier <- pow.bigz(n_levels, seq_along(n_levels))
+  multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels))
 
   b_u_plus <-
     gmp::`%*%`(data_wo_t, multiplier) %>%
-    add.bigz(data$treated) %>%
+    gmp::add.bigz(data$treated) %>%
     as.vector()
+  stopifnot(gmp::is.bigz(b_u_plus))
 
-  # browser()
-  # browser()
   # Compute c_u
   c_u = aggregate_table(b_u, opt = opt)
 
@@ -65,25 +67,25 @@ get_match_quality <- function(cov_to_drop, data, repeats, holdout, covs, n_level
   if (repeats) {
     match_index <-
       update_matched_bit(data, setdiff(covs, covs_to_drop), n_levels[-which(covs == cov_to_drop)], opt = opt) %>%
-      extract2('match_index')
+      magrittr::extract2('match_index')
 
     # match_index <-
     #   update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop], opt = opt) %>%
-    #   extract2('match_index')
+    #   magrittr::extract2('match_index')
     units_matched <- which(match_index)
   }
   else {
     match_index <-
       update_matched_bit(dplyr::filter(data, !matched), setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)], opt = opt) %>%
-      extract2('match_index')
+      magrittr::extract2('match_index')
     units_matched <- which(!data$matched)[match_index]
   }
 
   num_control_matched <- sum(data$treated[units_matched] == 0)
   num_treated_matched <- sum(data$treated[units_matched] == 1)
 
-  BF <- if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
+  BF <- dplyr::if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
                 0,
                 num_control_matched / num_control + num_treated_matched / num_treated)
 
@@ -160,25 +162,25 @@ process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matc
               made_matches = made_matches))
 }
 
-get_PE <- function(cov_to_drop, covs, holdout, PE_method, user_PE_func, PE_func_params) {
-  if (!is.null(user_PE_func)) {
-    PE_func <- user_PE_func
+get_PE <- function(cov_to_drop, covs, holdout, PE_method, user_PE_fun, PE_fun_params) {
+  if (!is.null(user_PE_fun)) {
+    PE_func <- user_PE_fun
   }
   else {
     if (PE_method == 'elasticnet') {
       PE_func <- glmnet::glmnet
-      PE_func_params <- list(alpha = 0, lambda = 0.1)
+      PE_fun_params <- list(alpha = 0, lambda = 0.1)
     }
     else if (PE_method == 'xgb') {
       PE_func <- xgboost::xgboost
-      PE_func_params <- list(nrounds = 100, verbose = 0)
+      PE_fun_params <- list(nrounds = 100, verbose = 0)
     }
     else {
-      stop('PE_method not recognized. To supply your own function, use user_PE_func.')
+      stop('PE_method not recognized. To supply your own function, use user_PE_fun')
     }
   }
 
-  PE <- predict_master(holdout, covs, cov_to_drop, PE_func, PE_func_params)
+  PE <- predict_master(holdout, covs, cov_to_drop, PE_func, PE_fun_params)
   return(PE)
 }
 
@@ -191,27 +193,27 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
   if (repeats) {
     match_index <-
       update_matched_bit(data, setdiff(covs, cov_to_drop), n_levels[-which(covs == cov_to_drop)], opt) %>%
-      extract2('match_index')
+      magrittr::extract2('match_index')
     # match_index <-
     #   update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop], opt) %>%
-    #   extract2('match_index')
+    #   magrittr::extract2('match_index')
     units_matched <- which(match_index)
   }
   else {
     match_index <-
       update_matched_bit(dplyr::filter(data, !matched), setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)], opt) %>%
-      extract2('match_index')
+      magrittr::extract2('match_index')
     # match_index <-
     #   update_matched_bit(dplyr::filter(data, !matched), covs[-cov_to_drop], n_levels[-cov_to_drop], opt) %>%
-    #   extract2('match_index')
+    #   magrittr::extract2('match_index')
     units_matched <- which(!data$matched)[match_index]
   }
 
   num_control_matched <- sum(data$treated[units_matched] == 0)
   num_treated_matched <- sum(data$treated[units_matched] == 1)
 
-  BF <- if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
+  BF <- dplyr::if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
                 0,
                 num_control_matched / num_control + num_treated_matched / num_treated)
   return(BF)
@@ -232,7 +234,7 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
 #'   to a csv file.
 #' @param treatment_column_name A character with the name of the treatment
 #'   column in \code{data}.
-#' @param outcome_column_name A character with the name of the outcomee column
+#' @param outcome_column_name A character with the name of the outcome column
 #'   in \code{data}.
 #' @param PE_method One of "elasticnet", .... Denotes the method to be used for
 #'   computation of PE.
@@ -285,9 +287,14 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
 #'   this many imputations of the missing data in \code{data} using MICE.
 
 #' @examples
-#' data <- gen_data(100, 5)
-#' FLAME_bit(data = data,)
-
+#' data <- gen_data()
+#' holdout <- gen_data()
+#' FLAME_out <- FLAME_bit(data = data, holdout = holdout)
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#' @importFrom zeallot %<-%
+#' @importFrom rlang !!
+#' @export
 FLAME_bit <- function(data,
            treatment_column_name = 'treated',
            outcome_column_name='outcome',
@@ -300,11 +307,6 @@ FLAME_bit <- function(data,
            want_bf = FALSE, early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
            missing_data_replace = 0, missing_holdout_replace = 0,
            missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
-  require(gmp)
-  require(glmnet)
-  require(dplyr)
-  require(magrittr)
-  require(zeallot)
 
   c(data, holdout) %<-% read_data(data, holdout)
 
@@ -387,7 +389,7 @@ FLAME_bit <- function(data,
     c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
       process_matches(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names, opt = opt)
     if (made_matches) {
-      data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs?
+      data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs_dropped?
       data$matched[units_matched] <- TRUE
     }
     show_progress(verbose, iter, data)
@@ -424,25 +426,19 @@ FLAME_bit <- function(data,
 }
 
 # Check covariate order and also return_df
-
-FLAME_bit_new <- function(data,
-                      treatment_column_name = 'treated',
-                      outcome_column_name='outcome',
-                      PE_method = 'elasticnet', user_PE_func = NULL,
-                      PE_func_params = NULL,
-                      C = 0.1, holdout = 0.1,
-                      repeats = FALSE, verbose = 2, want_pe = TRUE, early_stop_iterations = Inf,
-                      stop_unmatched_c = FALSE, early_stop_un_c_frac = 0,
-                      stop_unmatched_t = FALSE, early_stop_un_t_frac = 0,
-                      early_stop_pe = FALSE, early_stop_pe_frac = 0.01,
-                      want_bf = FALSE, early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
-                      missing_data_replace = 0, missing_holdout_replace = 0,
-                      missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
-  require(gmp)
-  require(glmnet)
-  require(dplyr)
-  require(magrittr)
-  require(zeallot)
+#' @export
+FLAME_bit_new <-
+  function(data, holdout = 0.1, C = 0.1, ## Algorithmic arguments
+           treatment_column_name = 'treated',outcome_column_name='outcome',
+           PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
+           repeats = FALSE, verbose = 2, want_pe = TRUE, want_bf = FALSE,
+           early_stop_iterations = Inf, ## Early stopping arguments
+           stop_unmatched_c = FALSE, early_stop_un_c_frac = 0,
+           stop_unmatched_t = FALSE, early_stop_un_t_frac = 0,
+           early_stop_pe = FALSE, early_stop_pe_frac = 0.01,
+           early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
+           missing_data_replace = 0, missing_holdout_replace = 0, ## Missing data arguments
+           missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
 
   c(data, holdout) %<-% read_data(data, holdout)
 
@@ -503,7 +499,7 @@ FLAME_bit_new <- function(data,
     # Compute the match quality associated with dropping each covariate
     # MQ <- lapply(covs, get_match_quality, data, repeats, holdout, covs, n_levels,
     #              C, PE_method, alpha)
-    PE <- sapply(covs, get_PE, covs, holdout, PE_method, user_PE_func, PE_func_params)
+    PE <- sapply(covs, get_PE, covs, holdout, PE_method, user_PE_fun, PE_fun_params)
     # browser()
     best_lower_bound <- max(-PE)
     upper_bound <- 2 * C - PE
@@ -544,7 +540,7 @@ FLAME_bit_new <- function(data,
     c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
       process_matches(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names, opt = opt)
     if (made_matches) {
-      data[units_matched, setdiff(1:n_covs, covs)] <- '*' ## Same as covs?
+      data[units_matched, setdiff(1:n_covs, covs)] <- '*'
       data$matched[units_matched] <- TRUE
     }
     # show_progress(verbose, iter, data)

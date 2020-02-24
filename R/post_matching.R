@@ -8,6 +8,7 @@
 #'   treatment effect is desired.
 #' @param output_style If 1, only returns the values of covariates these units
 #'   were matched on. If 0, returns all covariate values.
+#' @export
 mmg_of_unit <- function(unit, flame_obj, output_style = 1) {
   MGs <- flame_obj$MGs
   for (i in 1:length(MGs)) {
@@ -29,6 +30,7 @@ mmg_of_unit <- function(unit, flame_obj, output_style = 1) {
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
 #' @param unit An integer between 1 and \code{nrow(flame_obj)} for whom the
 #'   treatment effect is desired.
+#' @export
 te_of_unit <- function(unit, flame_obj) {
   MGs <- flame_obj$MGs
   for (i in 1:length(MGs)) {
@@ -39,7 +41,7 @@ te_of_unit <- function(unit, flame_obj) {
   stop('Unit not matched')
 }
 
-
+#' @export
 CATE <- function(units, flame_obj) {
   if (any(!(units %in% 1:nrow(flame_obj$data)))) {
     stop('Unit not in dataset')
@@ -72,6 +74,7 @@ CATE <- function(units, flame_obj) {
 #' matched dataset.
 #'
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
+#' @export
 ATE <- function(flame_obj) {
   CATE <- flame_obj$CATE
   MGs <- flame_obj$MGs
@@ -87,6 +90,7 @@ ATE <- function(flame_obj) {
 #' outcome of control units in its matched group. This value is then averaged
 #' across all treated units.
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
+#' @export
 ATT <- function(flame_obj) {
   matched_treated <- with(flame_obj$data, which(matched & treated == 1))
   controls <- which(flame_obj$data$treated == 0)

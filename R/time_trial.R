@@ -1,4 +1,4 @@
-# require(ggplot2)
+
 # n <- c(500, 1000, 2500, 5000, 10000)
 # p <- 30
 # new_times <- NULL
@@ -47,7 +47,6 @@
 #
 #
 #
-# # require(microbenchmark)
 #
 # # aggregate_table <- function(list) {
 # #   tab = table(as.character(list))
