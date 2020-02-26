@@ -210,13 +210,29 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
     units_matched <- which(!data$matched)[match_index]
   }
 
+  # Newly matched
   num_control_matched <- sum(data$treated[units_matched] == 0)
   num_treated_matched <- sum(data$treated[units_matched] == 1)
 
-  BF <- dplyr::if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
+  # All matched units; for stopping rule purposes
+  all_unmatched <-
+    setdiff(1:nrow(data), union(units_matched, which(data$matched)))
+
+  n_control_unmatched <- sum(all_unmatched %in% which(data$treated == 0))
+  n_treated_unmatched <- sum(all_unmatched %in% which(data$treated == 1))
+
+  prop_control_unmatched <- n_control_unmatched / num_control
+  prop_treated_unmatched <- n_treated_unmatched / num_treated
+
+  # Is this if_else really necessary? We should catch it earlier
+  BF <- dplyr::if_else(num_control == 0 | num_treated == 0,
                 0,
                 num_control_matched / num_control + num_treated_matched / num_treated)
-  return(BF)
+
+  return(list(BF = BF,
+              prop_unmatched =
+                list(control = prop_control_unmatched,
+                     treated = prop_treated_unmatched)))
 }
 
 #' Bit Vectors Implementation
@@ -267,10 +283,9 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels, opt) {
 #' @param early_stop_un_t_frac A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of treatment units that are unmatched falls below this
 #'   value, FLAME terminates.
-#' @param early_stop_pe A logical scalar. If TRUE....
-#' @param early_stop_pe_frac A numeric value between 0 and 1 (inclusive).
+#' @param early_stop_pe A numeric value between 0 and 1 (inclusive).
 #' @param early_stop_bf A logical scalar. If TRUE....
-#' @param early_stop_bf_frac A numeric value between 0 and 1 (inclusive).
+#' @param early_stop_bf A numeric value between 0 and 1 (inclusive).
 #' @section Parameters for Missing Data:
 #' @param missing_data_replace If 0, assumes no missingness in \code{data}. If
 #'   1, eliminates units with missingness from \code{data}. If 2, will not match
@@ -303,25 +318,25 @@ FLAME_bit <- function(data,
            repeats = FALSE, verbose = 2, want_pe = TRUE, early_stop_iterations = Inf,
            stop_unmatched_c = FALSE, early_stop_un_c_frac = 0.1,
            stop_unmatched_t = FALSE, early_stop_un_t_frac = 0.1,
-           early_stop_pe = FALSE, early_stop_pe_frac = 0.01,
-           want_bf = FALSE, early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
+           early_stop_pe = 0.01,
+           want_bf = FALSE, early_stop_bf = 0.01,
            missing_data_replace = 0, missing_holdout_replace = 0,
            missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
 
   c(data, holdout) %<-% read_data(data, holdout)
 
   check_args(data, treatment_column_name, outcome_column_name,
-             alpha, C, holdout,
+             C, holdout,
              repeats, verbose, want_pe, early_stop_iterations,
              stop_unmatched_c, early_stop_un_c_frac,
              stop_unmatched_t, early_stop_un_t_frac,
-             early_stop_pe, early_stop_pe_frac,
-             want_bf, early_stop_bf, early_stop_bf_frac,
+             early_stop_pe, early_stop_pe,
+             want_bf, early_stop_bf, early_stop_bf,
              missing_data_replace, missing_holdout_replace,
              missing_holdout_imputations, missing_data_imputations)
 
   c(data, holdout, covs, n_covs, n_levels,
-    cov_names, original_colnames, sorting_order) %<-%
+    cov_names, sorting_order) %<-%
     organize_data(data, holdout, treatment_column_name, outcome_column_name)
 
   c(data, holdout) %<-%
@@ -397,8 +412,8 @@ FLAME_bit <- function(data,
                    store_pe, store_bf,
                    stop_unmatched_c, early_stop_un_c_frac,
                    stop_unmatched_t, early_stop_un_t_frac,
-                   early_stop_bf, early_stop_bf_frac,
-                   early_stop_pe, early_stop_pe_frac)) {
+                   early_stop_bf, early_stop_bf,
+                   early_stop_pe, early_stop_pe)) {
       break
     }
   }
@@ -407,7 +422,7 @@ FLAME_bit <- function(data,
 
   # Reorder the data according to the original column order
   data[, 1:n_covs] %<>% dplyr::select(order(sorting_order))
-  colnames(data) <- c(original_colnames, 'matched')
+  # colnames(data) <- c(original_colnames, 'matched')
 
   ret_list <- list(MGs = MGs,
                    CATE = CATE,
@@ -429,28 +444,26 @@ FLAME_bit <- function(data,
 #' @export
 FLAME_bit_new <-
   function(data, holdout = 0.1, C = 0.1, ## Algorithmic arguments
-           treatment_column_name = 'treated',outcome_column_name='outcome',
+           treatment_column_name = 'treated', outcome_column_name = 'outcome',
            PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
            repeats = FALSE, verbose = 2, want_pe = TRUE, want_bf = FALSE,
-           early_stop_iterations = Inf, ## Early stopping arguments
-           stop_unmatched_c = FALSE, early_stop_un_c_frac = 0,
-           stop_unmatched_t = FALSE, early_stop_un_t_frac = 0,
-           early_stop_pe = FALSE, early_stop_pe_frac = 0.01,
-           early_stop_bf = FALSE, early_stop_bf_frac = 0.01,
+           early_stop_iterations = Inf, epsilon = 0.05, ## Early stopping arguments
+           early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
+           early_stop_pe = Inf, early_stop_bf = 0,
            missing_data_replace = 0, missing_holdout_replace = 0, ## Missing data arguments
-           missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
+           missing_data_imputations = 0, missing_holdout_imputations = 10, opt = 0) {
 
   c(data, holdout) %<-% read_data(data, holdout)
 
-  check_args(data, treatment_column_name, outcome_column_name,
-             C, holdout,
-             repeats, verbose, want_pe, early_stop_iterations,
-             stop_unmatched_c, early_stop_un_c_frac,
-             stop_unmatched_t, early_stop_un_t_frac,
-             early_stop_pe, early_stop_pe_frac,
-             want_bf, early_stop_bf, early_stop_bf_frac,
+  check_args(data, holdout, C,
+             treatment_column_name, outcome_column_name,
+             PE_method, user_PE_fun, PE_fun_params,
+             repeats, verbose, want_pe, want_bf,
+             early_stop_iterations, epsilon,
+             early_stop_un_c_frac, early_stop_un_t_frac,
+             early_stop_pe, early_stop_bf,
              missing_data_replace, missing_holdout_replace,
-             missing_holdout_imputations, missing_data_imputations)
+             missing_data_imputations, missing_holdout_imputations)
 
   c(data, holdout, covs, n_covs, n_levels,
     cov_names, sorting_order) %<-%
@@ -487,45 +500,47 @@ FLAME_bit_new <-
   store_bf <- NULL
 
   iter <- 0
+  baseline_PE <- get_PE(cov_to_drop = NULL, covs, holdout,
+                        PE_method, user_PE_fun, PE_fun_params)
 
-  while (!early_stop(verbose, iter, covs, data, early_stop_iterations,
-                     store_pe, store_bf,
-                     stop_unmatched_c, early_stop_un_c_frac,
-                     stop_unmatched_t, early_stop_un_t_frac,
-                     early_stop_bf, early_stop_bf_frac,
-                     early_stop_pe, early_stop_pe_frac)) {
+  while (!early_stop(iter, data, covs, early_stop_iterations)) {
     iter <- iter + 1
+    show_progress(verbose, iter, data)
 
-    # Compute the match quality associated with dropping each covariate
-    # MQ <- lapply(covs, get_match_quality, data, repeats, holdout, covs, n_levels,
-    #              C, PE_method, alpha)
+    # Compute the PE associated with dropping each covariate
     PE <- sapply(covs, get_PE, covs, holdout, PE_method, user_PE_fun, PE_fun_params)
-    # browser()
-    best_lower_bound <- max(-PE)
-    upper_bound <- 2 * C - PE
+    if (early_stop_PE(min(PE), early_stop_pe, epsilon, baseline_PE)) {
+      break
+    }
 
-    drop_candidates <- which(upper_bound >= best_lower_bound) # Should this be strictly greater than?
-    PE <- PE[drop_candidates]
+    if (C != 0) {
+      best_lower_bound <- max(-PE)
+      upper_bound <- 2 * C - PE
 
-    BF <- sapply(covs[drop_candidates], get_BF, data, repeats, covs, n_levels, opt = opt)
+      drop_candidates <- which(upper_bound >= best_lower_bound) # Should this be strictly greater than?
+      PE <- PE[drop_candidates]
+
+      BF_out <- lapply(covs[drop_candidates], get_BF, data, repeats, covs, n_levels, opt = opt)
+      BF <- sapply(BF_out, function(x) x[['BF']])
+
+      MQ <- C * BF - PE
+    }
+    else {
+      MQ <- PE
+    }
+
     # (First, in unlikely case of ties) covariate yielding the highest match quality
-    # drop <-
-    #   sapply(MQ, function(x) C * x$BF - x$PE) %>%
-    #   which.max()
-    MQ <- C * BF - PE
     drop <- which.max(MQ)
+    prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
 
-    # store_pe %<>% c(MQ[[drop]]$PE)
-    # store_bf %<>% c(MQ[[drop]]$BF)
+    if (early_stop_BF(BF[drop], early_stop_bf,
+                      prop_unmatched[['control']], prop_unmatched[['treated']],
+                      early_stop_un_c_frac, early_stop_un_t_frac)) {
+      break
+    }
+
     store_pe %<>% c(PE[drop])
     store_bf %<>% c(BF[drop])
-
-    # drop_candidates[drop] is the *entry* of covs that we drop and so we drop
-    #   covs[drop_candidates[drop]]
-
-    # Update covariates to match on
-    # covs <- covs[-drop]
-    # n_levels <- n_levels[-drop]
 
     covs_dropped <- c(covs_dropped, cov_names[covs[drop_candidates[drop]]])
     covs <- covs[-drop_candidates[drop]]
@@ -543,15 +558,6 @@ FLAME_bit_new <-
       data[units_matched, setdiff(1:n_covs, covs)] <- '*'
       data$matched[units_matched] <- TRUE
     }
-    # show_progress(verbose, iter, data)
-    # if (early_stop(iter, data, early_stop_iterations,
-    #                store_pe, store_bf,
-    #                stop_unmatched_c, early_stop_un_c_frac,
-    #                stop_unmatched_t, early_stop_un_t_frac,
-    #                early_stop_bf, early_stop_bf_frac,
-    #                early_stop_pe, early_stop_pe_frac)) {
-    #   break
-    # }
   }
 
   # Done matching!

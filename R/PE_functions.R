@@ -14,16 +14,16 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
     holdout %>%
     dplyr::filter(treated == 1) %>%
     dplyr::select(setdiff(covs, cov_to_drop), outcome)
-    # dplyr::select(-c(cov_to_drop, treated))
+
   X_treat <- model.matrix(outcome ~ ., covs_treat)
 
   covs_control <-
     holdout %>%
     dplyr::filter(treated == 0) %>%
     dplyr::select(setdiff(covs, cov_to_drop), outcome)
-    # dplyr::select(-c(cov_to_drop, treated))
+
   X_control <- model.matrix(outcome ~ ., covs_control)
-  # browser()
+
   return(list(X_treat = X_treat,
               X_control = X_control,
               Y_treat = Y_treat,
