@@ -46,11 +46,6 @@ organize_data <- function(data, holdout,
   # Number of levels of each covariate
   n_levels <- sapply(data[, 1:n_covs, drop = FALSE], nlevels)
 
-  # Change levels to allow for 'unmatched on this covariate' indicator: '*'
-  for (i in 1:n_covs) {
-    levels(data[, i]) %<>% c('*')
-  }
-
   # To sort covariates in increasing order of number of levels
   sorting_order <- order(n_levels)
   # To make sure the column names are also reordered

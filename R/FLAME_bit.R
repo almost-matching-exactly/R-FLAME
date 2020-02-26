@@ -169,7 +169,15 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method, user_PE_fun, PE_fun_pa
   else {
     if (PE_method == 'elasticnet') {
       PE_func <- glmnet::glmnet
-      PE_fun_params <- list(alpha = 0, lambda = 0.1)
+      if (length(unique(holdout$outcome)) == 2) {
+        family <- 'binomial'
+        lambda <- 1
+      }
+      else {
+        family <- 'gaussian'
+        lambda <- 0.1
+      }
+      PE_fun_params <- list(alpha = 0, lambda = lambda, family = family)
     }
     else if (PE_method == 'xgb') {
       PE_func <- xgboost::xgboost
@@ -441,6 +449,7 @@ FLAME_bit <- function(data,
 }
 
 # Check covariate order and also return_df
+
 #' @export
 FLAME_bit_new <-
   function(data, holdout = 0.1, C = 0.1, ## Algorithmic arguments
@@ -473,7 +482,36 @@ FLAME_bit_new <-
     handle_missing_data(data, holdout,
                         missing_data_replace, missing_holdout_replace,
                         missing_data_imputations, missing_holdout_imputations)
+  if (is.data.frame(data)) {
+    n_iters <- 1
+  }
+  else {
+    n_iters <- length(data)
+  }
 
+  FLAME_out <- vector(mode = 'list', length = n_iters)
+  for (i in 1:n_iters) {
+    FLAME_out[[i]] <-
+      FLAME_internal(data[[i]], holdout, covs, n_covs, n_levels, cov_names, sorting_order, C, PE_method, user_PE_fun, PE_fun_params,
+                     repeats, verbose, want_pe, want_bf, early_stop_iterations,
+                     epsilon = 0.05, early_stop_un_c_frac, early_stop_un_t_frac,
+                     early_stop_pe, early_stop_bf)
+  }
+
+  if (n_iters == 1) {
+    return(FLAME_out[[1]])
+  }
+  return(FLAME_out)
+}
+
+# Check covariate order and also return_df
+
+FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_names, sorting_order, C = 0.1, ## Algorithmic arguments
+                           PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
+                           repeats = FALSE, verbose = 2, want_pe = TRUE, want_bf = FALSE,
+                           early_stop_iterations = Inf, epsilon = 0.05, ## Early stopping arguments
+                           early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
+                           early_stop_pe = Inf, early_stop_bf = 0, opt = 0) {
   # List of MGs, each entry contains the corresponding MGs entries
   MGs <- list()
   # List of CATEs, each entry contains the corresponding MGs CATE
@@ -587,6 +625,3 @@ FLAME_bit_new <-
 
   return(ret_list)
 }
-
-# Check covariate order and also return_df
-

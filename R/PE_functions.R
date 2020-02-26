@@ -50,17 +50,28 @@ get_MSE <- function(X, Y, func, ...) {
 }
 
 predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) {
-  c(X_treat, X_control, Y_treat, Y_control) %<-%
-    setup_preds(holdout, covs, cov_to_drop)
-  # browser()
-  MSE_treat <- do.call(get_MSE,
-                       c(list(X = X_treat, Y = Y_treat, func = PE_func),
-                         PE_func_params))
-  # browser()
-  MSE_control <- do.call(get_MSE,
-                       c(list(X = X_control, Y = Y_control, func = PE_func),
-                         PE_func_params))
-  return(MSE_treat + MSE_control)
+  if (is.data.frame(holdout)) { # It's a single data frame
+    n_imputations <- 1
+  }
+  else { # It's a list of imputed holdout data frames
+    n_imputations <- length(holdout)
+  }
+
+  PE <- vector(mode = 'numeric', length = n_imputations)
+  for (i in 1:n_imputations) {
+    c(X_treat, X_control, Y_treat, Y_control) %<-%
+      setup_preds(holdout[[i]], covs, cov_to_drop)
+    # browser()
+    MSE_treat <- do.call(get_MSE,
+                         c(list(X = X_treat, Y = Y_treat, func = PE_func),
+                           PE_func_params))
+    # browser()
+    MSE_control <- do.call(get_MSE,
+                         c(list(X = X_control, Y = Y_control, func = PE_func),
+                           PE_func_params))
+    PE[i] <- MSE_treat + MSE_control
+  }
+  return(mean(PE))
 }
 
 predict_xgb <- function(holdout, covs, cov_to_drop) {
