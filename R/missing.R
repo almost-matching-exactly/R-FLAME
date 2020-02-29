@@ -1,10 +1,10 @@
 impute_missing <- function(data, n_imputations) {
-  pred_mat <-
-    matrix(1, nrow = ncol(data), ncol = ncol(data) - 1) %>%
-    cbind(0)
-  diag(pred_mat) <- 0
-  mice::mice(data, m = n_imputations,
-             predictorMatrix = pred_mat, printFlag = FALSE) %>%
+  # browser()
+  # pred_mat <-
+  #   matrix(1, nrow = ncol(data), ncol = ncol(data)) %>%
+  #   cbind(0)
+  # diag(pred_mat) <- 0
+  mice::mice(data, m = n_imputations, printFlag = FALSE) %>%
     mice::complete(action = 'all') %>%
     return()
 }
@@ -22,15 +22,22 @@ handle_missing_data <- function(data, holdout,
   }
   else if (missing_data_replace == 1) {
     data %<>%
-      dplyr::drop_na()
+      tidyr::drop_na()
   }
   else if (missing_data_replace == 2) {
+    # Replace the missing values with unique integers, each larger than all
+    # observed covariate values in data
+    replace_vals <-
+      max(data[, 1:(ncol(data) - 2)], na.rm = TRUE) + seq_len(sum(is.na(data)))
+    data[which(is.na(data), arr.ind = TRUE)] <- replace_vals
 
   }
   else if (missing_data_replace == 3) {
-    message('Imputing missingness in data using MICE\r')
-    data <- impute_missing(data, missing_data_imputations)
-    message('Finished imputation')
+    if (sum(is.na(data)) > 0) {
+      message('Imputing missingness in data using MICE\r')
+      data <- impute_missing(data, missing_data_imputations)
+      message('Finished imputation')
+    }
   }
 
   if (missing_holdout_replace == 0) {
@@ -42,21 +49,29 @@ handle_missing_data <- function(data, holdout,
   }
   else if (missing_holdout_replace == 1) {
     holdout %<>%
-      dplyr::drop_na()
+      tidyr::drop_na()
   }
   else if (missing_holdout_replace == 2) {
-    message('Imputing missingness in holdout using MICE\r')
-    holdout <- impute_missing(holdout, missing_holdout_imputations)
-    message('Finished imputation')
+    if (sum(is.na(holdout)) > 0) {
+      message('Imputing missingness in holdout using MICE\r')
+      holdout <- impute_missing(holdout, missing_holdout_imputations)
+      message('Finished imputation')
+    }
+  }
+
+  if (is.data.frame(holdout)) {
+    holdout %<>% list()
   }
 
   # Change levels to allow for 'unmatched on this covariate' indicator: '*'
   if (is.data.frame(data)) {
     n_imputations <- 1
+    data %<>% list()
   }
   else {
     n_imputations <- length(data)
   }
+
   for (i in 1:n_imputations) {
     for (j in 1:(ncol(data[[i]]) - 2)) {
       levels(data[[i]][, j]) %<>% c('*')

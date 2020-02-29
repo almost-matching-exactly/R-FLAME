@@ -7,6 +7,7 @@ aggregate_table <- function(vec, opt) {
   if (opt == 1) {
     return(as.vector(tab[match(list_val, name)]))
   }
+  message('got here. tf?')
   return(as.vector(tab[sapply(list_val, function(x) which(name ==  x))]))
 }
 
@@ -135,11 +136,17 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
 
 process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names, opt) {
   if (repeats) {
-    c(match_index, index) %<-% update_matched_bit(data, covs, n_levels, opt = opt)
+    match_out <- update_matched_bit(data, covs, n_levels, opt = opt)
+    match_index <- match_out[[1]]
+    index <- match_out[[2]]
+    # c(match_index, index) %<-% update_matched_bit(data, covs, n_levels, opt = opt)
     units_matched <- which(match_index)
   }
   else {
-    c(match_index, index) %<-% update_matched_bit(dplyr::filter(data, !matched), covs, n_levels, opt = opt)
+    # c(match_index, index) %<-% update_matched_bit(dplyr::filter(data, !matched), covs, n_levels, opt = opt)
+    match_out <- update_matched_bit(dplyr::filter(data, !matched), covs, n_levels, opt = opt)
+    match_index <- match_out[[1]]
+    index <- match_out[[2]]
     # adjusts for fact that match_index returned by update_matched bit is
     # with respect to the unmatched subset of data
     units_matched <- which(!data$matched)[match_index]
@@ -331,7 +338,10 @@ FLAME_bit <- function(data,
            missing_data_replace = 0, missing_holdout_replace = 0,
            missing_holdout_imputations = 10, missing_data_imputations = 0, opt = 0) {
 
-  c(data, holdout) %<-% read_data(data, holdout)
+  read_data_out <- read_data(data, holdout)
+  data <- read_data_out[[1]]
+  holdout <- read_data_out[[2]]
+  # c(data, holdout) %<-% read_data(data, holdout)
 
   check_args(data, treatment_column_name, outcome_column_name,
              C, holdout,
@@ -343,14 +353,28 @@ FLAME_bit <- function(data,
              missing_data_replace, missing_holdout_replace,
              missing_holdout_imputations, missing_data_imputations)
 
-  c(data, holdout, covs, n_covs, n_levels,
-    cov_names, sorting_order) %<-%
-    organize_data(data, holdout, treatment_column_name, outcome_column_name)
+  # c(data, holdout, covs, n_covs, n_levels,
+  #   cov_names, sorting_order) %<-%
+  #   organize_data(data, holdout, treatment_column_name, outcome_column_name)
 
-  c(data, holdout) %<-%
-    handle_missing_data(data, holdout,
-                        missing_data_replace, missing_holdout_replace,
-                        missing_data_imputations, missing_holdout_imputations)
+  organized_data <- organize_data(data, holdout, treatment_column_name, outcome_column_name)
+  data <- organized_data[[1]]
+  holdout <- organized_data[[2]]
+  covs <- organized_data[[3]]
+  n_covs <- organized_data[[4]]
+  n_levels <- organized_data[[5]]
+  cov_names <- organized_data[[6]]
+  sorting_order <- organized_data[[7]]
+
+  missing_data_out <- handle_missing_data(data, holdout,
+                                          missing_data_replace, missing_holdout_replace,
+                                          missing_data_imputations, missing_holdout_imputations)
+  data <- missing_data_out[[1]]
+  holdout <- missing_data_out[[2]]
+  # c(data, holdout) %<-%
+  #   handle_missing_data(data, holdout,
+  #                       missing_data_replace, missing_holdout_replace,
+  #                       missing_data_imputations, missing_holdout_imputations)
 
   # List of MGs, each entry contains the corresponding MGs entries
   MGs <- list()
@@ -460,9 +484,11 @@ FLAME_bit_new <-
            early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data_replace = 0, missing_holdout_replace = 0, ## Missing data arguments
-           missing_data_imputations = 0, missing_holdout_imputations = 10, opt = 0) {
+           missing_data_imputations = 10, missing_holdout_imputations = 10, opt = 0) {
 
-  c(data, holdout) %<-% read_data(data, holdout)
+  read_data_out <- read_data(data, holdout)
+  data <- read_data_out[[1]]
+  holdout <- read_data_out[[2]]
 
   check_args(data, holdout, C,
              treatment_column_name, outcome_column_name,
@@ -474,28 +500,34 @@ FLAME_bit_new <-
              missing_data_replace, missing_holdout_replace,
              missing_data_imputations, missing_holdout_imputations)
 
-  c(data, holdout, covs, n_covs, n_levels,
-    cov_names, sorting_order) %<-%
-    organize_data(data, holdout, treatment_column_name, outcome_column_name)
-
-  c(data, holdout) %<-%
+  missing_out <-
     handle_missing_data(data, holdout,
                         missing_data_replace, missing_holdout_replace,
                         missing_data_imputations, missing_holdout_imputations)
-  if (is.data.frame(data)) {
-    n_iters <- 1
-  }
-  else {
-    n_iters <- length(data)
-  }
+
+  data <- missing_out[[1]]
+  holdout <- missing_out[[2]]
+
+  c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
+    sort_cols(data, treatment_column_name, outcome_column_name, type = 'data')
+
+  holdout <-
+    sort_cols(holdout, treatment_column_name, outcome_column_name,
+              type = 'holdout') %>%
+    magrittr::extract2(1)
+
+  n_iters <- length(data)
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
+    if (missing_data_replace == 3) {
+      message('Running FLAME on imputed dataset ', i, ' of ', n_iters)
+    }
     FLAME_out[[i]] <-
       FLAME_internal(data[[i]], holdout, covs, n_covs, n_levels, cov_names, sorting_order, C, PE_method, user_PE_fun, PE_fun_params,
                      repeats, verbose, want_pe, want_bf, early_stop_iterations,
-                     epsilon = 0.05, early_stop_un_c_frac, early_stop_un_t_frac,
-                     early_stop_pe, early_stop_bf)
+                     epsilon = epsilon, early_stop_un_c_frac, early_stop_un_t_frac,
+                     early_stop_pe, early_stop_bf, opt = opt)
   }
 
   if (n_iters == 1) {
@@ -503,8 +535,6 @@ FLAME_bit_new <-
   }
   return(FLAME_out)
 }
-
-# Check covariate order and also return_df
 
 FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_names, sorting_order, C = 0.1, ## Algorithmic arguments
                            PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
@@ -524,12 +554,21 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
   covs_dropped <- NULL
 
   # Try and make matches on all covariates
-  c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-    process_matches(data, repeats, covs, n_levels, MGs,
-                    matched_on, matching_covs, CATE, cov_names, opt = opt)
+  # c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
+    # process_matches(data, repeats, covs, n_levels, MGs,
+    #                 matched_on, matching_covs, CATE, cov_names, opt = 1)
+    #
+  processed_matches <- process_matches(data, repeats, covs, n_levels, MGs,
+                                       matched_on, matching_covs, CATE, cov_names, opt = 1)
+  CATE <- processed_matches[[1]]
+  MGs <- processed_matches[[2]]
+  matched_on <- processed_matches[[3]]
+  units_matched <- processed_matches[[4]]
+  made_matches <- processed_matches[[5]]
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
+    data$weights[units_matched] %<>% magrittr::add(1)
     matching_covs %<>% c(list(order_cov_names(cov_names[covs],
                                               cov_names,
                                               sorting_order)))
@@ -590,11 +629,21 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
-    c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-      process_matches(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names, opt = opt)
+    # c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
+    #   process_matches(data, repeats, covs, n_levels,
+    #                   MGs, matched_on, matching_covs, CATE, cov_names, opt = opt)
+    processed_matches <- process_matches(data, repeats, covs, n_levels, MGs,
+                                         matched_on, matching_covs, CATE, cov_names, opt = 1)
+    CATE <- processed_matches[[1]]
+    MGs <- processed_matches[[2]]
+    matched_on <- processed_matches[[3]]
+    units_matched <- processed_matches[[4]]
+    made_matches <- processed_matches[[5]]
+
     if (made_matches) {
       data[units_matched, setdiff(1:n_covs, covs)] <- '*'
       data$matched[units_matched] <- TRUE
+      data$weights[units_matched] %<>% magrittr::add(1)
     }
   }
 
@@ -607,7 +656,8 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
   # Reorder the data according to the original column order
   data[, 1:n_covs] %<>% dplyr::select(order(sorting_order))
   colnames(data) <-
-    c(colnames(data)[1:n_covs][order(sorting_order)], 'outcome', 'treated', 'matched')
+    c(colnames(data)[1:n_covs][order(sorting_order)],
+      'outcome', 'treated', 'matched', 'weights')
 
   ret_list <- list(MGs = MGs,
                    CATE = CATE,

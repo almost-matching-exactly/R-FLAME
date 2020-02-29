@@ -41,8 +41,8 @@ early_stop_PE <- function(PE, early_stop_pe, epsilon, baseline_PE) {
     return(TRUE)
   }
   if (PE > (1 + epsilon) * baseline_PE) {
-    message('FLAME stopping: predictive error would have risen above ',
-            100 * epsilon, '% of the baseline.')
+    message('FLAME stopping: predictive error would have risen ',
+            100 * epsilon, '% above the baseline.')
     return(TRUE)
   }
   return(FALSE)
@@ -63,6 +63,17 @@ early_stop <- function(iter, data, covs, early_stop_iterations) {
     message('FLAME stopping: completed ', iter, ' iterations')
     return(TRUE)
   }
+
+  if (sum(!data$matched & data$treated == 0) == 0) {
+    message('FLAME stopping: all control units matched')
+    return(TRUE)
+  }
+
+  if (sum(!data$matched & data$treated == 1) == 0) {
+    message('FLAME stopping: all treatment units matched')
+    return(TRUE)
+  }
+
   return(FALSE)
 }
 

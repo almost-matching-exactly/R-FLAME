@@ -1,4 +1,29 @@
+# data <- gen_data()
+# holdout <- gen_data()
+# treatment_column_name <- 'treated'
+# outcome_column_name <- 'outcome'
+# out <- organize_data(data, holdout, treatment_column_name, outcome_column_name)
 #
+# f_a <- function(x) {
+#   c(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order) %<-% x
+#   list(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order)
+# }
+#
+# f_b <- function(out) {
+#   data <- out[[1]]
+#   holdout <- out[[2]]
+#   covs <- out[[3]]
+#   n_covs <- out[[4]]
+#   n_levels <- out[[5]]
+#   cov_names <- out[[6]]
+#   sorting_order <- out[[7]]
+#   list(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order)
+# }
+#
+# microbenchmark::microbenchmark(f_a(out), f_b(out), check = 'identical')
+
+#
+# microbenchmark::microbenchmark()
 # n <- c(500, 1000, 2500, 5000, 10000, 20000)
 # p <- c(25, 30, 35, 40)
 # n_reps <- 3

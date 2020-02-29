@@ -2,82 +2,69 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
-organize_data <- function(data, holdout,
-                          treatment_column_name, outcome_column_name) {
+sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
 
-  # Rearrange data
+  n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
+  n_df <- length(df) # Always pass in a list of data frames
+
+  # Treatment and outcome will be constant across imputations
   treatment_col <-
-    data %>%
+    df[[1]] %>%
     dplyr::select(!!rlang::enquo(treatment_column_name))
 
   outcome_col <-
-    data %>%
+    df[[1]] %>%
     dplyr::select(!!rlang::enquo(outcome_column_name))
 
-  data %<>%
-    dplyr::select(-c(!!rlang::enquo(treatment_column_name),
-                     !!rlang::enquo(outcome_column_name))) %>%
-    cbind(outcome_col) %>%
-    cbind(treatment_col)
+  n <- nrow(df[[1]])
 
-  ##
-  treatment_col <-
-    holdout %>%
-    dplyr::select(!!rlang::enquo(treatment_column_name))
+  # For all imputed data sets
+  for (i in 1:n_df) {
+    tmp_df <- df[[i]]
 
-  outcome_col <-
-    holdout %>%
-    dplyr::select(!!rlang::enquo(outcome_column_name))
+    tmp_df %<>%
+      dplyr::select(-c(!!rlang::enquo(treatment_column_name),
+                       !!rlang::enquo(outcome_column_name))) %>%
+      cbind(outcome_col) %>%
+      cbind(treatment_col)
 
-  holdout %<>%
-    dplyr::select(-c(!!rlang::enquo(treatment_column_name),
-                     !!rlang::enquo(outcome_column_name))) %>%
-    cbind(outcome_col) %>%
-    cbind(treatment_col)
-  ##
+    tmp_df[, 1:n_covs] %<>%
+      lapply(as.factor)
 
-  n_covs <- ncol(data) - 2 # ignore treatment and outcome
+    # Number of levels of each covariate
+    n_levels <- sapply(tmp_df[, 1:n_covs, drop = FALSE], nlevels)
 
-  data[, 1:n_covs] %<>%
-    lapply(as.factor)
-  holdout[, 1:n_covs] %<>%
-    lapply(as.factor)
+    # To sort covariates in increasing order of number of levels
+    sorting_order <- order(n_levels)
+    # To make sure the column names are also reordered
+    cov_names <- colnames(tmp_df)[1:n_covs][sorting_order]
 
-  # Number of levels of each covariate
-  n_levels <- sapply(data[, 1:n_covs, drop = FALSE], nlevels)
+    # Sorted number of levels of each covariate
+    n_levels <- n_levels[sorting_order]
 
-  # To sort covariates in increasing order of number of levels
-  sorting_order <- order(n_levels)
-  # To make sure the column names are also reordered
-  cov_names <- colnames(data)[1:n_covs][sorting_order]
+    # Data sorted by n_levels
+    tmp_df[, 1:n_covs] <- tmp_df[, sorting_order]
+    # Sorting data column names
+    colnames(tmp_df) <- c(cov_names, 'outcome', 'treated')
 
-  # Sorted number of levels of each covariate
-  n_levels <- n_levels[sorting_order]
-  # Data sorted by n_levels
-  data[, 1:n_covs] <- data[, sorting_order]
-  # Sorting data column names
-  colnames(data) <- c(cov_names, 'outcome', 'treated')
+    if (type == 'data') {
+      for (j in 1:n_covs) {
+        levels(tmp_df[, j]) %<>% c('*')
+      }
+    }
 
-  # Holdout and its column names sorted by n_levels
-  holdout[, 1:n_covs] <- holdout[, sorting_order]
-  colnames(holdout) <- c(cov_names, 'outcome', 'treated')
+    # covs denotes the covariates currently being matched on
+    covs <- 1:n_covs
 
-  n <- nrow(data)
-  # holdout_inds <- sample(1:n, size = round(holdout_data * n))
-  # holdout_data <- data[holdout_inds, ]
-  # data <- data[-holdout_inds, ]
+    # Denote whether a unit is matched and to how many others, respectively
+    if (type == 'data') {
+      tmp_df$matched <- rep(FALSE, n)
+      tmp_df$weights <- rep(0, n)
+    }
 
-  # # List of covariates used to match at each level
-  # matching_covs <- list()
-
-  # covs denotes the covariates currently being matched on
-  covs <- 1:n_covs
-
-  # Denotes the number of covariates each unit is matched on
-  data$matched <- rep(FALSE, n)
-
-  return(list(data = data,
-              holdout = holdout,
+    df[[i]] <- tmp_df
+  }
+  return(list(df = df,
               covs = covs,
               n_covs = n_covs,
               n_levels = n_levels,

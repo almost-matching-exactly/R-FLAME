@@ -1,5 +1,5 @@
 setup_preds <- function(holdout, covs, cov_to_drop) {
-
+  covs_to_test <- setdiff(covs, cov_to_drop)
   Y_treat <-
     holdout %>%
     dplyr::filter(treated == 1) %>%
@@ -13,14 +13,14 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
   covs_treat <-
     holdout %>%
     dplyr::filter(treated == 1) %>%
-    dplyr::select(setdiff(covs, cov_to_drop), outcome)
+    dplyr::select(covs_to_test, outcome)
 
   X_treat <- model.matrix(outcome ~ ., covs_treat)
 
   covs_control <-
     holdout %>%
     dplyr::filter(treated == 0) %>%
-    dplyr::select(setdiff(covs, cov_to_drop), outcome)
+    dplyr::select(covs_to_test, outcome)
 
   X_control <- model.matrix(outcome ~ ., covs_control)
 
@@ -50,17 +50,20 @@ get_MSE <- function(X, Y, func, ...) {
 }
 
 predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) {
-  if (is.data.frame(holdout)) { # It's a single data frame
-    n_imputations <- 1
-  }
-  else { # It's a list of imputed holdout data frames
-    n_imputations <- length(holdout)
-  }
+
+  n_imputations <- length(holdout) # It's a list of dataframes
 
   PE <- vector(mode = 'numeric', length = n_imputations)
   for (i in 1:n_imputations) {
-    c(X_treat, X_control, Y_treat, Y_control) %<-%
-      setup_preds(holdout[[i]], covs, cov_to_drop)
+    # c(X_treat, X_control, Y_treat, Y_control) %<-%
+      # setup_preds(holdout[[i]], covs, cov_to_drop)
+
+    setup_out <- setup_preds(holdout[[i]], covs, cov_to_drop)
+    X_treat <- setup_out[[1]]
+    X_control <- setup_out[[2]]
+    Y_treat <- setup_out[[3]]
+    Y_control <- setup_out[[4]]
+
     # browser()
     MSE_treat <- do.call(get_MSE,
                          c(list(X = X_treat, Y = Y_treat, func = PE_func),
@@ -69,7 +72,7 @@ predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) 
     MSE_control <- do.call(get_MSE,
                          c(list(X = X_control, Y = Y_control, func = PE_func),
                            PE_func_params))
-    PE[i] <- MSE_treat + MSE_control
+    PE[i] <- (MSE_treat + MSE_control) / 2
   }
   return(mean(PE))
 }

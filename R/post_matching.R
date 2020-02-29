@@ -70,16 +70,22 @@ CATE <- function(units, flame_obj) {
 #' Compute the ATE of a matched dataset.
 #'
 #' \code{ATE} Computes the average treatment effect (ATE) of a matched dataset
-#' via a weighted (by size) average of the CATEs of each matched group in the
-#' matched dataset.
+#' via the difference of the weighted treated and the weighted control outcomes
+#' A unit's weight is the number of times it was matched.
 #'
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
 #' @export
 ATE <- function(flame_obj) {
-  CATE <- flame_obj$CATE
-  MGs <- flame_obj$MGs
-  size <- sapply(MGs, length)
-  return(sum(size * CATE) / sum(size))
+  weights <- flame_obj$data$weights
+  outcomes <- flame_obj$data$outcome
+
+  control <- flame_obj$data$treated == 0
+  treated <- flame_obj$data$treated == 1
+
+  ATE <-
+  sum(outcomes[treated] * weights[treated]) / sum(weights[treated]) -
+    sum(outcomes[control] * weights[control]) / sum(weights[control])
+  return(ATE)
 }
 
 #' Compute the ATT of a matched dataset.

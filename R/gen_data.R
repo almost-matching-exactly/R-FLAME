@@ -14,13 +14,13 @@ gen_data <- function(n = 50, p = 5, write = FALSE) {
   # outcome <-
     # (covs[, 1] == 1) * 1
 
-  outcome <-
-    1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
-
   # outcome <-
-  #   (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3]) %>%
-  #   magrittr::add(rnorm(n)) %>%
-  #   magrittr::add(TE * treated)
+    # 1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
+
+  outcome <-
+    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3]) %>%
+    magrittr::add(rnorm(n)) %>%
+    magrittr::add(TE * treated)
   # outcome <-
   #   (15 * (covs[, 1] == 3) - 10 * (covs[, 2] == 1) + 5 * (covs[, 3] == 2)) %>%
   #   magrittr::add(rnorm(n)) %>%
