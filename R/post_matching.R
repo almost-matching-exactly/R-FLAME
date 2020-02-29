@@ -76,15 +76,15 @@ CATE <- function(units, flame_obj) {
 #' @param flame_obj An object returned by running \code{FLAME_bit}.
 #' @export
 ATE <- function(flame_obj) {
-  weights <- flame_obj$data$weights
+  weight <- flame_obj$data$weight
   outcomes <- flame_obj$data$outcome
 
   control <- flame_obj$data$treated == 0
   treated <- flame_obj$data$treated == 1
 
   ATE <-
-  sum(outcomes[treated] * weights[treated]) / sum(weights[treated]) -
-    sum(outcomes[control] * weights[control]) / sum(weights[control])
+  sum(outcomes[treated] * weight[treated]) / sum(weight[treated]) -
+    sum(outcomes[control] * weight[control]) / sum(weight[control])
   return(ATE)
 }
 

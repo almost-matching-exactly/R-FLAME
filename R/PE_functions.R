@@ -30,12 +30,6 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
               Y_control = Y_control))
 }
 
-predict_custom <- function(holdout, covs, cov_to_drop) {
-  c(X_treat, X_control, Y_treat, Y_control) %<-%
-    setup_preds(holdout, covs, cov_to_drop)
-
-}
-
 get_MSE <- function(X, Y, func, ...) {
   MSE <-
     tryCatch(
@@ -64,7 +58,7 @@ predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) 
     Y_treat <- setup_out[[3]]
     Y_control <- setup_out[[4]]
 
-    # browser()
+    browser()
     MSE_treat <- do.call(get_MSE,
                          c(list(X = X_treat, Y = Y_treat, func = PE_func),
                            PE_func_params))
@@ -75,62 +69,4 @@ predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) 
     PE[i] <- (MSE_treat + MSE_control) / 2
   }
   return(mean(PE))
-}
-
-predict_xgb <- function(holdout, covs, cov_to_drop) {
-  c(X_treat, X_control, Y_treat, Y_control) %<-%
-    setup_preds(holdout, covs, cov_to_drop)
-
-  MSE_treated <-
-    tryCatch(
-      error = function(cnd) 0,
-      xgboost::xgboost(data = X_treat, label = Y_treat, verbose = 0, nrounds = 100) %>%
-      predict(X_treat) %>%
-      magrittr::subtract(Y_treat) %>%
-      magrittr::raise_to_power(2) %>%
-      mean()
-    )
-
-  MSE_control <-
-    tryCatch(
-      error = function(cnd) 0,
-      xgboost::xgboost(data = X_control, label = Y_control, verbose = 0, nrounds = 100) %>%
-        predict(X_treat) %>%
-        magrittr::subtract(Y_treat) %>%
-        magrittr::raise_to_power(2) %>%
-        mean()
-    )
-  return(MSE_treated + MSE_control)
-}
-
-predict_elasticnet <- function(holdout, covs, cov_to_drop, alpha) {
-  c(X_treat, X_control, Y_treat, Y_control) %<-%
-    setup_preds(holdout, covs, cov_to_drop)
-  # browser()
-  MSE_treated <-
-    tryCatch(
-      error = function(cnd) 0,
-      glmnet::glmnet(X_treat,
-             Y_treat,
-             alpha = 0,
-             lambda = 0.2 / nrow(X_treat)) %>%
-      predict(X_treat) %>%
-      magrittr::subtract(Y_treat) %>%
-      magrittr::raise_to_power(2) %>%
-      mean()
-    )
-
-  MSE_control <-
-    tryCatch(
-      error = function(cnd) 0,
-      glmnet::glmnet(X_control,
-             Y_control,
-             alpha = 0,
-             lambda = 0.2 / nrow(X_control)) %>%
-        predict(X_control) %>%
-        magrittr::subtract(Y_control) %>%
-        magrittr::raise_to_power(2) %>%
-        mean()
-    )
- return(MSE_treated + MSE_control)
 }

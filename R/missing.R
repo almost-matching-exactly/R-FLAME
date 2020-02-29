@@ -10,21 +10,21 @@ impute_missing <- function(data, n_imputations) {
 }
 
 handle_missing_data <- function(data, holdout,
-                                missing_data_replace, missing_holdout_replace,
-                                missing_data_imputations, missing_holdout_imputations) {
+                                missing_data, missing_holdout,
+                                n_data_imputations, n_holdout_imputations) {
 
-  if (missing_data_replace == 0) {
+  if (missing_data == 0) {
     if (sum(is.na(data)) > 0) {
       stop("Found missingness in 'data' but was told to assume there was none.\n
-           Please either change 'missing_data_replace' to 1, 2, or 3, or supply 'data'
+           Please either change 'missing_data' to 1, 2, or 3, or supply 'data'
            without missingness.")
     }
   }
-  else if (missing_data_replace == 1) {
+  else if (missing_data == 1) {
     data %<>%
       tidyr::drop_na()
   }
-  else if (missing_data_replace == 2) {
+  else if (missing_data == 2) {
     # Replace the missing values with unique integers, each larger than all
     # observed covariate values in data
     replace_vals <-
@@ -32,30 +32,26 @@ handle_missing_data <- function(data, holdout,
     data[which(is.na(data), arr.ind = TRUE)] <- replace_vals
 
   }
-  else if (missing_data_replace == 3) {
+  else if (missing_data == 3) {
     if (sum(is.na(data)) > 0) {
-      message('Imputing missingness in data using MICE\r')
-      data <- impute_missing(data, missing_data_imputations)
-      message('Finished imputation')
+      data <- impute_missing(data, n_data_imputations)
     }
   }
 
-  if (missing_holdout_replace == 0) {
+  if (missing_holdout == 0) {
     if (sum(is.na(holdout)) > 0) {
       stop("Found missingness in 'holdout' but was told to assume there was none.\n
-           Please either change 'missing_holdout_replace' to 1 or 2, or supply 'holdout'
+           Please either change 'missing_holdout' to 1 or 2, or supply 'holdout'
            without missingness.")
     }
   }
-  else if (missing_holdout_replace == 1) {
+  else if (missing_holdout == 1) {
     holdout %<>%
       tidyr::drop_na()
   }
-  else if (missing_holdout_replace == 2) {
+  else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
-      message('Imputing missingness in holdout using MICE\r')
-      holdout <- impute_missing(holdout, missing_holdout_imputations)
-      message('Finished imputation')
+      holdout <- impute_missing(holdout, n_holdout_imputations)
     }
   }
 

@@ -59,7 +59,7 @@ sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
     # Denote whether a unit is matched and to how many others, respectively
     if (type == 'data') {
       tmp_df$matched <- rep(FALSE, n)
-      tmp_df$weights <- rep(0, n)
+      tmp_df$weight <- rep(0, n)
     }
 
     df[[i]] <- tmp_df

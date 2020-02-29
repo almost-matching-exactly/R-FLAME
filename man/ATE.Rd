@@ -11,6 +11,6 @@ ATE(flame_obj)
 }
 \description{
 \code{ATE} Computes the average treatment effect (ATE) of a matched dataset
-via a weighted (by size) average of the CATEs of each matched group in the
-matched dataset.
+via the difference of the weighted treated and the weighted control outcomes
+A unit's weight is the number of times it was matched.
 }

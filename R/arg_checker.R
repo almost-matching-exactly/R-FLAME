@@ -5,8 +5,8 @@ check_args <-
            early_stop_iterations, epsilon,
            early_stop_un_c_frac, early_stop_un_t_frac,
            early_stop_pe, early_stop_bf,
-           missing_data_replace, missing_holdout_replace,
-           missing_data_imputations, missing_holdout_imputations) {
+           missing_data, missing_holdout,
+           n_data_imputations, n_holdout_imputations) {
 
   stopifnot(is.data.frame(data))
   stopifnot(is.data.frame(holdout))
@@ -51,8 +51,8 @@ check_args <-
   stopifnot(is.numeric(early_stop_bf) & early_stop_bf >= 0 & early_stop_bf <= 2)
 
   ## Missing data parameters
-  stopifnot(is.numeric(missing_data_replace) & missing_data_replace %in% c(0, 1, 2, 3))
-  stopifnot(is.numeric(missing_holdout_replace) & missing_holdout_replace %in% c(0, 1, 2))
-  stopifnot(is.numeric(missing_data_imputations) & missing_data_imputations >= 0)
-  stopifnot(is.numeric(missing_holdout_imputations) & missing_holdout_imputations >= 0)
+  stopifnot(is.numeric(missing_data) & missing_data %in% c(0, 1, 2, 3))
+  stopifnot(is.numeric(missing_holdout) & missing_holdout %in% c(0, 1, 2))
+  stopifnot(is.numeric(n_data_imputations) & n_data_imputations >= 0)
+  stopifnot(is.numeric(n_holdout_imputations) & n_holdout_imputations >= 0)
 }

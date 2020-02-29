@@ -16,15 +16,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Overview of the Algorithm 
-FLAME operates by iteratively matching units on a set of covariates and then dropping one of those covariates. If we begin with a data set with $d$ covariates, then we denote the covariates used to match on an iteration $l$ by a binary vector $\boldsymbol{\theta}^{l} \in \mathbb{R}^d$. The $j$'th entry of $\boldsymbol{\theta}$ denotes whether the $j$'th covariate is used to match on iteration $l$. In moving from iteration $l$ to iteration $l + 1$, we change a single entry of $\boldsymbol{\theta}^{l}$ from 1 to 0.
-
-More specifically, FLAME begins with $\boldsymbol{\theta}^{0} = 1_d$; that is, by attempting to match units on all covariates. At any iteration $l$, it then drops the covariate yielding the greatest increase in match quality, defined as $\mathtt{MQ} := C * \mathtt{BF} - \mathtt{PE}$. The balancing factor, $\mathtt{BF}$, associated the drop of a covariate (updating $\boldsymbol{\theta}^{l}$ to $\boldsymbol{\theta}^{l + 1}$), is defined as the proportion of (as of yet unmatched) control units matched plus the proportion of (as of yet unmatched) treated units matched. The predictive error, $\mathtt{PE}$, associated with the drop of a covariate, is defined as the training MSE incurred when predicting the outcome from the remaining covariates. This is determined via a separate holdout set, so as not to induce bias in the matching procedure. 
-
-By default, the algorithm terminates when all covariates have been dropped or all units have been matched, but we provide several options for early stopping, described below. 
-
 # Overview
-FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable matching method for causal inference. It matches units via a learned, weighted Hamming distance that determines what covariates are more important to match on. 
+FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable matching method for causal inference. It matches units via a learned, weighted Hamming distance that determines what covariates are more important to match on. For more details, see the below section _Overview of the Algorithm_ or the original FLAME paper, linked [here](<https://arxiv.org/pdf/1707.06315.pdf>). 
 
 We can start by loading FLAME...
 ```{r setup}
@@ -33,7 +26,7 @@ devtools::load_all()
 
 ... and generating some toy data:
 ```{r}
-set.seed(44)
+set.seed(45)
 data <- gen_data() # Data we would like to match
 holdout <- gen_data() # Data we will train on, to compute PE 
 ```
@@ -41,7 +34,7 @@ holdout <- gen_data() # Data we will train on, to compute PE
 
 To run FLAME with its default settings:
 ```{r}
-FLAME_out <- FLAME_bit_new(data = data, holdout = holdout)
+FLAME_out <- FLAME(data = data, holdout = holdout)
 ```
 
 By default, `FLAME` returns a list with *6* entries:
@@ -49,14 +42,18 @@ By default, `FLAME` returns a list with *6* entries:
 names(FLAME_out)
 ```
 
-The first, `FLAME_out$data` contains the original data frame with two modifications:
+The first, `FLAME_out$data` contains the original data frame with several modifications:
 
-1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not the corresponding unit was matched. This can be useful if you'd like to use only the matched data for subsequent analysis:
+1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not a unit was matched. This can be useful if you'd like to use only the matched data for subsequent analysis:
 ```{r}
 matched_data <- dplyr::filter(FLAME_out$data, matched)
 ```
 
-2. Units that were matched, but not on all covariates, will have a \* in place of their covariate value for all covariates for which they were not matched. 
+2. There is an extra numeric column, `FLAME_out$data$weight` that denotes on how many different sets of covariates a unit was matched. By default, this will be 1 if a unit is matched and 0 otherwise. With the `repeats = TRUE` argument, however, units are allowed to match several times and their values for `weight` can therefore be greater than 1.  These weights can be used to estimate average treatment effects.
+
+3. Regardless of their original names, the columns denoting treatment and outcome in the data will be renamed `treated` and `outcome`. 
+
+4. Units that were matched, but not on all covariates, will have a \* in place of their covariate value for all covariates for which they were not matched. 
 ```{r}
 head(FLAME_out$data)
 ```
@@ -98,15 +95,20 @@ Thus, first covariate X5 was dropped, then X4, and so on. This information is di
 
 # Description of Arguments
 
+## Data Arguments
+
+* `data`: Either a data frame or path to a .csv file (which will be read via `read.csv` with the `header = TRUE` argument) containing the data to be matched. Treatments are assumed to be binary (can be input as logical), outcomes numeric or binary, and covariates categorical (they will be coerced to factors). Treatments and outcome should not be coded as factors. 
+* `holdout`: Either a data frame, or path to a .csv file (which will be read via `read.csv` with the `header = TRUE` argument) or a value between 0 and 1. In the first two cases, the argument indicates the holdout set to be used for computing predictive error. In the third case, that proportion of `data` will be used as a holdout set and only the remaining proportion will be matched. Restrictions on column types are the same as for `data`. 
+* `treatment_column_name`: A character with the name of the treatment column in `data`.
+* `outcome_column_name`: A character with the name of the outcome column in `data`. Defaults to 'outcome'. 
+
 ## Algorithmic Arguments
 
-* `C`: The hyperparameter governing the relative weights of the balancing factor and predictive error in determining match quality. 
-* `want_pe`: A logical scalar. If TRUE, the predictive error at each iteration will be returned.
-* `want_bf`: A logical scalar. If TRUE, the balancing factor at each iteration will be returned.
-* `repeats`: A logical scalar. If true, allows the same unit to be matched multiple times, on different numbers of covariates.
-* `verbose`: Controls output while FLAME is running. If 0, no output. If 1, outputs the iteration every iteration. If 2, outputs the iteration and number of unmatched units every 5 iterations. If 3, outputs the iteration and number of unmatched units every 5 iterations.
-* `treatment_column_name`: A character with the name of the treatment column in `data`.
-* `outcome_column_name`: A character with the name of the outcome column in `data`.
+* `C`: The hyperparameter governing the relative weights of the balancing factor and predictive error in determining match quality. Defaults to 0.1. 
+* `want_pe`: If `TRUE`, the predictive error at each iteration will be returned by `FLAME`. Defaults to `FALSE`.
+* `want_bf`: If `TRUE`, the balancing factor at each iteration will be returned by `FLAME`. Defaults to `FALSE`.
+* `repeats`: If `TRUE`, allows the same unit to be matched multiple times, on different sets of covariates. For example, if two units match exactly on all covariates, they will also match on every subsequent iteration of FLAME. Defaults to `FALSE`. 
+* `verbose`: Controls output while FLAME is running. If 0, no output. If 1, outputs the iteration every iteration, as well as the stopping condition. If 2, outputs the iteration and number of unmatched units every 5 iterations, as well as the stopping condition. If 3, outputs the iteration and number of unmatched units every 5 iterations, as well as the stopping condition.
 * `PE_method`: One of 'elasticnet' or 'xgb', respectively denoting whether ridge regression (via `glmnet`, with defaults of `alpha = 0`, `lambda = 0.1` and all other parameters at their defaults) or xgboost (via `xgboost`, with a default of `nrounds = 100` and all other parameters at their defaults) is used to compute the predictive error. Ignored if `user_PE_func` is supplied.
 * `user_PE_func` and `user_PE_func_params`: The former is a user supplied function for fitting an outcome model to compute the predictive error and the latter, a named list with optional, additional parameters that can be passed to it. `user_PE_func` must be of the form `fun(X, Y, additional_params)` and have a predict method allowing it to generate predictions for `X` via `predict(fun(X, Y, additional_params), X)`. For example, to run ridge regression, but with a `lambda` of 1 instead of 0.1 as is the default:
 ```{r,eval=FALSE}
@@ -118,28 +120,31 @@ FLAME(data = data, holdout = holdout,
 
 
 ## Early Stopping Arguments
-By default, FLAME terminates when all covariates have been dropped or all units have been matched. There are various early stopping arguments that can be supplied to alter this behavior. In all cases, however, FLAME still terminates if all covariates have been dropped or all units have been matched, even if the user-specified stopping condition has not yet been met. 
+By default, FLAME terminates when all covariates have been dropped or all control / treatment units have been matched. There are various early stopping arguments that can be supplied to alter this behavior. In all cases, however, FLAME still terminates if all covariates have been dropped or all control / treatment units have been matched, even if the user-specified stopping condition has not yet been met. 
 
-* `early_stop_iterations`: A number of iterations, corresponding to a number of covariates dropped, after which FLAME will automatically terminate. A value of 0 has FLAME perform a single round of exact matching _on all covariates_ and then terminate. 
+* `early_stop_iterations`: A number of iterations, corresponding to a number of covariates dropped, after which FLAME will automatically exit. A value of 0 has FLAME perform a single round of exact matching on all covariates and then exit. Defaults to infinity. 
 
-* `early_stop_bf` and `early_stop_bf_frac`: Arguments governing stopping based off the balancing factor. If `early_stop_bf` is TRUE, . If `early_stop_bf` is FALSE, `early_stop_bf_frac` is ignored. 
+* `epsilon`: If the predictive error at any iteration rises above 100 * epsilon percent of the error associated with predicting the outcome using _all_ covariates, FLAME exits. 
 
-* `early_stop_un_c_frac`: If the proportion of control units that are _unmatched_ falls _below_ this value, FLAME stops. 
+* `early_stop_bf`: A number between 0 and 2 (the minimum and maximum possible balancing factors). If the balancing factor at any iteration would fall below `early_stop_bf`, FLAME exits _without dropping the covariate that would lead to this low balancing factor._ Defaults to 0. 
 
-* `early_stop_un_t_frac`: If the proportion of treatment units that are _unmatched_ falls _below_ this value, FLAME stops. 
+* `early_stop_un_c_frac`: If the proportion of control units that are unmatched falls below this value, FLAME exits. 
+
+* `early_stop_un_t_frac`: If the proportion of treatment units that are unmatched falls below this value, FLAME exits. 
+
 
 ## Missing Data Arguments 
 FLAME offers several options for dealing with missing data, outlined below:
 
-* `missing_data_replace` and `missing_data_imputations`: These two arguments govern FLAME's response to missingness in the data to be matched. If `missing_data_replace` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, prevents a unit from being matched on covariates for which it has some missingness. If it is 3, performs `missing_data_imputations` using MICE.
+* `missing_data` and `n_data_imputations`: These two arguments govern FLAME's response to missingness in the data to be matched. If `missing_data` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, units will be prevented from matching on the covariates they are missing. If it is 3, `n_data_imputations` imputed datasets are generated using `MICE`. In this case, the output of `FLAME` is a list of length `n_data_imputations`, corresponding to the standard `FLAME` output on each imputed dataset.
 
-* `missing_holdout_replace` and `missing_holdout_imputations`: These two arguments govern FLAME's response to missingness in the holdout data. If `missing_holdout_replace` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, performs `missing_holdout_imputations` using MICE.
+* `missing_holdout` and `n_holdout_imputations`: These two arguments govern FLAME's response to missingness in the holdout data. If `missing_holdout` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, `n_holdout_imputations` imputed holdout datasets are generated using `MICE`. In this case, the predictive error computed by `FLAME` is the average of the predictive errors across the imputed holdout datasets. 
 
 
 # Post-Matching Analysis
 After `FLAME` has been run, the matched data can be used for a variety of purposes. The FLAME package provides functionality for a few quick, post-matching analyses, via the functions `CATE`, `ATE`, `ATT`, and `MG`.
 
-`CATE(units, flame_obj)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `flame_obj`. Note that you may supply only a single unit for the `units` argument and that the units will be indexed _with respect to the original data frame passed to_ `FLAME`. That is, values outside of [1, `nrow(flame_obj$data)`] will cause an error.
+`CATE(units, flame_obj)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `flame_obj`. You may supply only a single unit for the `units` argument. 
 
 In this way, we can find the treatment effect for a unit of interest, say, unit 5...
 ```{r,eval=FALSE}
@@ -163,4 +168,19 @@ MG(units = 5, flame_obj = FLAME_out)
 MG(units = which(data$age < 30 & data$treated == 1), flame_obj = FLAME_out)
 ```
 
+Note that if the value supplied to the `holdout` argument is a proportion between 0 and 1, the values supplied to the `units` argument in the functions above will be indexed with respect to `flame_obj$data` _and not with respect to the data passed in _`data`.
+
+# Overview of the Algorithm 
+FLAME operates by iteratively matching all possible units on a set of covariates and then dropping one of those covariates to make more matches. Roughly, units are said to 'match' on a set of covariates if they have identical values of all those covariates. FLAME is thus designed to be run on categorical covariates. However, continuous covariates can be discretized, via rules such as those employed by Coarsened Exact Matching (see [here](<https://cran.r-project.org/web/packages/cem/vignettes/cem.pdf>)), and then passed to FLAME. 
+
+More specifically, we define our inputs to the algorithm as the datasets $\mathcal{S} = (X, Y, T)$ and $\mathcal{S}^H = (X^H, Y^H, T^H)$, where $X \in \mathbb{R}^{n \times d}$ denotes the $d$ covariates of the $n$ units, $Y \in \mathbb{R}^n$ denotes their outcomes, and $T \in \mathbb{R}^n$ denotes their _binary_ treatment assignments. We will refer to a unit $i$ as 'control' if $T_i = 0$ and as 'treated' if $T_i = 1$. The dataset $\mathcal{S}^H$ is identically structured, but for a separate, holdout set of units.
+
+We denote the covariates used to match on an iteration $l$ by a binary vector $\boldsymbol{\theta}^{l} \in \mathbb{R}^d$. The $j$'th entry of $\boldsymbol{\theta}^{l}$ denotes whether the $j$'th covariate is used to match units on iteration $l$. When we go from iteration $l$ to iteration $l + 1$, we change a single entry of $\boldsymbol{\theta}^{l}$ from 1 to 0 to generate $\boldsymbol{\theta}^{l+1}$ and then match all possible units on $\boldsymbol{\theta}^{l+1}$. 
+*There are two key points regarding these matches:* 1: matches are only made for units in $\mathcal{S}$ and not for units in $\mathcal{S}^H$ and 2: units with identical values of the covariates indicated by $\boldsymbol{\theta}^{l+1}$ are only matched if at least one is control and one is treated.
+
+More specifically, FLAME begins with $\boldsymbol{\theta}^{0} = \mathbf{1}_d$; that is, by attempting to match units on all covariates. At any iteration $l$, it then drops the covariate yielding the greatest increase in match quality ($\mathtt{MQ}$), defined as $\mathtt{MQ} := C \cdot \mathtt{BF} - \mathtt{PE}$, where $C$ is a hyperparameter. The balancing factor, $\mathtt{BF}$, at an iteration $l$, is defined as the proportion of control units, plus the proportion of treated units, that are matched _by the update from_ $\boldsymbol{\theta}^{l}$ _to_ $\boldsymbol{\theta}^{l + 1}$. The predictive error, $\mathtt{PE}$, at an iteration $l$, is defined as the training MSE incurred when predicting $Y^{H}$ from the subset of $X^H$ indicated by $\boldsymbol{\theta}^{l + 1}$. In this way, FLAME encourages making many matches (lower variance of treatment effect estimates) and matching on covariates important to the outcome (lowering bias of treatment effect estimates).
+
+By default, the algorithm terminates when all covariates have been dropped or all treated/control units have been matched, but we provide several options for early stopping, described further below. 
+
+For more details, see [the FLAME paper](<https://arxiv.org/pdf/1707.06315.pdf>)
 
