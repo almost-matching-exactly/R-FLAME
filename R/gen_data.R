@@ -1,5 +1,5 @@
 #' @export
-gen_data <- function(n = 50, p = 5, write = FALSE) {
+gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'FLAME.csv') {
   TE <- 5
   covs <-
     rbinom(n * p, 1, prob = 0.5) %>%
@@ -12,13 +12,10 @@ gen_data <- function(n = 50, p = 5, write = FALSE) {
   treated <- rbinom(n, 1, prob = 0.5)
 
   # outcome <-
-    # (covs[, 1] == 1) * 1
-
-  # outcome <-
-    # 1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
+  #   1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
 
   outcome <-
-    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3]) %>%
+    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4]) %>%
     magrittr::add(rnorm(n)) %>%
     magrittr::add(TE * treated)
   # outcome <-
@@ -27,7 +24,7 @@ gen_data <- function(n = 50, p = 5, write = FALSE) {
   #   magrittr::add(TE * treated)
   data <- data.frame(covs, outcome = outcome, treated = treated)
   if (write) {
-    write.csv(data, file = paste0(getwd(), '/flame_test.csv'),
+    write.csv(data, file = paste0(path, '/', filename),
               row.names = FALSE)
   }
   return(data)

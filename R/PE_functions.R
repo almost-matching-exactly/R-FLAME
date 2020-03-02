@@ -1,26 +1,66 @@
+cv_xgboost <- function(X, Y) {
+  eta <- c(0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
+  max_depth <- c(2, 3, 4, 6, 8)
+  alpha <- c(0.01, 0.1, 0.5, 1, 5)
+  nrounds <- c(5, 10, 50, 100, 200)
+  subsample <- c(0.1, 0.3, 0.5, 0.75, 1)
+
+  param_combs <-
+    expand.grid(eta, max_depth, alpha, nrounds, subsample)
+
+  colnames(param_combs) <-
+    c('eta', 'max_depth', 'alpha', 'nrounds', 'subsample')
+
+  error <- vector(mode = 'numeric', length = length(param_combs))
+
+  if (length(unique(Y)) == 2) {
+    obj <- 'binary:logistic'
+  } else {
+    obj <- 'reg:squarederror'
+  }
+
+  for (i in 1:length(param_combs)) {
+    params <- list(objective = obj,
+                   eta = param_combs$eta[i],
+                   max_depth = param_combs$max_depth[i],
+                   alpha = param_combs$alpha[i],
+                   subsample = param_combs$subsample[i])
+    cv <-
+      xgboost::xgb.cv(data = X,
+                      label = Y,
+                      params = params,
+                      nrounds = param_combs$nrounds[i],
+                      nfold = 5, verbose = 0)
+
+    error[i] <- cv$evaluation_log[param_combs$nrounds[i], 4]
+  }
+
+  best_params <- param_combs[which.min(error), ]
+  fit <- xgboost::xgboost(data = X,
+                  label = Y,
+                  params = list(objective = obj,
+                                eta = best_params$eta,
+                                max_depth = best_params$max_depth,
+                                alpha = best_params$alpha,
+                                subsample = best_params$subsample),
+                  nround = best_params$nrounds,
+                  verbose = 0)
+
+  return(fit)
+}
+
 setup_preds <- function(holdout, covs, cov_to_drop) {
+  n_cols <- ncol(holdout)
   covs_to_test <- setdiff(covs, cov_to_drop)
-  Y_treat <-
-    holdout %>%
-    dplyr::filter(treated == 1) %>%
-    dplyr::pull(outcome)
 
-  Y_control <-
-    holdout %>%
-    dplyr::filter(treated == 0) %>%
-    dplyr::pull(outcome)
+  Y_treat <- holdout$outcome[holdout$treated == 1]
+  Y_control <- holdout$outcome[holdout$treated == 0]
 
-  covs_treat <-
-    holdout %>%
-    dplyr::filter(treated == 1) %>%
-    dplyr::select(covs_to_test, outcome)
+  covs_treat <- holdout[holdout$treated == 1, c(covs_to_test, n_cols - 1)]
 
   X_treat <- model.matrix(outcome ~ ., covs_treat)
 
-  covs_control <-
-    holdout %>%
-    dplyr::filter(treated == 0) %>%
-    dplyr::select(covs_to_test, outcome)
+  covs_control <- holdout[holdout$treated == 0, c(covs_to_test, n_cols - 1)]
 
   X_control <- model.matrix(outcome ~ ., covs_control)
 
@@ -30,43 +70,36 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
               Y_control = Y_control))
 }
 
-get_MSE <- function(X, Y, func, ...) {
-  MSE <-
-    tryCatch(
-    error = function(cnd) 0,
-    func(X, Y, ...) %>%
-      predict(X) %>%
-      magrittr::subtract(Y) %>%
-      magrittr::raise_to_power(2) %>%
-      mean()
-    )
+get_MSE <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
+  fit <- do.call(fit_fun, c(list(X, Y), fit_params))
+  preds <- do.call(predict_fun, c(list(fit, X), predict_params))
+  MSE <- mean((preds - Y) ^ 2)
   return(MSE)
 }
 
-predict_master <- function(holdout, covs, cov_to_drop, PE_func, PE_func_params) {
+predict_master <-
+  function(holdout, covs, cov_to_drop,
+           PE_fit, PE_predict, PE_fit_params, PE_predict_params) {
 
-  n_imputations <- length(holdout) # It's a list of dataframes
+  n_imputations <- length(holdout) # List of dataframes
 
   PE <- vector(mode = 'numeric', length = n_imputations)
   for (i in 1:n_imputations) {
-    # c(X_treat, X_control, Y_treat, Y_control) %<-%
-      # setup_preds(holdout[[i]], covs, cov_to_drop)
-
     setup_out <- setup_preds(holdout[[i]], covs, cov_to_drop)
     X_treat <- setup_out[[1]]
     X_control <- setup_out[[2]]
     Y_treat <- setup_out[[3]]
     Y_control <- setup_out[[4]]
 
-    browser()
-    MSE_treat <- do.call(get_MSE,
-                         c(list(X = X_treat, Y = Y_treat, func = PE_func),
-                           PE_func_params))
-    # browser()
-    MSE_control <- do.call(get_MSE,
-                         c(list(X = X_control, Y = Y_control, func = PE_func),
-                           PE_func_params))
-    PE[i] <- (MSE_treat + MSE_control) / 2
+    MSE_treat <-
+      get_MSE(X_treat, Y_treat,
+              PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+
+    MSE_control <-
+      get_MSE(X_control, Y_control,
+              PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+
+    PE[i] <- MSE_treat + MSE_control
   }
   return(mean(PE))
 }

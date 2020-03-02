@@ -15,7 +15,8 @@ show_progress <- function(verbose, iter, data) {
 }
 
 early_stop_BF <- function(BF, early_stop_bf, prop_c_unmatched, prop_t_unmatched,
-                          early_stop_un_c_frac, early_stop_un_t_frac) {
+                          early_stop_un_c_frac, early_stop_un_t_frac,
+                          verbose) {
 
   if (BF < early_stop_bf) {
     if (verbose != 0) {
@@ -41,7 +42,7 @@ early_stop_BF <- function(BF, early_stop_bf, prop_c_unmatched, prop_t_unmatched,
   return(FALSE)
 }
 
-early_stop_PE <- function(PE, early_stop_pe, epsilon, baseline_PE) {
+early_stop_PE <- function(PE, early_stop_pe, epsilon, baseline_PE, verbose) {
   if (PE > early_stop_pe) { # should be >
     if (verbose != 0) {
       message('FLAME stopping: predictive error would have risen above ', early_stop_pe)
@@ -58,7 +59,7 @@ early_stop_PE <- function(PE, early_stop_pe, epsilon, baseline_PE) {
   return(FALSE)
 }
 
-early_stop <- function(iter, data, covs, early_stop_iterations) {
+early_stop <- function(iter, data, covs, early_stop_iterations, verbose) {
   if (length(covs) == 1) {
     if (verbose != 0) {
       message('FLAME stopping: all covariates dropped')

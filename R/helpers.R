@@ -2,7 +2,7 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
-sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
+sort_cols <- function(df, treated_column_name, outcome_column_name, type) {
 
   n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -10,7 +10,7 @@ sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
   # Treatment and outcome will be constant across imputations
   treatment_col <-
     df[[1]] %>%
-    dplyr::select(!!rlang::enquo(treatment_column_name))
+    dplyr::select(!!rlang::enquo(treated_column_name))
 
   outcome_col <-
     df[[1]] %>%
@@ -23,7 +23,7 @@ sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
     tmp_df <- df[[i]]
 
     tmp_df %<>%
-      dplyr::select(-c(!!rlang::enquo(treatment_column_name),
+      dplyr::select(-c(!!rlang::enquo(treated_column_name),
                        !!rlang::enquo(outcome_column_name))) %>%
       cbind(outcome_col) %>%
       cbind(treatment_col)
@@ -60,6 +60,9 @@ sort_cols <- function(df, treatment_column_name, outcome_column_name, type) {
     if (type == 'data') {
       tmp_df$matched <- rep(FALSE, n)
       tmp_df$weight <- rep(0, n)
+      if (!('missing' %in% colnames(tmp_df))) {
+        tmp_df$missing <- rep(FALSE, n)
+      }
     }
 
     df[[i]] <- tmp_df

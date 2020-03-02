@@ -11,7 +11,7 @@ impute_missing <- function(data, n_imputations) {
 
 handle_missing_data <- function(data, holdout,
                                 missing_data, missing_holdout,
-                                n_data_imputations, n_holdout_imputations) {
+                                missing_data_imputations, missing_holdout_imputations) {
 
   if (missing_data == 0) {
     if (sum(is.na(data)) > 0) {
@@ -21,21 +21,20 @@ handle_missing_data <- function(data, holdout,
     }
   }
   else if (missing_data == 1) {
-    data %<>%
-      tidyr::drop_na()
+    data$missing <- is.na(rowSums(data))
   }
   else if (missing_data == 2) {
+    if (sum(is.na(data)) > 0) {
+      data <- impute_missing(data, missing_data_imputations)
+    }
+  }
+  else if (missing_data == 3) {
     # Replace the missing values with unique integers, each larger than all
     # observed covariate values in data
     replace_vals <-
       max(data[, 1:(ncol(data) - 2)], na.rm = TRUE) + seq_len(sum(is.na(data)))
     data[which(is.na(data), arr.ind = TRUE)] <- replace_vals
 
-  }
-  else if (missing_data == 3) {
-    if (sum(is.na(data)) > 0) {
-      data <- impute_missing(data, n_data_imputations)
-    }
   }
 
   if (missing_holdout == 0) {
@@ -51,7 +50,7 @@ handle_missing_data <- function(data, holdout,
   }
   else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
-      holdout <- impute_missing(holdout, n_holdout_imputations)
+      holdout <- impute_missing(holdout, missing_holdout_imputations)
     }
   }
 

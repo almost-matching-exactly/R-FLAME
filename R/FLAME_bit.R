@@ -13,7 +13,6 @@ aggregate_table <- function(vec) {
 
 update_matched_bit <- function(data, covs, n_levels) {
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
-######## Do a massive dataset to check this
 
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
@@ -51,7 +50,7 @@ update_matched_bit <- function(data, covs, n_levels) {
 #parameter as input. The function then computes Balancing Factor and Predictive Error,
 #returning Match Quality.
 
-get_match_quality <- function(cov_to_drop, data, repeats, holdout, covs, n_levels, C,
+get_match_quality <- function(cov_to_drop, data, replace, holdout, covs, n_levels, C,
                               PE_method, alpha) {
   ### Compute Balancing Factor
 
@@ -60,21 +59,16 @@ get_match_quality <- function(cov_to_drop, data, repeats, holdout, covs, n_level
   num_treated <- sum(data$treated == 1)
 
   # Number of matched units
-  if (repeats) {
+  if (replace) {
     match_index <-
-      update_matched_bit(data, setdiff(covs, covs_to_drop), n_levels[-which(covs == cov_to_drop)]) %>%
-      magrittr::extract2('match_index')
-
-    # match_index <-
-    #   update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
-    #   magrittr::extract2('match_index')
+      update_matched_bit(data, setdiff(covs, covs_to_drop),
+                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
     units_matched <- which(match_index)
   }
   else {
     match_index <-
-      update_matched_bit(dplyr::filter(data, !matched), setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)]) %>%
-      magrittr::extract2('match_index')
+      update_matched_bit(data[!data$matched, ], setdiff(covs, cov_to_drop),
+                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
     units_matched <- which(!data$matched)[match_index]
   }
 
@@ -129,20 +123,19 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
               matched_on = matched_on))
 }
 
-process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names) {
-  if (repeats) {
+process_matches <- function(data, replace, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names) {
+  if (replace) {
     match_out <- update_matched_bit(data, covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
-    # c(match_index, index) %<-% update_matched_bit(data, covs, n_levels)
     units_matched <- which(match_index)
   }
   else {
-    # c(match_index, index) %<-% update_matched_bit(dplyr::filter(data, !matched), covs, n_levels)
-    match_out <- update_matched_bit(dplyr::filter(data, !matched), covs, n_levels)
+    match_out <- update_matched_bit(data[!data$matched, ], covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
-    # adjusts for fact that match_index returned by update_matched bit is
+
+    # Adjusts for fact that match_index returned by update_matched bit is
     # with respect to the unmatched subset of data
     units_matched <- which(!data$matched)[match_index]
   }
@@ -164,59 +157,65 @@ process_matches <- function(data, repeats, covs, n_levels, MGs, matched_on, matc
               made_matches = made_matches))
 }
 
-get_PE <- function(cov_to_drop, covs, holdout, PE_method, user_PE_fun, PE_fun_params) {
-  if (!is.null(user_PE_fun)) {
-    PE_func <- user_PE_fun
+get_PE <- function(cov_to_drop, covs, holdout, PE_method,
+                   user_PE_fit, user_PE_fit_params,
+                   user_PE_predict, user_PE_predict_params) {
+
+  if (!is.null(user_PE_fit)) {
+    PE_fit <- user_PE_fit
+    PE_fit_params <- user_PE_fit_params
   }
   else {
     if (PE_method == 'elasticnet') {
-      PE_func <- glmnet::glmnet
+      PE_fit <- glmnet::cv.glmnet
       if (length(unique(holdout$outcome)) == 2) {
         family <- 'binomial'
-        lambda <- 1
       }
       else {
         family <- 'gaussian'
-        lambda <- 0.1
       }
-      PE_fun_params <- list(alpha = 0, lambda = lambda, family = family)
+      PE_fit_params <- list(family = family, nfolds = 5)
     }
     else if (PE_method == 'xgb') {
-      PE_func <- xgboost::xgboost
-      PE_fun_params <- list(nrounds = 100, verbose = 0)
+      PE_fit <- cv_xgboost
+      PE_fit_params <- list()
     }
     else {
-      stop('PE_method not recognized. To supply your own function, use user_PE_fun')
+      stop('PE_method not recognized.
+           To supply your own function, use user_PE_fit and user_PE_predict')
     }
   }
 
-  PE <- predict_master(holdout, covs, cov_to_drop, PE_func, PE_fun_params)
+  if (!is.null(user_PE_predict)) {
+    PE_predict <- user_PE_predict
+    PE_predict_params <- user_PE_predict_params
+  }
+  else {
+    PE_predict <- predict
+    PE_predict_params <- list()
+  }
+
+  PE <- predict_master(holdout, covs, cov_to_drop,
+                       PE_fit, PE_predict, PE_fit_params, PE_predict_params)
   return(PE)
 }
 
-get_BF <- function(cov_to_drop, data, repeats, covs, n_levels) {
+get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   # Calculate number of units unmatched (available)
   num_control <- sum(data$treated == 0)
   num_treated <- sum(data$treated == 1)
 
   # Number of matched units
-  if (repeats) {
+  if (replace) {
     match_index <-
-      update_matched_bit(data, setdiff(covs, cov_to_drop), n_levels[-which(covs == cov_to_drop)]) %>%
-      magrittr::extract2('match_index')
-    # match_index <-
-    #   update_matched_bit(data, covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
-    #   magrittr::extract2('match_index')
+      update_matched_bit(data, setdiff(covs, cov_to_drop),
+                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
     units_matched <- which(match_index)
   }
   else {
     match_index <-
-      update_matched_bit(dplyr::filter(data, !matched), setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)]) %>%
-      magrittr::extract2('match_index')
-    # match_index <-
-    #   update_matched_bit(dplyr::filter(data, !matched), covs[-cov_to_drop], n_levels[-cov_to_drop]) %>%
-    #   magrittr::extract2('match_index')
+      update_matched_bit(data[!data$matched, ], setdiff(covs, cov_to_drop),
+                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
     units_matched <- which(!data$matched)[match_index]
   }
 
@@ -245,69 +244,138 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels) {
                      treated = prop_treated_unmatched)))
 }
 
-#' Bit Vectors Implementation
+#' Bit Vectors Implementation of FLAME
 #'
-#' \code{FLAME_bit} runs the FLAME matching algorithm implemented using bit
-#' vectors. The user is required to pass in \code{data}.
-#' This is a longer description of what FLAME does.
+#' \code{FLAME} runs the bit-vectors implementation of the FLAME algorithm.
+#'
+#' @section Introduction:
+#' FLAME is a matching algorithm for causal inference that matches units if they
+#' match exactly on certain covariates. It starts by making any possible matches
+#' on all covariates. It then drops a covariate, makes any possible matches on
+#' the remaining covariates, and repeats this process until stopping. The
+#' covariate dropped at any given iteration is the one yielding the greatest
+#' match quality \eqn{MQ}, defined as \eqn{MQ = C \times BF - PE}. Here,
+#' \eqn{BF} denotes the balancing factor, defined as the proportion of control
+#' units, plus the proportion of treated units, that can be newly matched by
+#' dropping that covariate. And \eqn{PE} denotes the prediction error, defined
+#' as the training error incurred when predicting the outcome from covariates on
+#' a separate, holdout set. In this way, FLAME encourages making many matches
+#' and also matching on covariates important to the outcome. The hyperparameter
+#' \eqn{C} controls the balance between these two objectives. For more details,
+#' please see the FLAME paper \href{https://arxiv.org/pdf/1707.06315.pdf}{here}.
+#'
+#' @section Stopping Rules:
+#' By default, \code{FLAME} stops when 1. all covariates have been dropped or 2.
+#' all treatment or control units have been matched. This behavior can be
+#' modified by the arguments whose prefix is "early_stop". With the exception of
+#' \code{early_stop_iterations}, all the rules come into play \emph{before} the
+#' offending covariate is dropped. That is, if \code{early_stop_BF = 0.2} and at
+#' the current iteration, dropping the covariate leading to highest match
+#' quality is associated with a balancing factor of 0.1, FLAME stops
+#' \emph{without} dropping this covariate.
+#'
+#' @section Missing Data:
+#' \code{FLAME} offers functionality for handling missing data in the XXXXX, for
+#' both the \code{data} and \code{holdout} sets. This functionality can be
+#' specified via the arguments whose prefix is "missing". The simplest option,
+#' for missingness in \code{data} is to set \code{missing_data = 1}, in which
+#' case any units with missing data are dropped and not used in the algorithm.
+#' The same goes for \code{holdout} and \code{holdout_data}. Missing values can
+#' also be imputed via \code{mice::mice} by specifying \code{missing_data = 2}
+#' and \code{missing_holdout = 2}, respectively. In this case,
+#' \code{missing_data_imputations} many datasets will be imputed for \code{data}
+#' (and similarly for \code{holdout}). If more than one imputation of
+#' \code{data} is requested, the FLAME algorithm will be run on all imputations.
+#' If more than one imputation of \code{holdout} is requested, the predictive
+#' error at an iteration will be the average of predictive  errors across all
+#' imputed \code{holdout} datasets.
 #'
 #' @param data Data to be matched. Either a dataframe or a path to a .csv file
-#'   to be read into a dataframe.
-#' @param holdout Data to be used to compute predictive error. If a numeric
-#'   scalar between 0 and 1 (default = 0.1), that proportion of \code{data} will
-#'   made into a holdout set to compute predictive error and only the remaining
-#'   proportion of \code{data} will be matched. Otherwise, a dataframe or a path
-#'   to a csv file.
-#' @param treatment_column_name A character with the name of the treatment
-#'   column in \code{data}.
-#' @param outcome_column_name A character with the name of the outcome column
-#'   in \code{data}.
-#' @param PE_method One of "elasticnet", .... Denotes the method to be used for
-#'   computation of PE.
-#' @param C A positive scalar denoting the tradeoff between BF and PE. Higher C
-#'   will prioritize more matches and lower C will prioritize not dropping
-#'   important covariates.
-#' @param repeats A logical scalar. If true, allows the same unit to be matched
-#'   multiple times, on different numbers of covariates.
+#'   to be read (via \code{read.csv}) into a dataframe. Treatment must be
+#'   described in a logical or binary column with name
+#'   \code{treated_column_name}. Outcome must be either binary (logical or
+#'   binary column) or continuous (numeric). All other columns will be assumed
+#'   to be covariates to be used for matching and must be categorical as they
+#'   will be coerced to factors. No default.
+#' @param holdout Holdout data to be used to compute predictive error. If a
+#'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
+#'   into a holdout set and only the remaining proportion of \code{data} will be
+#'   matched. Otherwise, a dataframe or a path to a .csv file. Must have the
+#'   same column names as \code{data}. This data will \emph{not} be matched.
+#'   Defaults to 0.1
+#' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
+#'   the FLAME algorithm. Higher C prioritizes more matches and lower C
+#'   prioritizes not dropping important covariates. Defaults to 0.1.
+#' @param treated_column_name A character with the name of the treatment column
+#'   in \code{data} and \code{holdout}. Defaults to 'treated'.
+#' @param outcome_column_name A character with the name of the outcome column in
+#'   \code{data} and \code{holdout}. Defaults to 'outcome'.
+#' @param PE_method Either "elasticnet" or "xgb". Denotes the method to be used
+#'   to compute PE. If "elasticnet", uses \code{glmnet::cv.glmnet} with default
+#'   parameters and then the default predict method to estimate the outcome. If
+#'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
+#'   cross-validate and find the best with respect to RMSE (for continuous
+#'   outcomes) or binary misclassification rate (for binary outcomes). Then uses
+#'   default predict method to estimate the outcome. Defaults to "elasticnet".
+#' @param user_PE_fit An optional function supplied by the user that can be used
+#'   instead of those allowed for by \code{PE_method} to fit a model fitting the
+#'   outcome from the covariates. Must take in a matrix of covariates as its
+#'   first argument and a vector outcome as its second argument. Defaults to
+#'   \code{NULL}.
+#' @param user_PE_fit_params A named list of optional parameters to be used by
+#'   \code{user_PE_fit}. Defaults to \code{NULL}.
+#' @param user_PE_predict An optional function supplied by the user that can be
+#'   used to generate predictions from the output of \code{user_PE_fit}. If not
+#'   supplied, defaults to \code{predict}. Defaults to \code{NULL}.
+#' @param user_PE_predict_params A named list of optional parameters to be used
+#'   by \code{user_PE_params}. Defaults to \code{NULL}.
+#' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
+#'   matched multiple times, on different sets of covariates. Defaults to
+#'   \code{FALSE}.
 #' @param verbose Controls output while FLAME is running. If 0, no output. If 1,
-#'   outputs the iteration every iteration. If 2, outputs the iteration and
-#'   number of unmatched units every 5 iterations. If 3, outputs the iteration
-#'   and number of unmatched units every 5 iterations.
+#'   outputs the iteration every iteration and the stopping condition. If 2,
+#'   outputs the iteration and number of unmatched units every 5 iterations, and
+#'   the stopping condition. If 3, outputs the iteration and number of unmatched
+#'   units every 5 iterations, and the stopping condition. Defaults to 2.
 #' @param want_pe A logical scalar. If TRUE, the predictive error (PE) at each
-#'   iteration will be returned.
+#'   iteration will be returned. Defaults to \code{FALSE}.
 #' @param want_bf A logical scalar. If TRUE, the balancing factor (BF) at each
-#'   iteration will be returned.
-#' @section Parameters for Early Stopping:
+#'   iteration will be returned. Defaults to \code{FALSE}.
 #' @param early_stop_iterations A nonnegative integer, denoting the number of
 #'   iterations of FLAME to be performed. If 0, one round of exact matching is
-#'   performed before terminating.
-#' @param stop_unmatched_c A logical scalar. If TRUE, FLAME will terminate when
-#'   there are no more control units to be matched.
+#'   performed before stopping. Defaults to \code{Inf}.
+#' @param epsilon A nonnegative numeric. If FLAME attemts to drop a covariate
+#'   that would raise the PE above (1 + epsilon) times the predictive error
+#'   before any covariates have been dropped, FLAME will stop. Defaults to 0.25.
 #' @param early_stop_un_c_frac A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of control units that are unmatched falls below this value,
-#'   FLAME terminates.
-#' @param stop_unmatched_t A logical scalar. If TRUE, FLAME will terminate when
-#'   there are no more treated units to be matched.
+#'   FLAME stops. Defaults to 0.
 #' @param early_stop_un_t_frac A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of treatment units that are unmatched falls below this
-#'   value, FLAME terminates.
-#' @param early_stop_pe A numeric value between 0 and 1 (inclusive).
-#' @param early_stop_bf A logical scalar. If TRUE....
-#' @param early_stop_bf A numeric value between 0 and 1 (inclusive).
-#' @section Parameters for Missing Data:
-#' @param missing_data If 0, assumes no missingness in \code{data}. If
-#'   1, eliminates units with missingness from \code{data}. If 2, will not match
-#'   a unit on a covariate that it is missing. If 3, performs
-#'   \code{n_data_imputations} of MICE to impute the missing data.
-#' @param missing_holdout If 0, assumes no missing data in
-#'   \code{holdout}. If 1, eliminates units with missingness from
-#'   \code{holdout}. If 2,  performs \code{n_holdout_imputations} of MICE
-#'   to impute the missing data.
-#' @param n_holdout_imputations If \code{missing_holdout} = 2,
-#'   performs this many imputations of the missing data in \code{holdout} using
-#'   MICE.
-#' @param n_data_imputations If \code{missing_data} = 2, performs
-#'   this many imputations of the missing data in \code{data} using MICE.
+#'   value, FLAME stops. Defaults to 0.
+#' @param early_stop_pe A numeric value between 0 and 1 (inclusive). If FLAME
+#'   attempts to drop a covariate that would lead to a PE above this value,
+#'   FLAME stops. Defaults to \code{Inf}.
+#' @param early_stop_bf A numeric value between 0 and 1 (inclusive). If FLAME
+#'   attempts to drop a covariate that would lead to a BF below this value,
+#'   FLAME stops. Defaults to 0.
+#' @param missing_data If 0, assumes no missingness in \code{data}. If 1,
+#'   eliminates units with missingness from \code{data}. If 2, performs
+#'   \code{missing_data_imputations} of MICE to impute the missing data. In this
+#'   case, FLAME will be run on each imputed dataset and a list of the results
+#'   for each dataset will be returned. If 3, will not match a unit on a
+#'   covariate that it is missing. Defaults to 0.
+#' @param missing_holdout If 0, assumes no missing data in \code{holdout}. If 1,
+#'   eliminates units with missingness from \code{holdout}. If 2, performs
+#'   \code{missing_holdout_imputations} of MICE to impute the missing data. In
+#'   this latter case, all imputations will be used to compute PE, and the PE at
+#'   an iteration will be the average across all imputations. Defaults to 0.
+#' @param missing_holdout_imputations If \code{missing_holdout} = 2, performs
+#'   this many imputations of the missing data in \code{holdout} using MICE.
+#'   Defaults to 5.
+#' @param missing_data_imputations If \code{missing_data} = 2, performs this
+#'   many imputations of the missing data in \code{data} using MICE. Defaults to
+#'   5.
 
 #' @examples
 #' data <- gen_data()
@@ -317,48 +385,47 @@ get_BF <- function(cov_to_drop, data, repeats, covs, n_levels) {
 #' @importFrom magrittr %<>%
 #' @importFrom zeallot %<-%
 #' @importFrom rlang !!
-
 #' @export
 FLAME <-
   function(data, holdout = 0.1, C = 0.1, ## Algorithmic arguments
-           treatment_column_name = 'treated', outcome_column_name = 'outcome',
-           PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
-           repeats = FALSE, verbose = 2, want_pe = FALSE, want_bf = FALSE,
+           treated_column_name = 'treated', outcome_column_name = 'outcome',
+           PE_method = 'elasticnet', user_PE_fit = NULL, user_PE_fit_params = NULL,
+           user_PE_predict = NULL, user_PE_predict_params = NULL,
+           replace = FALSE, verbose = 2, want_pe = FALSE, want_bf = FALSE,
            early_stop_iterations = Inf, epsilon = 0.25, ## Early stopping arguments
            early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0, ## Missing data arguments
-           n_data_imputations = 10, n_holdout_imputations = 10) {
+           missing_data_imputations = 5, missing_holdout_imputations = 5) {
 
   read_data_out <- read_data(data, holdout)
   data <- read_data_out[[1]]
   holdout <- read_data_out[[2]]
 
   check_args(data, holdout, C,
-             treatment_column_name, outcome_column_name,
-             PE_method, user_PE_fun, PE_fun_params,
-             repeats, verbose, want_pe, want_bf,
+             treated_column_name, outcome_column_name,
+             PE_method, user_PE_fit, user_PE_fit_params,
+             replace, verbose, want_pe, want_bf,
              early_stop_iterations, epsilon,
              early_stop_un_c_frac, early_stop_un_t_frac,
              early_stop_pe, early_stop_bf,
              missing_data, missing_holdout,
-             n_data_imputations, n_holdout_imputations)
+             missing_data_imputations, missing_holdout_imputations)
 
   missing_out <-
     handle_missing_data(data, holdout,
                         missing_data, missing_holdout,
-                        n_data_imputations, n_holdout_imputations)
+                        missing_data_imputations, missing_holdout_imputations)
 
   data <- missing_out[[1]]
   holdout <- missing_out[[2]]
 
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
-    sort_cols(data, treatment_column_name, outcome_column_name, type = 'data')
+    sort_cols(data, treated_column_name, outcome_column_name, type = 'data')
 
   holdout <-
-    sort_cols(holdout, treatment_column_name, outcome_column_name,
-              type = 'holdout') %>%
-    magrittr::extract2(1)
+    sort_cols(holdout, treated_column_name, outcome_column_name,
+              type = 'holdout')[[1]]
 
   n_iters <- length(data)
 
@@ -368,9 +435,12 @@ FLAME <-
       message('Running FLAME on imputed dataset ', i, ' of ', n_iters)
     }
     FLAME_out[[i]] <-
-      FLAME_internal(data[[i]], holdout, covs, n_covs, n_levels, cov_names, sorting_order, C, PE_method, user_PE_fun, PE_fun_params,
-                     repeats, verbose, want_pe, want_bf, early_stop_iterations,
-                     epsilon = epsilon, early_stop_un_c_frac, early_stop_un_t_frac,
+      FLAME_internal(data[[i]], holdout, covs, n_covs, n_levels,
+                     cov_names, sorting_order, C,
+                     PE_method, user_PE_fit, user_PE_fit_params,
+                     user_PE_predict, user_PE_predict_params,
+                     replace, verbose, want_pe, want_bf, early_stop_iterations,
+                     epsilon, early_stop_un_c_frac, early_stop_un_t_frac,
                      early_stop_pe, early_stop_bf)
   }
 
@@ -380,12 +450,13 @@ FLAME <-
   return(FLAME_out)
 }
 
-FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_names, sorting_order, C = 0.1, ## Algorithmic arguments
-                           PE_method = 'elasticnet', user_PE_fun = NULL, PE_fun_params = NULL,
-                           repeats = FALSE, verbose = 2, want_pe = TRUE, want_bf = FALSE,
-                           early_stop_iterations = Inf, epsilon = 0.05, ## Early stopping arguments
-                           early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
-                           early_stop_pe = Inf, early_stop_bf = 0) {
+FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C, ## Algorithmic arguments
+                           PE_method, user_PE_fit, user_PE_fit_params ,
+                           user_PE_predict, user_PE_predict_params,
+                           replace, verbose, want_pe, want_bf,
+                           early_stop_iterations, epsilon, ## Early stopping arguments
+                           early_stop_un_c_frac, early_stop_un_t_frac,
+                           early_stop_pe, early_stop_bf) {
   # List of MGs, each entry contains the corresponding MGs entries
   MGs <- list()
   # List of CATEs, each entry contains the corresponding MGs CATE
@@ -398,11 +469,7 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
   covs_dropped <- NULL
 
   # Try and make matches on all covariates
-  # c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-    # process_matches(data, repeats, covs, n_levels, MGs,
-    #                 matched_on, matching_covs, CATE, cov_names)
-    #
-  processed_matches <- process_matches(data, repeats, covs, n_levels, MGs,
+  processed_matches <- process_matches(data, replace, covs, n_levels, MGs,
                                        matched_on, matching_covs, CATE, cov_names)
   CATE <- processed_matches[[1]]
   MGs <- processed_matches[[2]]
@@ -412,7 +479,7 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
-    data$weight[units_matched] %<>% magrittr::add(1)
+    data$weight[units_matched] <- data$weight[units_matched] + 1
     matching_covs %<>% c(list(order_cov_names(cov_names[covs],
                                               cov_names,
                                               sorting_order)))
@@ -422,15 +489,18 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
 
   iter <- 0
   baseline_PE <- get_PE(cov_to_drop = NULL, covs, holdout,
-                        PE_method, user_PE_fun, PE_fun_params)
+                        PE_method, user_PE_fit, user_PE_fit_params,
+                        user_PE_predict, user_PE_predict_params)
 
-  while (!early_stop(iter, data, covs, early_stop_iterations)) {
+  while (!early_stop(iter, data, covs, early_stop_iterations, verbose)) {
     iter <- iter + 1
     show_progress(verbose, iter, data)
 
     # Compute the PE associated with dropping each covariate
-    PE <- sapply(covs, get_PE, covs, holdout, PE_method, user_PE_fun, PE_fun_params)
-    if (early_stop_PE(min(PE), early_stop_pe, epsilon, baseline_PE)) {
+    PE <- sapply(covs, get_PE, covs, holdout,
+                 PE_method, user_PE_fit, user_PE_fit_params,
+                 user_PE_predict, user_PE_predict_params)
+    if (early_stop_PE(min(PE), early_stop_pe, epsilon, baseline_PE, verbose)) {
       break
     }
 
@@ -438,10 +508,10 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
       best_lower_bound <- max(-PE)
       upper_bound <- 2 * C - PE
 
-      drop_candidates <- which(upper_bound >= best_lower_bound) # Should this be strictly greater than?
+      drop_candidates <- which(upper_bound >= best_lower_bound)
       PE <- PE[drop_candidates]
 
-      BF_out <- lapply(covs[drop_candidates], get_BF, data, repeats, covs, n_levels)
+      BF_out <- lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
       BF <- sapply(BF_out, function(x) x[['BF']])
 
       MQ <- C * BF - PE
@@ -456,7 +526,8 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
 
     if (early_stop_BF(BF[drop], early_stop_bf,
                       prop_unmatched[['control']], prop_unmatched[['treated']],
-                      early_stop_un_c_frac, early_stop_un_t_frac)) {
+                      early_stop_un_c_frac, early_stop_un_t_frac,
+                      verbose)) {
       break
     }
 
@@ -473,10 +544,7 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
-    # c(CATE, MGs, matched_on, units_matched, made_matches) %<-%
-    #   process_matches(data, repeats, covs, n_levels,
-    #                   MGs, matched_on, matching_covs, CATE, cov_names)
-    processed_matches <- process_matches(data, repeats, covs, n_levels, MGs,
+    processed_matches <- process_matches(data, replace, covs, n_levels, MGs,
                                          matched_on, matching_covs, CATE, cov_names)
     CATE <- processed_matches[[1]]
     MGs <- processed_matches[[2]]
@@ -485,9 +553,17 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
     made_matches <- processed_matches[[5]]
 
     if (made_matches) {
-      data[units_matched, setdiff(1:n_covs, covs)] <- '*'
+      if (replace) {
+        # Only use * to refer to main matched group
+        # weight == 0 implies never matched before so this match is their MMG
+        data[intersect(units_matched, which(data$weight == 0)),
+                       setdiff(1:n_covs, covs)] <- '*'
+      }
+      else {
+        data[units_matched, setdiff(1:n_covs, covs)] <- '*'
+      }
       data$matched[units_matched] <- TRUE
-      data$weight[units_matched] %<>% magrittr::add(1)
+      data$weight[units_matched] <- data$weight[units_matched] + 1
     }
   }
 
@@ -503,12 +579,13 @@ FLAME_internal <- function(data, holdout = 0.1, covs, n_covs, n_levels, cov_name
     c(colnames(data)[1:n_covs][order(sorting_order)],
       'outcome', 'treated', 'matched', 'weight')
 
-  ret_list <- list(MGs = MGs,
-                   CATE = CATE,
-                   matched_on = matched_on,
-                   data = data,
-                   matching_covs = matching_covs,
-                   dropped = covs_dropped)
+  ret_list <-
+    list(data = data,
+         MGs = MGs,
+         CATE = CATE,
+         matched_on = matched_on,
+         matching_covs = matching_covs,
+         dropped = covs_dropped)
 
   if (want_pe) {
     ret_list %<>% c('PE' = list(store_pe))

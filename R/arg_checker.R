@@ -1,58 +1,117 @@
 check_args <-
-  function(data, holdout, C, treatment_column_name, outcome_column_name,
+  function(data, holdout, C, treated_column_name, outcome_column_name,
            PE_method, user_PE_fun, PE_fun_params,
-           repeats, verbose, want_pe, want_bf,
+           replace, verbose, want_pe, want_bf,
            early_stop_iterations, epsilon,
            early_stop_un_c_frac, early_stop_un_t_frac,
            early_stop_pe, early_stop_bf,
            missing_data, missing_holdout,
-           n_data_imputations, n_holdout_imputations) {
+           missing_data_imputations, missing_holdout_imputations) {
 
-  stopifnot(is.data.frame(data))
-  stopifnot(is.data.frame(holdout))
+  if (!is.data.frame(data)) {
+    stop('data must be a data frame or a character denoting a .csv file in the working directory.')
+  }
+  if (!is.data.frame(holdout)) {
+    stop('holdout must be a data frame, a character denoting a .csv file in the working directory,
+         or a numeric proportion of data to use as a holdout set.')
+  }
 
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
 
   if (!identical(sort(data_cols), sort(holdout_cols))) {
-    stop('Data and holdout must contain identical column names')
+    stop('Data and holdout must contain identical column names.')
   }
 
-  stopifnot(is.numeric(C) & C >= 0)
+  if (!is.numeric(C) | C < 0 | is.infinite(C)) {
+    stop('C must be a finite, nonnegative scalar.')
+  }
 
-  stopifnot(is.character(treatment_column_name) &
-              treatment_column_name %in% data_cols &
-              treatment_column_name %in% holdout_cols)
+  if (!is.character(treated_column_name)) {
+    stop('If you specify treated_column_name, it must be a character.')
+  }
 
-  stopifnot(is.character(outcome_column_name) &
-              outcome_column_name %in% data_cols &
-              outcome_column_name %in% holdout_cols)
+  if (!(treated_column_name %in% data_cols)) {
+    stop('treated_column_name must be the name of a column in data.')
+  }
 
-  stopifnot(PE_method %in% c('elasticnet'))
-  # Checks for user function / params
+  if (!(treated_column_name %in% holdout_cols)) {
+    stop('treated_column_name must be the name of a column in holdout.')
+  }
 
-  stopifnot(is.logical(repeats))
-  stopifnot(verbose %in% c(0, 1, 2, 3))
+  if (!is.character(outcome_column_name)) {
+    stop('If you specify outcome_column_name, it must be a character.')
+  }
 
-  stopifnot(is.logical(want_pe))
-  stopifnot(is.logical(want_bf))
+  if (!(outcome_column_name %in% data_cols)) {
+    stop('outcome_column_name must be the name of a column in data.')
+  }
+
+  if (!(outcome_column_name %in% holdout_cols)) {
+    stop('outcome_column_name must be the name of a column in holdout.')
+  }
+
+  if (!(PE_method %in% c('elasticnet', 'xgb'))) {
+    stop("PE_method must be one of 'elasticnet' or 'xgb'.
+         To supply your own model to fit, use user_PE_fit.")
+  }
+
+  if (!is.logical(replace)) {
+    stop('replace must be a logical scalar')
+  }
+
+  if (!(verbose %in% c(0, 1, 2, 3))) {
+    stop('Verbose must be one of: 0, 1, 2, 3.')
+  }
+
+  if (!is.logical(want_pe)) {
+    stop('want_pe must be a logical scalar')
+  }
+
+  if (!is.logical(want_bf)) {
+    stop('want_bf must be a logical scalar')
+  }
 
   ## Early stop parameters
-  stopifnot(is.numeric(early_stop_iterations) & early_stop_iterations >= 0)
+  if (!is.numeric(early_stop_iterations) | early_stop_iterations < 0) {
+    stop('early_stop_iterations must be a nonnegative scalar')
+  }
 
-  stopifnot(is.numeric(epsilon) & epsilon > 0)
+  if (!is.numeric(epsilon) | early_stop_iterations <= 0) {
+    stop('epsilon must be a positive scalar')
+  }
 
-  stopifnot(is.numeric(early_stop_un_c_frac) &
-              (early_stop_un_c_frac >= 0 & early_stop_un_c_frac <= 1))
-  stopifnot(is.numeric(early_stop_un_t_frac) &
-              (early_stop_un_t_frac >= 0 & early_stop_un_t_frac <= 1))
+  if (!is.numeric(early_stop_un_c_frac) |
+      early_stop_un_c_frac < 0 |
+      early_stop_un_c_frac > 1) {
+    stop('early_stop_un_c_frac must be a fraction between 0 and 1 (inclusive).')
+  }
 
-  stopifnot(is.numeric(early_stop_pe) & early_stop_pe >= 0)
-  stopifnot(is.numeric(early_stop_bf) & early_stop_bf >= 0 & early_stop_bf <= 2)
+  if (!is.numeric(early_stop_un_t_frac) |
+      early_stop_un_t_frac < 0 |
+      early_stop_un_t_frac > 1) {
+    stop('early_stop_un_t_frac must be a fraction between 0 and 1 (inclusive).')
+  }
+
+  if (!is.numeric(early_stop_pe) | early_stop_pe < 0) {
+    stop('early_stop_pe must be a nonnegative scalar')
+  }
+
+  if (!is.numeric(early_stop_bf) | early_stop_bf < 0 | early_stop_bf > 2) {
+    stop('early_stop_bf must be a scalar between 0 and 2 (inclusive)')
+  }
 
   ## Missing data parameters
-  stopifnot(is.numeric(missing_data) & missing_data %in% c(0, 1, 2, 3))
-  stopifnot(is.numeric(missing_holdout) & missing_holdout %in% c(0, 1, 2))
-  stopifnot(is.numeric(n_data_imputations) & n_data_imputations >= 0)
-  stopifnot(is.numeric(n_holdout_imputations) & n_holdout_imputations >= 0)
+  if (!is.numeric(missing_data) | !(missing_data %in% c(0, 1, 2, 3))) {
+    stop('missing_data must be one of: 0, 1, 2, 3')
+  }
+  if (!is.numeric(missing_holdout) | !(missing_holdout %in% c(0, 1, 2))) {
+    stop('missing_data must be one of: 0, 1, 2')
+  }
+  if (!is.numeric(missing_data_imputations) | missing_data_imputations < 1) {
+    stop('missing_data_imputations must be an integer greater than 1')
+  }
+  if (!is.numeric(missing_holdout_imputations) | missing_holdout_imputations < 1) {
+    stop('missing_holdout_imputations must be an integer greater than 1')
+  }
 }

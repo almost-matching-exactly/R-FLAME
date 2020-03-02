@@ -1,25 +1,95 @@
-#' Returns the matched group of a given unit.
+#' Matched groups of units.
 #'
-#' \code{mmg_of_unit} Returns the matched group of unit \code{unit}, as well as
-#' the covariates of the units in the matched group.
+#' Returns the matched groups of units \code{units}, as well as the covariates,
+#' treatment, and outcome of the units in each matched group.
 #'
-#' @param flame_obj An object returned by running \code{FLAME_bit}.
-#' @param unit An integer between 1 and \code{nrow(flame_obj)} for whom the
-#'   treatment effect is desired.
-#' @param output_style If 1, only returns the values of covariates these units
-#'   were matched on. If 0, returns all covariate values.
+#' \code{MG} returns a list, each entry of which contains information about the
+#' matched group(s) of the corresponding unit. If \code{\link{FLAME}} was run with
+#' argument \code{repeats = FALSE} to generate \code{flame_obj}, \code{MG}
+#' should be run with the default \code{multiple = FALSE} and will return
+#' information about the matched group of each unit. If \code{link{FLAME}} was run
+#' with argument \code{repeats = TRUE}, then \code{MG} may be run with either
+#' \code{multiple = FALSE} or \code{multiple = TRUE}. In the first case, only
+#' one matched group, that with matches on the greatest number of covariates,
+#' will be returned. In the second case, all matched groups involving the
+#' relevant unit will be returned.
+#'
+#' @seealso \code{\link{FLAME}}
+#'
+#' @param units A vector of integers between 1 and \code{nrow(flame_obj$data)}
+#'   whose matched groups are desired.
+#' @param flame_obj An object returned by running \code{\link{FLAME}}.
+#' @param multiple A logical scalar. If \code{FALSE} (default), then will only
+#'   return each unit's first matched group; else, will return all of them. See
+#'   below for details.
+#'
+#' @return A list of length \code{length(units)}. Each entry is a data frame (if
+#'   \code{multiple = FALSE}) or a list of data frames (if \code{multiple =
+#'   TRUE}). For a given entry, these data frames are subsets of \code{data}
+#'   passed to \code{\link{FLAME}} to generate \code{flame_obj}, whose rows
+#'   correspond to the units in the matched group(s) of that entry.
+#'
+#'   Each entry thus always corresponds to the matched group(s) of the
+#'   corresponding unit in \code{units}, but the structure of the entries
+#'   depends on the value of \code{multiple} and on whether or not the call to
+#'   \code{\link{FLAME}} that generated \code{flame_obj} specified \code{repeats =
+#'   TRUE} or not. If it did, a unit may have several matched
+#'   groups, corresponding to several sets of covariates it was matched on. In
+#'   this case, \code{multiple = FALSE} requests that only the matched group
+#'   with matches on the greatest number of covariates be returned and
+#'   \code{multiple = TRUE} requests that all matched groups involving that unit
+#'   be returned. If it did not, a unit only has one matched group
+#'   that will be returned.
+#'
+#'   The starred entries (*) in the returned data frames have the same meaning
+#'   as in \code{flame_obj$data}, except for if both \code{multiple = TRUE} and
+#'   \code{repeats = TRUE}. In this case, if \emph{all} units do not match on a given
+#'   covariate, all entries of that covariate will be starred, even though a
+#'   subset of the units may have matched on them.
+#'
+#'
 #' @export
-mmg_of_unit <- function(unit, flame_obj, output_style = 1) {
-  MGs <- flame_obj$MGs
-  for (i in 1:length(MGs)) {
-    if (unit %in% MGs[[i]]) {
-      if (output_style == 1) {
-        return(flame_obj$data[MGs[[i]], ])
+#'
+MG <- function(units, flame_obj, multiple = FALSE) {
+  n_cols <- length(colnames(flame_obj$data))
+  cov_names <-
+    colnames(flame_obj$data)[1:(n_cols - 4)]
+  MGs <- flame_obj$MGs # MGs made by FLAME
+
+  out <- vector('list', length = length(units))
+
+  for (i in seq_along(units)) {
+    unit <- units[i]
+
+    # Number of MGs to return for unit
+    # Only > 1 if multiple = TRUE and matched multiple times
+    n_unit_MGs <- ifelse(multiple, flame_obj$data$weight[unit], 1)
+
+    # To store MGs of unit
+    out[[i]] <- vector('list', length = n_unit_MGs)
+    counter <- 1
+    for (j in 1:length(MGs)) {
+      if (unit %in% MGs[[j]]) {
+        tmp <-
+          flame_obj$data[MGs[[j]], ] %>%
+          dplyr::select(-c(matched, weight))
+        keep <-
+          match(names(flame_obj$matched_on[[j]]), cov_names) %>%
+          c(n_cols - 3, n_cols - 2) # Keep outcome and treatment
+        tmp[, -keep] <- '*'
+        out[[i]][[counter]] <- tmp
+
+        counter <- counter + 1
+        if (counter == n_unit_MGs + 1) {
+          break
+        }
       }
-      return(flame_obj$original_data[MGs[[i]], ])
     }
   }
-  stop('Unit not matched')
+  if (!multiple) {
+    out %<>% lapply(`[[`, 1)
+  }
+  return(out)
 }
 
 #' Compute the treatment effect of a given unit.

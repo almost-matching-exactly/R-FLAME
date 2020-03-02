@@ -2,7 +2,7 @@ read_data <- function(data, holdout) {
   if (is.character(data)) {
     tryCatch(
       error = function(cnd) {
-        stop('Cannot read data .csv file from current directory')
+        stop('Cannot read data .csv file from working directory')
       },
       data <- read.csv(data, header = TRUE)
     )
@@ -11,7 +11,7 @@ read_data <- function(data, holdout) {
   if (is.character(holdout)) {
     tryCatch(
       error = function(cnd) {
-        stop('Cannot read holdout .csv file from current directory')
+        stop('Cannot read holdout .csv file from working directory')
       },
       holdout <- read.csv(holdout, header = TRUE)
     )

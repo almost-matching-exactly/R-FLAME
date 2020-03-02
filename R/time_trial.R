@@ -1,3 +1,95 @@
+check_all_matches <- function(flout, data) {
+  max_covs <- length(flout$matched_on[[1]])
+  min_covs <- length(flout$matched_on[[length(flout$matched_on)]])
+  matched <- NULL
+  for (n_covs in seq(max_covs, min_covs)) {
+    message('n_covs = ', n_covs)
+    check_matches(flout, n_covs, data, matched)
+    MG_exclude <- which(sapply(flout$matched_on, function(x) length(x) >= n_covs))
+    matched <- unlist(flout$MGs[MG_exclude])
+  }
+  return(TRUE)
+}
+check_matches <- function(flout, n_covs, data, matched) {
+  MGs <- flout$MGs
+  matched_on <- flout$matched_on
+  to_eliminate <- NULL
+  for (i in 1:length(matched_on)) {
+    if (length(matched_on[[i]]) != n_covs) {
+      to_eliminate <- c(to_eliminate, i)
+    }
+    else {
+      covs <-
+          match(names(matched_on[[i]]), colnames(data)[1:(length(colnames(data)) - 2)])
+    }
+  }
+  # browser()
+  MGs[to_eliminate] <- NULL
+  for (i in 1:nrow(data)) { # For each unit
+    if (i %in% matched) {
+      next
+    }
+    ever_matched <- FALSE # Have we found them to be matched?
+    matches <- NULL # Who have we found them to be matched with?
+    to_match <- data[i, covs] # Covariate values we're matching to
+    for (j in 1:nrow(data)) { # For everyone else in the data
+      if (j == i | j %in% matched) { # If they've already been matched, carry on
+        next
+      }
+      if (all(data[j, covs] == to_match)) { # If unit j matches unit i
+        ever_matched <- TRUE # i has been matched
+        matches <- c(matches, j) # Add j to the list of units i has been matched to
+        # matched <- c(matched, j) # Add j to the list of units that has ever been matchedd
+      }
+    }
+    # Now we have a list, matches, of all the people i matched to
+
+    if (length(unique(union(data$treated[i], data$treated[matches]))) != 2) {
+      ever_matched <- FALSE
+    }
+
+    if (!ever_matched) {
+      for (k in 1:length(MGs)) {
+        if (i %in% MGs[[k]]) { # If i found
+          print(i)
+          print(matches)
+          stop('uh oh A')
+          break
+        }
+      }
+      next # if no discrepancy, carry on
+    }
+
+    # Valid match
+    matches <- c(matches, i) # add him to his own MG
+    # matched <- c(matched, i) # add him to the list of matched people
+
+    # if we matched i
+    ever_found <- FALSE # did FLAME ever match i
+    for (k in 1:length(MGs)) {
+      if (i %in% MGs[[k]]) { #if FLAME did match i
+        ever_found <- TRUE
+        if (!all(sort(MGs[[k]]) == sort(matches))) { # If MGs don't agree
+          ever_found <- FALSE # discrepancy
+          print(i)
+          print(matches)
+          stop('uh oh C')
+          break
+        }
+        else {
+          # If they matched on all the same covariates np
+        }
+      }
+    }
+    if (!ever_found) { # If discrepancy, cut
+      print(i)
+      print(matches)
+      stop('uh oh D')
+    }
+  }
+  return(TRUE)
+}
+
 # data <- gen_data()
 # holdout <- gen_data()
 # treatment_column_name <- 'treated'
@@ -19,10 +111,28 @@
 #   sorting_order <- out[[7]]
 #   list(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order)
 # }
-#
-# microbenchmark::microbenchmark(f_a(out), f_b(out), check = 'identical')
 
+# eta <- c(0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
+# max_depth <- c(2, 3, 4, 6, 8)
+# alpha <- c(0.01, 0.1, 0.5, 1, 5)
+# nrounds <- c(5, 10, 50, 100, 200)
+# subsample <- c(0.1, 0.3, 0.5, 0.75, 1)
 #
+# f_a <- function() {
+#   expand.grid(eta, max_depth, alpha, nrounds, subsample) %>%
+#     `colnames<-`(c('eta', 'max_depth', 'alpha', 'nrounds', 'subsample')) %>%
+#     return()
+# }
+#
+# f_b <- function() {
+#   grd <- expand.grid(eta, max_depth, alpha, nrounds, subsample)
+#   colnames(grd) <- c('eta', 'max_depth', 'alpha', 'nrounds', 'subsample')
+#   return(grd)
+# }
+#
+# microbenchmark::microbenchmark(f_a(), f_b(), check = 'identical')
+
+
 # microbenchmark::microbenchmark()
 # n <- c(500, 1000, 2500, 5000, 10000, 20000)
 # p <- c(25, 30, 35, 40)
