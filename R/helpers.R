@@ -1,9 +1,48 @@
+# X is the subset of the data frame containing the continuous covariates
+bin_continuous_covariates <- function(X, rule) {
+  n <- nrow(X)
+  if (rule == 'sturges') {
+    bin_fun <- function(x) (max(x) - min(x)) / (log(n, base = 2) + 1)
+  }
+  else if (rule == 'scott') {
+    bin_fun <- function(x) 3.5 * sqrt(var(x)) / (n ^ (1 / 3))
+  }
+  else if (rule == 'fd') {
+    bin_fun <- function(x) 2 * IQR(x) / (n ^ (1 / 3))
+  }
+  else {
+    stop('Unrecognized binning rule. Please supply one of "sturges", "scott", or "fd".')
+  }
+
+  is_continuous <- which(!sapply(X, is.factor))
+
+  if (length(is_continuous) == 0) {
+    return(X)
+  }
+  warning('Binning continuous covariates. This is not recommended;
+          users are encouraged to use methods specifically designed for continuous covariates.')
+
+  X_cont <- X[, is_continuous]
+
+  bin_sizes <- sapply(X_cont, bin_fun)
+  ranges <- sapply(X_cont, function(x) max(x) - min(x))
+  n_bins <- ceiling(ranges / bin_sizes)
+
+  X_cont <-
+    purrr::map2(X_cont, n_bins, cut) %>%
+    as.data.frame()
+
+  X[, is_continuous] <- X_cont
+
+  return(X)
+}
+
 order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
 sort_cols <- function(df, treated_column_name, outcome_column_name,
-                      type, is_missing) {
+                      binning_method, type, is_missing = NULL) {
 
   n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -19,6 +58,11 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
 
   n <- nrow(df[[1]])
 
+  treatment_col_ind <- which(colnames(df[[1]]) == treated_column_name)
+  outcome_col_ind <- which(colnames(df[[1]]) == outcome_column_name)
+  covariates <-
+    which(!(1:ncol(df[[1]]) %in% c(treatment_col_ind, outcome_col_ind)))
+
   # For all imputed data sets
   for (i in 1:n_df) {
     tmp_df <- df[[i]]
@@ -29,8 +73,8 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
       cbind(outcome_col) %>%
       cbind(treatment_col)
 
-    tmp_df[, 1:n_covs] %<>%
-      lapply(as.factor)
+    tmp_df[, 1:n_covs] <-
+      bin_continuous_covariates(tmp_df[, 1:n_covs], rule = binning_method)
 
     # Number of levels of each covariate
     n_levels <- sapply(tmp_df[, 1:n_covs, drop = FALSE], nlevels)

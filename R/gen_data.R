@@ -30,6 +30,27 @@ gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'F
   return(data)
 }
 
+gen_mixed_data <- function(n = 200, p = 8) {
+  TE <- 5
+  covs <-
+    rbinom(n * (p - 3), 1, prob = 0.5) %>%
+    matrix(nrow = n) %>%
+    cbind(rnorm(n, 5, 5),
+          rnorm(n, 0, 1),
+          rnorm(n, -10, 1))
+
+
+  treated <- rbinom(n, 1, prob = 0.5)
+
+  outcome <-
+    (15 * covs[, 7] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4] + 3 * covs[, 6]) %>%
+    magrittr::add(rnorm(n)) %>%
+    magrittr::add(TE * treated)
+  data <- data.frame(covs, outcome = outcome, treated = treated)
+  data[, 1:(ncol(covs) - 3)] %<>% lapply(as.factor)
+  return(data)
+}
+
 gen_missing_data <- function(n = 50, p = 5, write = FALSE, percent_missing = 0.05) {
   data <- gen_data(n = n, p = p, write = write)
   covs <- as.matrix(data[, 1:p])

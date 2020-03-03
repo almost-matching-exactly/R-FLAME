@@ -274,6 +274,10 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #'   in \code{data} and \code{holdout}. Defaults to 'treated'.
 #' @param outcome_column_name A character with the name of the outcome column in
 #'   \code{data} and \code{holdout}. Defaults to 'outcome'.
+#' @param binning_method The method to be used to bin continuous covariates in the
+#' data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
+#' or the Freedman-Diaconis rule for determining number of bins in a histogram.
+#' Each continuous covariate will be binned into the corresponding number of bins.
 #' @param PE_method Either "elasticnet" or "xgb". Denotes the method to be used
 #'   to compute PE. If "elasticnet", uses \code{glmnet::cv.glmnet} with default
 #'   parameters and then the default predict method to estimate the outcome. If
@@ -354,6 +358,7 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 FLAME <-
   function(data, holdout = 0.1, C = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
+           binning_method = 'sturges',
            PE_method = 'elasticnet',
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
@@ -370,6 +375,7 @@ FLAME <-
 
   check_args(data, holdout, C,
              treated_column_name, outcome_column_name,
+             binning_method,
              PE_method, user_PE_fit, user_PE_fit_params,
              user_PE_predict, user_PE_predict_params,
              replace, verbose, want_pe, want_bf,
@@ -390,13 +396,15 @@ FLAME <-
 
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
     sort_cols(data, treated_column_name, outcome_column_name,
-              type = 'data', is_missing)
+              binning_method, type = 'data', is_missing)
 
   holdout <-
     sort_cols(holdout, treated_column_name, outcome_column_name,
-              type = 'holdout')[[1]]
+              binning_method, type = 'holdout')[[1]]
 
   n_iters <- length(data)
+
+  browser()
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {

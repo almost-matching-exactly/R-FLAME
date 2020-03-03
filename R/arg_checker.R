@@ -1,5 +1,6 @@
 check_args <-
   function(data, holdout, C, treated_column_name, outcome_column_name,
+           binning_method,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
            replace, verbose, want_pe, want_bf,
@@ -66,6 +67,10 @@ check_args <-
 
   if (is.factor(dplyr::pull(holdout, !!rlang::enquo(outcome_column_name)))) {
     stop('Outcome variable in holdout must be numeric binary or continuous.')
+  }
+
+  if (!(binning_method %in% c('sturges', 'scott', 'fd'))) {
+    stop("binning_method must be one of: 'sturges', 'scott', or 'fd'.")
   }
 
   if (!(PE_method %in% c('elasticnet', 'xgb'))) {
