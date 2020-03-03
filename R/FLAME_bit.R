@@ -12,8 +12,8 @@ aggregate_table <- function(vec) {
 # value), and a list of indices for the matched units (the second return value)
 
 update_matched_bit <- function(data, covs, n_levels) {
+  browser()
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
-
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
 
@@ -87,6 +87,7 @@ process_matches <-
     units_matched <- which(!data$missing)[match_index]
   }
   else {
+    browser()
     match_out <-
       update_matched_bit(data[!data$matched & !data$missing, ], covs, n_levels)
     match_index <- match_out[[1]]

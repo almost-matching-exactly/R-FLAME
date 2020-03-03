@@ -23,14 +23,17 @@ bin_continuous_covariates <- function(X, rule) {
           users are encouraged to use methods specifically designed for continuous covariates.')
 
   X_cont <- X[, is_continuous]
-
+  cov_names <- colnames(X_cont)
   bin_sizes <- sapply(X_cont, bin_fun)
   ranges <- sapply(X_cont, function(x) max(x) - min(x))
   n_bins <- ceiling(ranges / bin_sizes)
 
   X_cont <-
-    purrr::map2(X_cont, n_bins, cut) %>%
-    as.data.frame()
+    lapply(1:ncol(X_cont), function(i) {
+      cut(X_cont[, i], breaks = n_bins[i], labels = 0:(n_bins[i] - 1))
+    }) %>%
+    as.data.frame() %>%
+    `colnames<-`(cov_names)
 
   X[, is_continuous] <- X_cont
 
@@ -100,7 +103,7 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
 
     # covs denotes the covariates currently being matched on
     covs <- 1:n_covs
-
+    # browser()
     # Denote whether a unit is matched and to how many others, respectively
     if (type == 'data') {
       tmp_df$matched <- rep(FALSE, n)

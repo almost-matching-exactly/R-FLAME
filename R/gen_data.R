@@ -35,7 +35,7 @@ gen_mixed_data <- function(n = 200, p = 8) {
   covs <-
     rbinom(n * (p - 3), 1, prob = 0.5) %>%
     matrix(nrow = n) %>%
-    cbind(rnorm(n, 5, 5),
+    cbind(rnorm(n, 5, 7),
           rnorm(n, 0, 1),
           rnorm(n, -10, 1))
 
