@@ -42,17 +42,17 @@ early_stop_BF <- function(BF, early_stop_bf, prop_c_unmatched, prop_t_unmatched,
   return(FALSE)
 }
 
-early_stop_PE <- function(PE, early_stop_pe, epsilon, baseline_PE, verbose) {
+early_stop_PE <- function(PE, early_stop_pe, early_stop_epsilon, baseline_PE, verbose) {
   if (PE > early_stop_pe) { # should be >
     if (verbose != 0) {
       message('FLAME stopping: predictive error would have risen above ', early_stop_pe)
     }
     return(TRUE)
   }
-  if (PE > (1 + epsilon) * baseline_PE) {
+  if (PE > (1 + early_stop_epsilon) * baseline_PE) {
     if (verbose != 0) {
       message('FLAME stopping: predictive error would have risen ',
-              100 * epsilon, '% above the baseline.')
+              100 * early_stop_epsilon, '% above the baseline.')
     }
     return(TRUE)
   }

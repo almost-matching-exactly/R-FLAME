@@ -4,10 +4,10 @@
 \alias{ATE}
 \title{Compute the ATE of a matched dataset.}
 \usage{
-ATE(flame_obj)
+ATE(FLAME_out)
 }
 \arguments{
-\item{flame_obj}{An object returned by running \code{FLAME_bit}.}
+\item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
 }
 \description{
 \code{ATE} Computes the average treatment effect (ATE) of a matched dataset

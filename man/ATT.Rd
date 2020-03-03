@@ -4,10 +4,10 @@
 \alias{ATT}
 \title{Compute the ATT of a matched dataset.}
 \usage{
-ATT(flame_obj)
+ATT(FLAME_out)
 }
 \arguments{
-\item{flame_obj}{An object returned by running \code{FLAME_bit}.}
+\item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
 }
 \description{
 \code{ATT} Computes the average treatment effect on the treated (ATT) of a matched dataset.

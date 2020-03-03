@@ -2,7 +2,8 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
-sort_cols <- function(df, treated_column_name, outcome_column_name, type) {
+sort_cols <- function(df, treated_column_name, outcome_column_name,
+                      type, is_missing) {
 
   n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -60,9 +61,7 @@ sort_cols <- function(df, treated_column_name, outcome_column_name, type) {
     if (type == 'data') {
       tmp_df$matched <- rep(FALSE, n)
       tmp_df$weight <- rep(0, n)
-      if (!('missing' %in% colnames(tmp_df))) {
-        tmp_df$missing <- rep(FALSE, n)
-      }
+      tmp_df$missing <- is_missing
     }
 
     df[[i]] <- tmp_df

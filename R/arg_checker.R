@@ -1,8 +1,9 @@
 check_args <-
   function(data, holdout, C, treated_column_name, outcome_column_name,
-           PE_method, user_PE_fun, PE_fun_params,
+           PE_method, user_PE_fit, user_PE_fit_params,
+           user_PE_predict, user_PE_predict_params,
            replace, verbose, want_pe, want_bf,
-           early_stop_iterations, epsilon,
+           early_stop_iterations, early_stop_epsilon,
            early_stop_un_c_frac, early_stop_un_t_frac,
            early_stop_pe, early_stop_bf,
            missing_data, missing_holdout,
@@ -39,6 +40,14 @@ check_args <-
     stop('treated_column_name must be the name of a column in holdout.')
   }
 
+  if (is.factor(dplyr::pull(data, !!rlang::enquo(treated_column_name)))) {
+    stop('Treated variable in data must be numeric binary or logical.')
+  }
+
+  if (is.factor(dplyr::pull(holdout, !!rlang::enquo(treated_column_name)))) {
+    stop('Treated variable in holdout must be numeric binary or logical.')
+  }
+
   if (!is.character(outcome_column_name)) {
     stop('If you specify outcome_column_name, it must be a character.')
   }
@@ -49,6 +58,14 @@ check_args <-
 
   if (!(outcome_column_name %in% holdout_cols)) {
     stop('outcome_column_name must be the name of a column in holdout.')
+  }
+
+  if (is.factor(dplyr::pull(data, !!rlang::enquo(outcome_column_name)))) {
+    stop('Outcome variable in data must be numeric binary or continuous.')
+  }
+
+  if (is.factor(dplyr::pull(holdout, !!rlang::enquo(outcome_column_name)))) {
+    stop('Outcome variable in holdout must be numeric binary or continuous.')
   }
 
   if (!(PE_method %in% c('elasticnet', 'xgb'))) {
@@ -77,8 +94,8 @@ check_args <-
     stop('early_stop_iterations must be a nonnegative scalar')
   }
 
-  if (!is.numeric(epsilon) | early_stop_iterations <= 0) {
-    stop('epsilon must be a positive scalar')
+  if (!is.numeric(early_stop_epsilon) | early_stop_iterations <= 0) {
+    stop('early_stop_epsilon must be a positive scalar')
   }
 
   if (!is.numeric(early_stop_un_c_frac) |

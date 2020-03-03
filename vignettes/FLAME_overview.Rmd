@@ -124,7 +124,7 @@ By default, FLAME terminates when all covariates have been dropped or all contro
 
 * `early_stop_iterations`: A number of iterations, corresponding to a number of covariates dropped, after which FLAME will automatically exit. A value of 0 has FLAME perform a single round of exact matching on all covariates and then exit. Defaults to infinity. 
 
-* `epsilon`: If the predictive error at any iteration rises above 100 * epsilon percent of the error associated with predicting the outcome using _all_ covariates, FLAME exits. 
+* `early_stop_epsilon`: If the predictive error at any iteration rises above 100 * early_stop_epsilon percent of the error associated with predicting the outcome using _all_ covariates, FLAME exits. 
 
 * `early_stop_bf`: A number between 0 and 2 (the minimum and maximum possible balancing factors). If the balancing factor at any iteration would fall below `early_stop_bf`, FLAME exits _without dropping the covariate that would lead to this low balancing factor._ Defaults to 0. 
 
@@ -144,31 +144,31 @@ FLAME offers several options for dealing with missing data, outlined below:
 # Post-Matching Analysis
 After `FLAME` has been run, the matched data can be used for a variety of purposes. The FLAME package provides functionality for a few quick, post-matching analyses, via the functions `CATE`, `ATE`, `ATT`, and `MG`.
 
-`CATE(units, flame_obj)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `flame_obj`. You may supply only a single unit for the `units` argument. 
+`CATE(units, FLAME_out)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `FLAME_out`. You may supply only a single unit for the `units` argument. 
 
 In this way, we can find the treatment effect for a unit of interest, say, unit 5...
 ```{r,eval=FALSE}
-CATE(units = 5, flame_obj = FLAME_out)
+CATE(units = 5, FLAME_out = FLAME_out)
 ```
 
 ... or for a class of units for which the treatment effect is of particular interest:
 ```{r,eval=FALSE}
-CATE(units = which(data$age < 30 & data$treated == 1), flame_obj = FLAME_out)
+CATE(units = which(data$age < 30 & data$treated == 1), FLAME_out = FLAME_out)
 ```
 
-`ATE(flame_obj)` and `ATT(flame_obj)` return the estimated average treatment effect and the estimated average treatment effect on the treated, respectively. 
+`ATE(FLAME_out)` and `ATT(FLAME_out)` return the estimated average treatment effect and the estimated average treatment effect on the treated, respectively. 
 ```{r,eval=FALSE}
-ATE(flame_obj = FLAME_out)
-ATT(flame_obj = FLAME_out)
+ATE(FLAME_out = FLAME_out)
+ATT(FLAME_out = FLAME_out)
 ```
 
-Lastly, we can use `MG(units, flame_obj)` to get a list of the members of the matched groups of all units in `units`:
+Lastly, we can use `MG(units, FLAME_out)` to get a list of the members of the matched groups of all units in `units`:
 ```{r, eval = FALSE}
-MG(units = 5, flame_obj = FLAME_out)
-MG(units = which(data$age < 30 & data$treated == 1), flame_obj = FLAME_out)
+MG(units = 5, FLAME_out = FLAME_out)
+MG(units = which(data$age < 30 & data$treated == 1), FLAME_out = FLAME_out)
 ```
 
-Note that if the value supplied to the `holdout` argument is a proportion between 0 and 1, the values supplied to the `units` argument in the functions above will be indexed with respect to `flame_obj$data` _and not with respect to the data passed in _`data`.
+Note that if the value supplied to the `holdout` argument is a proportion between 0 and 1, the values supplied to the `units` argument in the functions above will be indexed with respect to `FLAME_out$data` _and not with respect to the data passed in _`data`.
 
 # Overview of the Algorithm 
 FLAME operates by iteratively matching all possible units on a set of covariates and then dropping one of those covariates to make more matches. Roughly, units are said to 'match' on a set of covariates if they have identical values of all those covariates. FLAME is thus designed to be run on categorical covariates. However, continuous covariates can be discretized, via rules such as those employed by Coarsened Exact Matching (see [here](<https://cran.r-project.org/web/packages/cem/vignettes/cem.pdf>)), and then passed to FLAME. 

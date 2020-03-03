@@ -4,58 +4,70 @@
 \alias{MG}
 \title{Matched groups of units.}
 \usage{
-MG(units, flame_obj, multiple = FALSE)
+MG(units, FLAME_out, multiple = FALSE)
 }
 \arguments{
-\item{units}{A vector of integers between 1 and \code{nrow(flame_obj$data)}
+\item{units}{A vector of integers between 1 and \code{nrow(FLAME_out$data)}
 whose matched groups are desired.}
 
-\item{flame_obj}{An object returned by running \code{\link{FLAME}}.}
+\item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
 
 \item{multiple}{A logical scalar. If \code{FALSE} (default), then will only
-return each unit's first matched group; else, will return all of them. See
-below for details.}
+return the matched group of each unit with matches on the greatest number
+of covariates; otherwise, will return all of them. See below for details.}
 }
 \value{
-A list of length \code{length(units)}. Each entry is a data frame (if
+\strong{If passing a single set of matched data}
+
+  A list of length \code{length(units)}. Each entry is a data frame (if
   \code{multiple = FALSE}) or a list of data frames (if \code{multiple =
   TRUE}). For a given entry, these data frames are subsets of \code{data}
-  passed to \code{\link{FLAME}} to generate \code{flame_obj}, whose rows
+  passed to \code{\link{FLAME}} to generate \code{FLAME_out}, whose rows
   correspond to the units in the matched group(s) of that entry.
 
   Each entry thus always corresponds to the matched group(s) of the
   corresponding unit in \code{units}, but the structure of the entries
   depends on the value of \code{multiple} and on whether or not the call to
-  \code{\link{FLAME}} that generated \code{flame_obj} specified \code{repeats =
-  TRUE} or not. If it did, a unit may have several matched
-  groups, corresponding to several sets of covariates it was matched on. In
-  this case, \code{multiple = FALSE} requests that only the matched group
-  with matches on the greatest number of covariates be returned and
-  \code{multiple = TRUE} requests that all matched groups involving that unit
-  be returned. If it did not, a unit only has one matched group
-  that will be returned.
+  \code{\link{FLAME}} that generated \code{FLAME_out} specified \code{repeats
+  = TRUE} or not. If it did, a unit may have several matched groups,
+  corresponding to several sets of covariates it was matched on. In this
+  case, \code{multiple = FALSE} requests that only the matched group with
+  matches on the greatest number of covariates be returned and \code{multiple
+  = TRUE} requests that all matched groups involving that unit be returned.
+  If the call to \code{\link{FLAME}} specified \code{repeats = FALSE}, a unit
+  only has one matched group that will be returned. Regardless of the value
+  of \code{repeats}, if \code{multiple = TRUE}, each entry of the returned
+  list will be a list of one or more data frames (matched groups). And if
+  \code{multiple = FALSE}, each entry will be a single data frame (matched
+  group).
 
   The starred entries (*) in the returned data frames have the same meaning
-  as in \code{flame_obj$data}, except for if both \code{multiple = TRUE} and
-  \code{repeats = TRUE}. In this case, if \emph{all} units do not match on a given
-  covariate, all entries of that covariate will be starred, even though a
-  subset of the units may have matched on them.
+  as in \code{FLAME_out$data}, except for if both \code{multiple = TRUE} and
+  \code{repeats = TRUE}. In this case, if \emph{all} units do not match on a
+  given covariate, all entries of that covariate will be starred, even though
+  a subset of the units may have matched on them. This is done so that it is
+  clear on which covariates these units match.
+
+  Note that this is the return format also if passing a single set of
+  imputed data.
+
+  \strong{If passing multiple sets of matched, imputed data}
+
+  A list of length \code{length(FLAME_out)}, where each entry has the
+  structure described above, corresponding to that imputed data set.
 }
 \description{
-Returns the matched groups of units \code{units}, as well as the covariates,
+Returns the matched groups of units, as well as the covariates,
 treatment, and outcome of the units in each matched group.
 }
 \details{
-\code{MG} returns a list, each entry of which contains information about the
-matched group(s) of the corresponding unit. If \code{\link{FLAME}} was run with
-argument \code{repeats = FALSE} to generate \code{flame_obj}, \code{MG}
-should be run with the default \code{multiple = FALSE} and will return
-information about the matched group of each unit. If \code{link{FLAME}} was run
-with argument \code{repeats = TRUE}, then \code{MG} may be run with either
-\code{multiple = FALSE} or \code{multiple = TRUE}. In the first case, only
-one matched group, that with matches on the greatest number of covariates,
-will be returned. In the second case, all matched groups involving the
-relevant unit will be returned.
+\code{MG} returns the covariates, treatments, and outcomes of the units in
+the matched groups of \code{units}. Multiple matched groups per unit may be
+returned if their creation was allowed when originally running
+\code{\link{FLAME}}. Additionally, if \code{\link{FLAME}} was run with
+\code{missing_data = 2} to generate \code{FLAME_out}, then \code{MG} will
+return matched group information for all \code{missing_data_imputations}
+imputations.
 }
 \seealso{
 \code{\link{FLAME}}

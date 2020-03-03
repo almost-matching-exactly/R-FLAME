@@ -33,63 +33,17 @@ update_matched_bit <- function(data, covs, n_levels) {
   stopifnot(gmp::is.bigz(b_u_plus))
 
   # Compute c_u
-  c_u = aggregate_table(b_u)
+  c_u <- aggregate_table(b_u)
 
   # Compute c_u+
-  c_u_plus = aggregate_table(b_u_plus)
+  c_u_plus <- aggregate_table(b_u_plus)
 
-  match_index = mapply(function(x,y) (x != y) && (x >= 2) && (y >= 1), c_u, c_u_plus)
-  index = b_u[match_index]
+  match_index <-
+    mapply(function(x,y) (x != y) && (x >= 2) && (y >= 1), c_u, c_u_plus)
+  index <- b_u[match_index]
 
   return(list(match_index = match_index,
               index = index))
-}
-
-#match_quality function takes holdout dataset, number of total covariates,
-#list of current covariates, covariate c to temporily remove from, and trafeoff
-#parameter as input. The function then computes Balancing Factor and Predictive Error,
-#returning Match Quality.
-
-get_match_quality <- function(cov_to_drop, data, replace, holdout, covs, n_levels, C,
-                              PE_method, alpha) {
-  ### Compute Balancing Factor
-
-  # Calculate number of units unmatched (available)
-  num_control <- sum(data$treated == 0)
-  num_treated <- sum(data$treated == 1)
-
-  # Number of matched units
-  if (replace) {
-    match_index <-
-      update_matched_bit(data, setdiff(covs, covs_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
-    units_matched <- which(match_index)
-  }
-  else {
-    match_index <-
-      update_matched_bit(data[!data$matched, ], setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
-    units_matched <- which(!data$matched)[match_index]
-  }
-
-  num_control_matched <- sum(data$treated[units_matched] == 0)
-  num_treated_matched <- sum(data$treated[units_matched] == 1)
-
-  BF <- dplyr::if_else(num_control == 0 | num_treated == 0, # Is this if_else really necessary? We should catch it earlier
-                0,
-                num_control_matched / num_control + num_treated_matched / num_treated)
-
-  ### Compute Predictive Error
-
-  # Default PE - elastic net regression with 0.1 regularization parameter
-  if (PE_method == 'elasticnet') {
-    PE <- predict_elasticnet(holdout, cov_to_drop, alpha)
-  }
-  else {
-    stop("I don't recognize this prediction method")
-  }
-  return(list(BF = BF,
-              PE = PE))
 }
 
 make_MGs <- function(data, index, matched_units, covs, cov_names) {
@@ -123,21 +77,24 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
               matched_on = matched_on))
 }
 
-process_matches <- function(data, replace, covs, n_levels, MGs, matched_on, matching_covs, CATE, cov_names) {
+process_matches <-
+  function(data, replace, covs, n_levels, MGs,
+           matched_on, matching_covs, CATE, cov_names) {
   if (replace) {
-    match_out <- update_matched_bit(data, covs, n_levels)
+    match_out <- update_matched_bit(data[!data$missing, ], covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
-    units_matched <- which(match_index)
+    units_matched <- which(!data$missing)[match_index]
   }
   else {
-    match_out <- update_matched_bit(data[!data$matched, ], covs, n_levels)
+    match_out <-
+      update_matched_bit(data[!data$matched & !data$missing, ], covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
 
     # Adjusts for fact that match_index returned by update_matched bit is
     # with respect to the unmatched subset of data
-    units_matched <- which(!data$matched)[match_index]
+    units_matched <- which(!data$matched & !data$missing)[match_index]
   }
 
   made_matches <- sum(match_index) > 0
@@ -208,15 +165,21 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   # Number of matched units
   if (replace) {
     match_index <-
-      update_matched_bit(data, setdiff(covs, cov_to_drop),
+      update_matched_bit(data[!data$missing, ], setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)])[['match_index']]
-    units_matched <- which(match_index)
+    units_matched <- which(!data$missing)[match_index]
   }
   else {
     match_index <-
-      update_matched_bit(data[!data$matched, ], setdiff(covs, cov_to_drop),
+      update_matched_bit(data[!data$matched & !data$missing, ],
+                         setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)])[['match_index']]
-    units_matched <- which(!data$matched)[match_index]
+    units_matched <- which(!data$matched & !data$missing)[match_index]
+  }
+
+  if (!replace & any(units_matched %in% which(data$matched))) {
+    browser()
+    stop('Rematching a matched unit')
   }
 
   # Newly matched
@@ -236,7 +199,8 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   # Is this if_else really necessary? We should catch it earlier
   BF <- dplyr::if_else(num_control == 0 | num_treated == 0,
                 0,
-                num_control_matched / num_control + num_treated_matched / num_treated)
+                num_control_matched / num_control +
+                  num_treated_matched / num_treated)
 
   return(list(BF = BF,
               prop_unmatched =
@@ -344,9 +308,10 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param early_stop_iterations A nonnegative integer, denoting the number of
 #'   iterations of FLAME to be performed. If 0, one round of exact matching is
 #'   performed before stopping. Defaults to \code{Inf}.
-#' @param epsilon A nonnegative numeric. If FLAME attemts to drop a covariate
-#'   that would raise the PE above (1 + epsilon) times the predictive error
-#'   before any covariates have been dropped, FLAME will stop. Defaults to 0.25.
+#' @param early_stop_epsilon A nonnegative numeric. If FLAME attemts to drop a
+#'   covariate that would raise the PE above (1 + early_stop_epsilon) times the
+#'   baseline PE (the PE ebefore any covariates have been dropped), FLAME will
+#'   stop. Defaults to 0.25.
 #' @param early_stop_un_c_frac A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of control units that are unmatched falls below this value,
 #'   FLAME stops. Defaults to 0.
@@ -387,15 +352,16 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @importFrom rlang !!
 #' @export
 FLAME <-
-  function(data, holdout = 0.1, C = 0.1, ## Algorithmic arguments
+  function(data, holdout = 0.1, C = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
-           PE_method = 'elasticnet', user_PE_fit = NULL, user_PE_fit_params = NULL,
+           PE_method = 'elasticnet',
+           user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
            replace = FALSE, verbose = 2, want_pe = FALSE, want_bf = FALSE,
-           early_stop_iterations = Inf, epsilon = 0.25, ## Early stopping arguments
+           early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
-           missing_data = 0, missing_holdout = 0, ## Missing data arguments
+           missing_data = 0, missing_holdout = 0,
            missing_data_imputations = 5, missing_holdout_imputations = 5) {
 
   read_data_out <- read_data(data, holdout)
@@ -405,8 +371,9 @@ FLAME <-
   check_args(data, holdout, C,
              treated_column_name, outcome_column_name,
              PE_method, user_PE_fit, user_PE_fit_params,
+             user_PE_predict, user_PE_predict_params,
              replace, verbose, want_pe, want_bf,
-             early_stop_iterations, epsilon,
+             early_stop_iterations, early_stop_epsilon,
              early_stop_un_c_frac, early_stop_un_t_frac,
              early_stop_pe, early_stop_bf,
              missing_data, missing_holdout,
@@ -419,9 +386,11 @@ FLAME <-
 
   data <- missing_out[[1]]
   holdout <- missing_out[[2]]
+  is_missing <- missing_out[[3]]
 
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
-    sort_cols(data, treated_column_name, outcome_column_name, type = 'data')
+    sort_cols(data, treated_column_name, outcome_column_name,
+              type = 'data', is_missing)
 
   holdout <-
     sort_cols(holdout, treated_column_name, outcome_column_name,
@@ -431,7 +400,7 @@ FLAME <-
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
-    if (missing_data == 3) {
+    if (missing_data == 2) {
       message('Running FLAME on imputed dataset ', i, ' of ', n_iters)
     }
     FLAME_out[[i]] <-
@@ -439,8 +408,9 @@ FLAME <-
                      cov_names, sorting_order, C,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params,
-                     replace, verbose, want_pe, want_bf, early_stop_iterations,
-                     epsilon, early_stop_un_c_frac, early_stop_un_t_frac,
+                     replace, verbose, want_pe, want_bf,
+                     early_stop_iterations, early_stop_epsilon,
+                     early_stop_un_c_frac, early_stop_un_t_frac,
                      early_stop_pe, early_stop_bf)
   }
 
@@ -450,13 +420,15 @@ FLAME <-
   return(FLAME_out)
 }
 
-FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C, ## Algorithmic arguments
-                           PE_method, user_PE_fit, user_PE_fit_params ,
-                           user_PE_predict, user_PE_predict_params,
-                           replace, verbose, want_pe, want_bf,
-                           early_stop_iterations, epsilon, ## Early stopping arguments
-                           early_stop_un_c_frac, early_stop_un_t_frac,
-                           early_stop_pe, early_stop_bf) {
+FLAME_internal <-
+  function(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C,
+           PE_method, user_PE_fit, user_PE_fit_params ,
+           user_PE_predict, user_PE_predict_params,
+           replace, verbose, want_pe, want_bf,
+           early_stop_iterations, early_stop_epsilon,
+           early_stop_un_c_frac, early_stop_un_t_frac,
+           early_stop_pe, early_stop_bf) {
+
   # List of MGs, each entry contains the corresponding MGs entries
   MGs <- list()
   # List of CATEs, each entry contains the corresponding MGs CATE
@@ -469,8 +441,10 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
   covs_dropped <- NULL
 
   # Try and make matches on all covariates
-  processed_matches <- process_matches(data, replace, covs, n_levels, MGs,
-                                       matched_on, matching_covs, CATE, cov_names)
+  processed_matches <-
+    process_matches(data, replace, covs, n_levels, MGs,
+                    matched_on, matching_covs, CATE, cov_names)
+
   CATE <- processed_matches[[1]]
   MGs <- processed_matches[[2]]
   matched_on <- processed_matches[[3]]
@@ -500,7 +474,9 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
     PE <- sapply(covs, get_PE, covs, holdout,
                  PE_method, user_PE_fit, user_PE_fit_params,
                  user_PE_predict, user_PE_predict_params)
-    if (early_stop_PE(min(PE), early_stop_pe, epsilon, baseline_PE, verbose)) {
+
+    if (early_stop_PE(min(PE), early_stop_pe,
+                      early_stop_epsilon, baseline_PE, verbose)) {
       break
     }
 
@@ -511,7 +487,8 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
       drop_candidates <- which(upper_bound >= best_lower_bound)
       PE <- PE[drop_candidates]
 
-      BF_out <- lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
+      BF_out <-
+        lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
       BF <- sapply(BF_out, function(x) x[['BF']])
 
       MQ <- C * BF - PE
@@ -520,7 +497,7 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
       MQ <- PE
     }
 
-    # (First, in unlikely case of ties) covariate yielding the highest match quality
+    # (First, in unlikely case of ties) covariate yielding highest match quality
     drop <- which.max(MQ)
     prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
 
@@ -544,8 +521,9 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
-    processed_matches <- process_matches(data, replace, covs, n_levels, MGs,
-                                         matched_on, matching_covs, CATE, cov_names)
+    processed_matches <-
+      process_matches(data, replace, covs, n_levels, MGs,
+                      matched_on, matching_covs, CATE, cov_names)
     CATE <- processed_matches[[1]]
     MGs <- processed_matches[[2]]
     matched_on <- processed_matches[[3]]
@@ -575,9 +553,16 @@ FLAME_internal <- function(data, holdout, covs, n_covs, n_levels, cov_names, sor
 
   # Reorder the data according to the original column order
   data[, 1:n_covs] %<>% dplyr::select(order(sorting_order))
+  data[, ncol(data)] <- NULL
   colnames(data) <-
     c(colnames(data)[1:n_covs][order(sorting_order)],
       'outcome', 'treated', 'matched', 'weight')
+
+  if (!replace) {
+    matched <- which(data$matched)
+    stopifnot(all(data$weight[matched] == 1))
+    stopifnot(all(data$weight[-matched] == 0))
+  }
 
   ret_list <-
     list(data = data,

@@ -20,35 +20,36 @@ FLAME(
   want_pe = FALSE,
   want_bf = FALSE,
   early_stop_iterations = Inf,
-  epsilon = 0.25,
+  early_stop_epsilon = 0.25,
   early_stop_un_c_frac = 0,
   early_stop_un_t_frac = 0,
   early_stop_pe = Inf,
   early_stop_bf = 0,
   missing_data = 0,
   missing_holdout = 0,
-  n_data_imputations = 5,
-  n_holdout_imputations = 5
+  missing_data_imputations = 5,
+  missing_holdout_imputations = 5
 )
 }
 \arguments{
 \item{data}{Data to be matched. Either a dataframe or a path to a .csv file
-to be read (via \code{read.csv}) into a dataframe. Treatment must be described
-in a logical or binary column with name \code{treated_column_name}. Outcome
-must be either binary (logical or binary column) or continuous (numeric).
-All other columns will be assumed to be covariates to be used for matching
-and must be categorical as they will be coerced to factors. No default.}
+to be read (via \code{read.csv}) into a dataframe. Treatment must be
+described in a logical or binary column with name
+\code{treated_column_name}. Outcome must be either binary (logical or
+binary column) or continuous (numeric). All other columns will be assumed
+to be covariates to be used for matching and must be categorical as they
+will be coerced to factors. No default.}
 
-\item{holdout}{Holdout data to be used to compute predictive error. If a numeric
-scalar between 0 and 1, that proportion of \code{data} will be made into a
-holdout set and only the remaining proportion of \code{data} will be
+\item{holdout}{Holdout data to be used to compute predictive error. If a
+numeric scalar between 0 and 1, that proportion of \code{data} will be made
+into a holdout set and only the remaining proportion of \code{data} will be
 matched. Otherwise, a dataframe or a path to a .csv file. Must have the
 same column names as \code{data}. This data will \emph{not} be matched.
 Defaults to 0.1}
 
-\item{C}{A finite, positive scalar denoting the tradeoff between BF and PE in the
-FLAME algorithm. Higher C prioritizes more matches and lower C prioritizes
-not dropping important covariates. Defaults to 0.1.}
+\item{C}{A finite, positive scalar denoting the tradeoff between BF and PE in
+the FLAME algorithm. Higher C prioritizes more matches and lower C
+prioritizes not dropping important covariates. Defaults to 0.1.}
 
 \item{treated_column_name}{A character with the name of the treatment column
 in \code{data} and \code{holdout}. Defaults to 'treated'.}
@@ -100,9 +101,10 @@ iteration will be returned. Defaults to \code{FALSE}.}
 iterations of FLAME to be performed. If 0, one round of exact matching is
 performed before stopping. Defaults to \code{Inf}.}
 
-\item{epsilon}{A nonnegative numeric. If FLAME attemts to drop a covariate
-that would raise the PE above (1 + epsilon) times the predictive error
-before any covariates have been dropped, FLAME will stop. Defaults to 0.25.}
+\item{early_stop_epsilon}{A nonnegative numeric. If FLAME attemts to drop a
+covariate that would raise the PE above (1 + early_stop_epsilon) times the
+baseline PE (the PE ebefore any covariates have been dropped), FLAME will
+stop. Defaults to 0.25.}
 
 \item{early_stop_un_c_frac}{A numeric value between 0 and 1 (inclusive). If
 the proportion of control units that are unmatched falls below this value,
@@ -121,24 +123,25 @@ attempts to drop a covariate that would lead to a BF below this value,
 FLAME stops. Defaults to 0.}
 
 \item{missing_data}{If 0, assumes no missingness in \code{data}. If 1,
-eliminates units with missingness from \code{data}. If 2, will not match a
-unit on a covariate that it is missing. If 3, performs
-\code{n_data_imputations} of MICE to impute the missing data. In this last
+eliminates units with missingness from \code{data}. If 2, performs
+\code{missing_data_imputations} of MICE to impute the missing data. In this
 case, FLAME will be run on each imputed dataset and a list of the results
-for each dataset will be returned. Defaults to 0.}
+for each dataset will be returned. If 3, will not match a unit on a
+covariate that it is missing. Defaults to 0.}
 
 \item{missing_holdout}{If 0, assumes no missing data in \code{holdout}. If 1,
 eliminates units with missingness from \code{holdout}. If 2, performs
-\code{n_holdout_imputations} of MICE to impute the missing data. In this
-latter case, all imputations will be used to compute PE, and the PE at an
-iteration will be the average across all imputations. Defaults to 0.}
+\code{missing_holdout_imputations} of MICE to impute the missing data. In
+this latter case, all imputations will be used to compute PE, and the PE at
+an iteration will be the average across all imputations. Defaults to 0.}
 
-\item{n_data_imputations}{If \code{missing_data} = 2, performs this many
-imputations of the missing data in \code{data} using MICE. Defaults to 5.}
+\item{missing_data_imputations}{If \code{missing_data} = 2, performs this
+many imputations of the missing data in \code{data} using MICE. Defaults to
+5.}
 
-\item{n_holdout_imputations}{If \code{missing_holdout} = 2, performs this
-many imputations of the missing data in \code{holdout} using MICE. Defaults
-to 5.}
+\item{missing_holdout_imputations}{If \code{missing_holdout} = 2, performs
+this many imputations of the missing data in \code{holdout} using MICE.
+Defaults to 5.}
 }
 \description{
 \code{FLAME} runs the bit-vectors implementation of the FLAME algorithm.
@@ -164,12 +167,13 @@ please see the FLAME paper \href{https://arxiv.org/pdf/1707.06315.pdf}{here}.
 \section{Stopping Rules}{
 
 By default, \code{FLAME} stops when 1. all covariates have been dropped or 2.
-all treatment or control units have been matched. This behavior can be modified
-by the arguments whose prefix is "early_stop". With the exception of \code{early_stop_iterations},
-all the rules come into play \emph{before} the offending covariate is dropped.
-That is, if \code{early_stop_BF = 0.2} and at the current iteration, dropping
-the covariate leading to highest match quality is associated with a balancing factor of
-0.1, FLAME stops \emph{without} dropping this covariate.
+all treatment or control units have been matched. This behavior can be
+modified by the arguments whose prefix is "early_stop". With the exception of
+\code{early_stop_iterations}, all the rules come into play \emph{before} the
+offending covariate is dropped. That is, if \code{early_stop_BF = 0.2} and at
+the current iteration, dropping the covariate leading to highest match
+quality is associated with a balancing factor of 0.1, FLAME stops
+\emph{without} dropping this covariate.
 }
 
 \section{Missing Data}{

@@ -14,6 +14,7 @@ handle_missing_data <- function(data, holdout,
                                 missing_data_imputations, missing_holdout_imputations) {
 
   if (missing_data == 0) {
+    is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
       stop("Found missingness in 'data' but was told to assume there was none.\n
            Please either change 'missing_data' to 1, 2, or 3, or supply 'data'
@@ -21,14 +22,19 @@ handle_missing_data <- function(data, holdout,
     }
   }
   else if (missing_data == 1) {
-    data$missing <- is.na(rowSums(data))
+    is_missing <- is.na(rowSums(data))
   }
   else if (missing_data == 2) {
+    is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
       data <- impute_missing(data, missing_data_imputations)
     }
+    else {
+      message('No missing data found; skipping imputation.')
+    }
   }
   else if (missing_data == 3) {
+    is_missing <- FALSE
     # Replace the missing values with unique integers, each larger than all
     # observed covariate values in data
     replace_vals <-
@@ -74,5 +80,6 @@ handle_missing_data <- function(data, holdout,
   }
 
   return(list(data = data,
-              holdout = holdout))
+              holdout = holdout,
+              is_missing = is_missing))
 }

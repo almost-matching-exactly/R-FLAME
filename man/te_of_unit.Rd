@@ -4,13 +4,13 @@
 \alias{te_of_unit}
 \title{Compute the treatment effect of a given unit.}
 \usage{
-te_of_unit(unit, flame_obj)
+te_of_unit(unit, FLAME_out)
 }
 \arguments{
-\item{unit}{An integer between 1 and \code{nrow(flame_obj)} for whom the
+\item{unit}{An integer between 1 and \code{nrow(FLAME_out)} for whom the
 treatment effect is desired.}
 
-\item{flame_obj}{An object returned by running \code{FLAME_bit}.}
+\item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
 }
 \description{
 \code{te_of_unit} Computes the treatment effect of unit \code{unit} as equal
