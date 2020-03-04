@@ -8,7 +8,8 @@ check_args <-
            early_stop_un_c_frac, early_stop_un_t_frac,
            early_stop_pe, early_stop_bf,
            missing_data, missing_holdout,
-           missing_data_imputations, missing_holdout_imputations) {
+           missing_data_imputations, missing_holdout_imputations,
+           impute_with_outcome, impute_with_treatment) {
 
   if (!is.data.frame(data)) {
     stop('data must be a data frame or a character denoting a .csv file in the working directory.')
@@ -146,5 +147,18 @@ check_args <-
   if (!is.numeric(missing_holdout_imputations) | missing_holdout_imputations < 1) {
     stop('missing_holdout_imputations must be an integer greater than 1')
   }
+
+  if (impute_with_outcome & !outcome_in_data) {
+    stop('Outcome not present in data; cannot request to use it to impute missingness.')
+  }
+
+  if (!is.logical(impute_with_outcome)) {
+    stop('impute_with_outcome must be a logical scalar')
+  }
+
+  if (!is.logical(impute_with_treatment)) {
+    stop('impute_with_outcome must be a logical scalar')
+  }
+
   return(outcome_in_data)
 }

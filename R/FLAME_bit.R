@@ -396,7 +396,8 @@ FLAME <-
              early_stop_un_c_frac, early_stop_un_t_frac,
              early_stop_pe, early_stop_bf,
              missing_data, missing_holdout,
-             missing_data_imputations, missing_holdout_imputations)
+             missing_data_imputations, missing_holdout_imputations,
+             impute_with_outcome, impute_with_treatment)
 
   missing_out <-
     handle_missing_data(data, holdout, outcome_in_data,
