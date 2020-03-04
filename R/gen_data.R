@@ -32,9 +32,14 @@ gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'F
 
 gen_mixed_data <- function(n = 200, p = 8) {
   TE <- 5
+  # covs <-
+  #   rbinom(n * (p - 3), 1, prob = 0.5) %>%
+  #   matrix(nrow = n) %>%
+  #   cbind(rnorm(n, 5, 7),
+  #         rnorm(n, 0, 1),
+  #         rnorm(n, -10, 1))
+
   covs <-
-    rbinom(n * (p - 3), 1, prob = 0.5) %>%
-    matrix(nrow = n) %>%
     cbind(rnorm(n, 5, 7),
           rnorm(n, 0, 1),
           rnorm(n, -10, 1))
@@ -43,11 +48,12 @@ gen_mixed_data <- function(n = 200, p = 8) {
   treated <- rbinom(n, 1, prob = 0.5)
 
   outcome <-
-    (15 * covs[, 7] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4] + 3 * covs[, 6]) %>%
+    outcome <- 10 * covs[, 1] + 5 * covs[, 2] %>%
+    # (15 * covs[, 7] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4] + 3 * covs[, 6]) %>%
     magrittr::add(rnorm(n)) %>%
     magrittr::add(TE * treated)
   data <- data.frame(covs, outcome = outcome, treated = treated)
-  data[, 1:(ncol(covs) - 3)] %<>% lapply(as.factor)
+  # data[, 1:(ncol(covs) - 3)] %<>% lapply(as.factor)
   return(data)
 }
 

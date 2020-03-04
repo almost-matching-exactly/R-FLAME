@@ -1,17 +1,53 @@
-impute_missing <- function(data, n_imputations) {
+impute_missing <- function(data, n_imputations,
+                           treatment_column_name, outcome_column_name,
+                           impute_with_treatment, impute_with_outcome) {
+
+  treatment_ind <- which(colnames(data) == treatment_column_name)
+  outcome_ind <- which(colnames(data) == outcome_column_name)
+
   # browser()
-  # pred_mat <-
-  #   matrix(1, nrow = ncol(data), ncol = ncol(data)) %>%
-  #   cbind(0)
-  # diag(pred_mat) <- 0
-  mice::mice(data, m = n_imputations, printFlag = FALSE) %>%
+  pred_mat <- matrix(1, nrow = ncol(data), ncol = ncol(data))
+  diag(pred_mat) <- 0
+
+  if (!impute_with_treatment) {
+    pred_mat[, treatment_ind] <- 0
+  }
+  if (!impute_with_outcome) {
+    pred_mat[, outcome_ind] <- 0
+  }
+
+  mice::mice(data, m = n_imputations,
+             predictorMatrix = pred_mat, printFlag = FALSE) %>%
     mice::complete(action = 'all') %>%
     return()
 }
 
-handle_missing_data <- function(data, holdout,
-                                missing_data, missing_holdout,
-                                missing_data_imputations, missing_holdout_imputations) {
+handle_missing_data <-
+  function(data, holdout,
+           treated_column_name, outcome_column_name,
+           missing_data, missing_holdout,
+           missing_data_imputations, missing_holdout_imputations,
+           impute_with_treatment, impute_with_outcome) {
+
+  outcome_data <- dplyr::pull(data, !!rlang::enquo(outcome_column_name))
+  outcome_holdout <- dplyr::pull(holdout, !!rlang::enquo(outcome_column_name))
+
+  if (any(is.na(outcome_data)) | any(is.na(outcome_holdout))) {
+    message('Found missingness in the outcome. Corresponding rows will automatically be dropped.')
+    to_drop <- which(is.na(outcome_data) | is.na(outcome_holdout))
+  }
+
+  treatment_data <- dplyr::pull(data, !!rlang::enquo(treatment_column_name))
+  treatment_holdout <- dplyr::pull(holdout, !!rlang::enquo(treatment_column_name))
+  if (any(is.na(treatment_data)) | any(is.na(treatment_holdout))) {
+    message('Found missingness in the treatment. Corresponding rows will automatically be dropped.')
+  }
+
+  to_drop_data <- which(is.na(outcome_data) | is.na(treatment_data))
+  to_drop_holdout <- which(is.na(outcome_holdout) | is.na(treatment_holdout))
+
+  data <- data[-to_drop_data, ]
+  holdout <- holdout[-to_drop_holdout, ]
 
   if (missing_data == 0) {
     is_missing <- FALSE
@@ -27,7 +63,9 @@ handle_missing_data <- function(data, holdout,
   else if (missing_data == 2) {
     is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
-      data <- impute_missing(data, missing_data_imputations)
+      data <- impute_missing(data, missing_data_imputations,
+                             treatment_column_name, outcome_column_name,
+                             impute_with_treatment, impute_with_outcome)
     }
     else {
       message('No missing data found; skipping imputation.')
@@ -56,7 +94,9 @@ handle_missing_data <- function(data, holdout,
   }
   else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
-      holdout <- impute_missing(holdout, missing_holdout_imputations)
+      holdout <- impute_missing(holdout, missing_holdout_imputations,
+                                treatment_column_name, outcome_column_name,
+                                impute_with_treatment, impute_with_outcome)
     }
   }
 

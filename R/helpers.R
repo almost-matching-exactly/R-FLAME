@@ -19,8 +19,7 @@ bin_continuous_covariates <- function(X, rule) {
   if (length(is_continuous) == 0) {
     return(X)
   }
-  warning('Binning continuous covariates. This is not recommended;
-          users are encouraged to use methods specifically designed for continuous covariates.')
+  warning('Binning continuous covariates. This is not recommended; users are encouraged to use methods specifically designed for continuous covariates.')
 
   X_cont <- X[, is_continuous]
   cov_names <- colnames(X_cont)

@@ -12,7 +12,7 @@ aggregate_table <- function(vec) {
 # value), and a list of indices for the matched units (the second return value)
 
 update_matched_bit <- function(data, covs, n_levels) {
-  browser()
+  # browser()
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
@@ -87,7 +87,7 @@ process_matches <-
     units_matched <- which(!data$missing)[match_index]
   }
   else {
-    browser()
+    # browser()
     match_out <-
       update_matched_bit(data[!data$matched & !data$missing, ], covs, n_levels)
     match_index <- match_out[[1]]
@@ -368,7 +368,8 @@ FLAME <-
            early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0,
-           missing_data_imputations = 5, missing_holdout_imputations = 5) {
+           missing_data_imputations = 5, missing_holdout_imputations = 5,
+           impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
 
   read_data_out <- read_data(data, holdout)
   data <- read_data_out[[1]]
@@ -388,8 +389,10 @@ FLAME <-
 
   missing_out <-
     handle_missing_data(data, holdout,
+                        treated_column_name, outcome_column_name,
                         missing_data, missing_holdout,
-                        missing_data_imputations, missing_holdout_imputations)
+                        missing_data_imputations, missing_holdout_imputations,
+                        impute_with_treatment, impute_with_outcome)
 
   data <- missing_out[[1]]
   holdout <- missing_out[[2]]
@@ -405,7 +408,7 @@ FLAME <-
 
   n_iters <- length(data)
 
-  browser()
+  # browser()
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
