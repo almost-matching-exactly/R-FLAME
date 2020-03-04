@@ -46,7 +46,7 @@ update_matched_bit <- function(data, covs, n_levels) {
               index = index))
 }
 
-make_MGs <- function(data, index, matched_units, covs, cov_names) {
+make_MGs <- function(data, outcome_in_data, index, matched_units, covs, cov_names) {
   # Takes all the units that were matched on these p' covariates and separates them
   # into matched groups based off their unique values of those covariates
   # Returns a list with three items:
@@ -66,7 +66,12 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
     MGs[[i]] <- members
     treated <- intersect(members, which(data$treated == 1))
     control <- intersect(members, which(data$treated == 0))
-    CATEs[i] <- mean(data$outcome[treated]) - mean(data$outcome[control])
+    if (outcome_in_data) {
+      CATEs[i] <- mean(data$outcome[treated]) - mean(data$outcome[control])
+    }
+    else {
+      CATEs[i] <- NA
+    }
     matched_on[[i]] <-
       data[members[1], covs, drop = FALSE] %>%
       `rownames<-`(NULL)
@@ -78,7 +83,7 @@ make_MGs <- function(data, index, matched_units, covs, cov_names) {
 }
 
 process_matches <-
-  function(data, replace, covs, n_levels, MGs,
+  function(data, outcome_in_data, replace, covs, n_levels, MGs,
            matched_on, matching_covs, CATE, cov_names) {
   if (replace) {
     match_out <- update_matched_bit(data[!data$missing, ], covs, n_levels)
@@ -101,7 +106,7 @@ process_matches <-
   made_matches <- sum(match_index) > 0
 
   if (made_matches) {
-    new_MGs <- make_MGs(data, index, units_matched, covs, cov_names)
+    new_MGs <- make_MGs(data, outcome_in_data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
     CATE <- c(CATE, new_MGs$CATEs)
     matched_on <- c(matched_on, new_MGs$matched_on)
@@ -255,13 +260,17 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' error at an iteration will be the average of predictive  errors across all
 #' imputed \code{holdout} datasets.
 #'
-#' @param data Data to be matched. Either a dataframe or a path to a .csv file
-#'   to be read (via \code{read.csv}) into a dataframe. Treatment must be
+#' @param data Data to be matched. Either a data frame or a path to a .csv file
+#'   to be read (via \code{read.csv}) into a data frame. Treatment must be
 #'   described in a logical or binary column with name
-#'   \code{treated_column_name}. Outcome must be either binary (logical or
-#'   binary column) or continuous (numeric). All other columns will be assumed
-#'   to be covariates to be used for matching and must be categorical as they
-#'   will be coerced to factors. No default.
+#'   \code{treated_column_name}. Outcome, if supplied, must be either binary
+#'   continuous (both numeric). If not supplied, matching will be performed but
+#'   post-matching, treatment effect estimation will not be possible. All other
+#'   columns will be assumed to be covariates to be used for matching. If they
+#'   are factors, they will be assumed to be categorical; if they are numeric,
+#'   they will be assumed continuous and binned into categories as specified by
+#'   \code{binning_method}. The input of continuous covariates is not
+#'   recommended. There is no default for \code{data}.
 #' @param holdout Holdout data to be used to compute predictive error. If a
 #'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
 #'   into a holdout set and only the remaining proportion of \code{data} will be
@@ -274,7 +283,8 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param treated_column_name A character with the name of the treatment column
 #'   in \code{data} and \code{holdout}. Defaults to 'treated'.
 #' @param outcome_column_name A character with the name of the outcome column in
-#'   \code{data} and \code{holdout}. Defaults to 'outcome'.
+#'   \code{holdout} and also in \code{data}, if supplied in the latter.
+#'   Defaults to 'outcome'.
 #' @param binning_method The method to be used to bin continuous covariates in the
 #' data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
 #' or the Freedman-Diaconis rule for determining number of bins in a histogram.
@@ -375,6 +385,7 @@ FLAME <-
   data <- read_data_out[[1]]
   holdout <- read_data_out[[2]]
 
+  outcome_in_data <-
   check_args(data, holdout, C,
              treated_column_name, outcome_column_name,
              binning_method,
@@ -388,27 +399,24 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations)
 
   missing_out <-
-    handle_missing_data(data, holdout,
+    handle_missing_data(data, holdout, outcome_in_data,
                         treated_column_name, outcome_column_name,
                         missing_data, missing_holdout,
                         missing_data_imputations, missing_holdout_imputations,
                         impute_with_treatment, impute_with_outcome)
-
   data <- missing_out[[1]]
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
 
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
-    sort_cols(data, treated_column_name, outcome_column_name,
+    sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
               binning_method, type = 'data', is_missing)
 
   holdout <-
-    sort_cols(holdout, treated_column_name, outcome_column_name,
+    sort_cols(holdout, outcome_in_data, treated_column_name, outcome_column_name,
               binning_method, type = 'holdout')[[1]]
 
   n_iters <- length(data)
-
-  # browser()
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
@@ -416,7 +424,8 @@ FLAME <-
       message('Running FLAME on imputed dataset ', i, ' of ', n_iters)
     }
     FLAME_out[[i]] <-
-      FLAME_internal(data[[i]], holdout, covs, n_covs, n_levels,
+      FLAME_internal(data[[i]], outcome_in_data,
+                     holdout, covs, n_covs, n_levels,
                      cov_names, sorting_order, C,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params,
@@ -433,7 +442,7 @@ FLAME <-
 }
 
 FLAME_internal <-
-  function(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C,
+  function(data, outcome_in_data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C,
            PE_method, user_PE_fit, user_PE_fit_params ,
            user_PE_predict, user_PE_predict_params,
            replace, verbose, want_pe, want_bf,
@@ -454,7 +463,7 @@ FLAME_internal <-
 
   # Try and make matches on all covariates
   processed_matches <-
-    process_matches(data, replace, covs, n_levels, MGs,
+    process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
                     matched_on, matching_covs, CATE, cov_names)
 
   CATE <- processed_matches[[1]]
@@ -534,7 +543,7 @@ FLAME_internal <-
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
     processed_matches <-
-      process_matches(data, replace, covs, n_levels, MGs,
+      process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
                       matched_on, matching_covs, CATE, cov_names)
     CATE <- processed_matches[[1]]
     MGs <- processed_matches[[2]]
@@ -583,6 +592,10 @@ FLAME_internal <-
          matched_on = matched_on,
          matching_covs = matching_covs,
          dropped = covs_dropped)
+
+  if (!outcome_in_data) {
+    ret_list$CATE <- NULL
+  }
 
   if (want_pe) {
     ret_list %<>% c('PE' = list(store_pe))

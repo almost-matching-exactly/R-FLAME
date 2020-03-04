@@ -43,8 +43,9 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
-sort_cols <- function(df, treated_column_name, outcome_column_name,
-                      binning_method, type, is_missing = NULL) {
+sort_cols <-
+  function(df, outcome_in_data, treated_column_name, outcome_column_name,
+           binning_method, type, is_missing = NULL) {
 
   n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -54,9 +55,11 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
     df[[1]] %>%
     dplyr::select(!!rlang::enquo(treated_column_name))
 
-  outcome_col <-
-    df[[1]] %>%
-    dplyr::select(!!rlang::enquo(outcome_column_name))
+  if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
+    outcome_col <-
+      df[[1]] %>%
+      dplyr::select(!!rlang::enquo(outcome_column_name))
+  }
 
   n <- nrow(df[[1]])
 
@@ -68,12 +71,23 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
   # For all imputed data sets
   for (i in 1:n_df) {
     tmp_df <- df[[i]]
+    # tmp_df %<>%
+      # dplyr::select(-c(!!rlang::enquo(treated_column_name),
+      #                  !!rlang::enquo(outcome_column_name))) %>%
+      # cbind(outcome_col) %>%
+      # cbind(treatment_col)
 
-    tmp_df %<>%
-      dplyr::select(-c(!!rlang::enquo(treated_column_name),
-                       !!rlang::enquo(outcome_column_name))) %>%
-      cbind(outcome_col) %>%
-      cbind(treatment_col)
+    if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
+      tmp_df <-
+        tmp_df[, covariates] %>%
+        cbind(outcome_col) %>%
+        cbind(treatment_col)
+    }
+    else {
+      tmp_df <-
+        tmp_df[, covariates] %>%
+        cbind(treatment_col)
+    }
 
     tmp_df[, 1:n_covs] <-
       bin_continuous_covariates(tmp_df[, 1:n_covs], rule = binning_method)
@@ -92,7 +106,12 @@ sort_cols <- function(df, treated_column_name, outcome_column_name,
     # Data sorted by n_levels
     tmp_df[, 1:n_covs] <- tmp_df[, sorting_order]
     # Sorting data column names
-    colnames(tmp_df) <- c(cov_names, 'outcome', 'treated')
+    if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
+      colnames(tmp_df) <- c(cov_names, 'outcome', 'treated')
+    }
+    else {
+      colnames(tmp_df) <- c(cov_names, 'treated')
+    }
 
     if (type == 'data') {
       for (j in 1:n_covs) {

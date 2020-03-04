@@ -20,9 +20,19 @@ check_args <-
 
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
-
-  if (!identical(sort(data_cols), sort(holdout_cols))) {
-    stop('Data and holdout must contain identical column names.')
+  # browser()
+  outcome_in_data <- TRUE
+  if (length(data_cols) != length(holdout_cols))  { # Outcome not supplied in data
+    outcome_in_data <- FALSE
+    if (!identical(sort(data_cols),
+                   sort(holdout_cols[-match(outcome_column_name, holdout_cols)]))) {
+      stop('Non-outcome columns of data and holdout must have identical names.')
+    }
+  }
+  else {
+    if (!identical(sort(data_cols), sort(holdout_cols))) {
+      stop('If data outcome supplied, data and holdout must contain identical column names.')
+    }
   }
 
   if (!is.numeric(C) | C < 0 | is.infinite(C)) {
@@ -50,10 +60,10 @@ check_args <-
   }
 
   if (!is.character(outcome_column_name)) {
-    stop('If you specify outcome_column_name, it must be a character.')
+    stop('Outcome_column_name must be a character.')
   }
 
-  if (!(outcome_column_name %in% data_cols)) {
+  if (outcome_in_data & !(outcome_column_name %in% data_cols)) {
     stop('outcome_column_name must be the name of a column in data.')
   }
 
@@ -61,7 +71,7 @@ check_args <-
     stop('outcome_column_name must be the name of a column in holdout.')
   }
 
-  if (is.factor(dplyr::pull(data, !!rlang::enquo(outcome_column_name)))) {
+  if (outcome_in_data && is.factor(dplyr::pull(data, !!rlang::enquo(outcome_column_name)))) {
     stop('Outcome variable in data must be numeric binary or continuous.')
   }
 
@@ -136,4 +146,5 @@ check_args <-
   if (!is.numeric(missing_holdout_imputations) | missing_holdout_imputations < 1) {
     stop('missing_holdout_imputations must be an integer greater than 1')
   }
+  return(outcome_in_data)
 }

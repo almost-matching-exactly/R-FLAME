@@ -23,6 +23,7 @@ gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'F
   #   magrittr::add(rnorm(n)) %>%
   #   magrittr::add(TE * treated)
   data <- data.frame(covs, outcome = outcome, treated = treated)
+  data[, 1:ncol(covs)] %<>% lapply(as.factor)
   if (write) {
     write.csv(data, file = paste0(path, '/', filename),
               row.names = FALSE)
