@@ -1,16 +1,20 @@
 show_progress <- function(verbose, iter, data) {
   if (verbose == 1) {
-    message(paste('Starting iteration', iter, 'of FLAME'))
+    message(paste('Starting iteration', iter, 'of FLAME\r'), appendLF = FALSE)
+    flush.console()
   }
   else if (verbose == 2) {
     if (iter %% 5 == 0) {
-      message(paste('Starting iteration', iter, 'of FLAME'))
+      message(paste('Starting iteration', iter, 'of FLAME\r'), appendLF = FALSE)
       message(paste(sum(!data$matched), 'unmatched units remaining'))
+      flush.console()
     }
   }
   else if (verbose == 3) {
-    message(paste('Starting iteration', iter, 'of FLAME'))
-    message(paste(sum(!data$matched), 'unmatched units remaining'))
+    message(paste0('Starting iteration ', iter, ' of FLAME (',
+                  sum(!data$matched), ' unmatched units remaining)\r'),
+            appendLF = FALSE)
+    flush.console()
   }
 }
 

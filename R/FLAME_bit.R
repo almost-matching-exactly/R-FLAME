@@ -422,7 +422,7 @@ FLAME <-
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
     if (missing_data == 2) {
-      message('Running FLAME on imputed dataset ', i, ' of ', n_iters)
+      message('Running FLAME on imputed dataset ', i, ' of ', n_iters, '\r', appendLF = FALSE)
     }
     FLAME_out[[i]] <-
       FLAME_internal(data[[i]], outcome_in_data,
