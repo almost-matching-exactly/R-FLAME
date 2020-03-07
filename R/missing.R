@@ -15,6 +15,8 @@ impute_missing <- function(data, outcome_in_data, n_imputations,
     pred_mat[, outcome_ind] <- 0
   }
 
+  pred_mat[c(treatment_ind, outcome_ind), ] <- 0
+
   mice::mice(data, m = n_imputations,
              predictorMatrix = pred_mat, printFlag = FALSE) %>%
     mice::complete(action = 'all') %>%
@@ -73,6 +75,7 @@ handle_missing_data <-
       data <- impute_missing(data, outcome_in_data, missing_data_imputations,
                              treated_column_name, outcome_column_name,
                              impute_with_treatment, impute_with_outcome)
+
     }
     else {
       message('No missing data found; skipping imputation.')

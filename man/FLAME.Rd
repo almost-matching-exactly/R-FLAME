@@ -10,6 +10,7 @@ FLAME(
   C = 0.1,
   treated_column_name = "treated",
   outcome_column_name = "outcome",
+  binning_method = "sturges",
   PE_method = "elasticnet",
   user_PE_fit = NULL,
   user_PE_fit_params = NULL,
@@ -28,17 +29,23 @@ FLAME(
   missing_data = 0,
   missing_holdout = 0,
   missing_data_imputations = 5,
-  missing_holdout_imputations = 5
+  missing_holdout_imputations = 5,
+  impute_with_treatment = TRUE,
+  impute_with_outcome = FALSE
 )
 }
 \arguments{
-\item{data}{Data to be matched. Either a dataframe or a path to a .csv file
-to be read (via \code{read.csv}) into a dataframe. Treatment must be
+\item{data}{Data to be matched. Either a data frame or a path to a .csv file
+to be read (via \code{read.csv}) into a data frame. Treatment must be
 described in a logical or binary column with name
-\code{treated_column_name}. Outcome must be either binary (logical or
-binary column) or continuous (numeric). All other columns will be assumed
-to be covariates to be used for matching and must be categorical as they
-will be coerced to factors. No default.}
+\code{treated_column_name}. Outcome, if supplied, must be either binary
+continuous (both numeric). If not supplied, matching will be performed but
+post-matching, treatment effect estimation will not be possible. All other
+columns will be assumed to be covariates to be used for matching. If they
+are factors, they will be assumed to be categorical; if they are numeric,
+they will be assumed continuous and binned into categories as specified by
+\code{binning_method}. The input of continuous covariates is not
+recommended. There is no default for \code{data}.}
 
 \item{holdout}{Holdout data to be used to compute predictive error. If a
 numeric scalar between 0 and 1, that proportion of \code{data} will be made
@@ -55,7 +62,13 @@ prioritizes not dropping important covariates. Defaults to 0.1.}
 in \code{data} and \code{holdout}. Defaults to 'treated'.}
 
 \item{outcome_column_name}{A character with the name of the outcome column in
-\code{data} and \code{holdout}. Defaults to 'outcome'.}
+\code{holdout} and also in \code{data}, if supplied in the latter.
+Defaults to 'outcome'.}
+
+\item{binning_method}{The method to be used to bin continuous covariates in the
+data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
+or the Freedman-Diaconis rule for determining number of bins in a histogram.
+Each continuous covariate will be binned into the corresponding number of bins.}
 
 \item{PE_method}{Either "elasticnet" or "xgb". Denotes the method to be used
 to compute PE. If "elasticnet", uses \code{glmnet::cv.glmnet} with default

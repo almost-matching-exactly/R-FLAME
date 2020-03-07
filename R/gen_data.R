@@ -11,13 +11,13 @@ gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'F
   #   matrix(nrow = n)
   treated <- rbinom(n, 1, prob = 0.5)
 
-  outcome <-
-    1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
-
   # outcome <-
-  #   (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4]) %>%
-  #   magrittr::add(rnorm(n)) %>%
-  #   magrittr::add(TE * treated)
+  #   1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
+
+  outcome <-
+    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4]) %>%
+    magrittr::add(rnorm(n)) %>%
+    magrittr::add(TE * treated)
   # outcome <-
   #   (15 * (covs[, 1] == 3) - 10 * (covs[, 2] == 1) + 5 * (covs[, 3] == 2)) %>%
   #   magrittr::add(rnorm(n)) %>%
@@ -65,5 +65,6 @@ gen_missing_data <- function(n = 50, p = 5, write = FALSE, percent_missing = 0.0
   inds <- sample(1:size, size = round(percent_missing * size), replace = FALSE)
   covs[inds] <- NA
   data[, 1:p] <- covs
+  data[, 1:ncol(covs)] %<>% lapply(as.factor)
   return(data)
 }

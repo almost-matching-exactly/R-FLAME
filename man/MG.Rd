@@ -28,22 +28,22 @@ of covariates; otherwise, will return all of them. See below for details.}
   Each entry thus always corresponds to the matched group(s) of the
   corresponding unit in \code{units}, but the structure of the entries
   depends on the value of \code{multiple} and on whether or not the call to
-  \code{\link{FLAME}} that generated \code{FLAME_out} specified \code{repeats
+  \code{\link{FLAME}} that generated \code{FLAME_out} specified \code{replace
   = TRUE} or not. If it did, a unit may have several matched groups,
   corresponding to several sets of covariates it was matched on. In this
   case, \code{multiple = FALSE} requests that only the matched group with
   matches on the greatest number of covariates be returned and \code{multiple
   = TRUE} requests that all matched groups involving that unit be returned.
-  If the call to \code{\link{FLAME}} specified \code{repeats = FALSE}, a unit
+  If the call to \code{\link{FLAME}} specified \code{replace = FALSE}, a unit
   only has one matched group that will be returned. Regardless of the value
-  of \code{repeats}, if \code{multiple = TRUE}, each entry of the returned
+  of \code{replace}, if \code{multiple = TRUE}, each entry of the returned
   list will be a list of one or more data frames (matched groups). And if
   \code{multiple = FALSE}, each entry will be a single data frame (matched
   group).
 
   The starred entries (*) in the returned data frames have the same meaning
   as in \code{FLAME_out$data}, except for if both \code{multiple = TRUE} and
-  \code{repeats = TRUE}. In this case, if \emph{all} units do not match on a
+  \code{replace = TRUE}. In this case, if \emph{all} units do not match on a
   given covariate, all entries of that covariate will be starred, even though
   a subset of the units may have matched on them. This is done so that it is
   clear on which covariates these units match.
@@ -64,10 +64,10 @@ treatment, and outcome of the units in each matched group.
 \code{MG} returns the covariates, treatments, and outcomes of the units in
 the matched groups of \code{units}. Multiple matched groups per unit may be
 returned if their creation was allowed when originally running
-\code{\link{FLAME}}. Additionally, if \code{\link{FLAME}} was run with
-\code{missing_data = 2} to generate \code{FLAME_out}, then \code{MG} will
-return matched group information for all \code{missing_data_imputations}
-imputations.
+\code{\link{FLAME}} with \code{replace = TRUE}. Additionally, if
+\code{\link{FLAME}} was run with \code{missing_data = 2} to generate
+\code{FLAME_out}, then \code{MG} will return matched group information for
+all \code{missing_data_imputations} imputations.
 }
 \seealso{
 \code{\link{FLAME}}
