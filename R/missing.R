@@ -41,6 +41,12 @@ handle_missing_data <-
 
   if (outcome_in_data) {
     outcome_data <- dplyr::pull(data, !!rlang::enquo(outcome_column_name))
+    if (all(is.na(outcome_data))) {
+      stop('Outcome in data is entirely missing. If you do not have an outcome, do not supply a corresponding column.')
+    }
+    if (all(is.na(outcome_holdout))) {
+      stop('Outcome in holdout is entirely missing.')
+    }
     if (any(is.na(outcome_data)) | any(is.na(outcome_holdout))) {
       message('Found missingness in the outcome. Corresponding rows will automatically be dropped.')
     }
@@ -124,7 +130,7 @@ handle_missing_data <-
   }
 
   for (i in 1:n_imputations) {
-    for (j in 1:(ncol(data[[i]]) - 2)) {
+    for (j in 1:(ncol(data[[i]]) - 1 - outcome_in_data)) {
       levels(data[[i]][, j]) %<>% c('*')
     }
   }

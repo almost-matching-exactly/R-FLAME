@@ -1,3 +1,34 @@
+# aggregate_table <- function(vec) {
+#   tab <- table(as.character(vec))
+#   tab <- unclass(tab)
+#   name <- names(tab)
+#   list_val <- as.character(vec)
+#   return(as.vector(tab[match(list_val, name)]))
+# }
+#
+# agg2 <- function(vec) {
+#   tab <- table(as.character(vec))
+#   # tab <- unclass(tab)
+#   name <- names(tab)
+#   list_val <- as.character(vec)
+#   return(as.vector(tab[match(list_val, name)]))
+# }
+#
+# agg3 <- function(vec) {
+#   vec <- as.character(vec)
+#   tab <- table(vec)
+#   # tab <- unclass(tab)
+#   name <- names(tab)
+#   return(as.vector(tab[match(vec, name)]))
+# }
+#
+# tmp <-
+#   sample(1:12, size = 1000, replace = TRUE) %>%
+#   gmp::as.bigz()
+#
+# microbenchmark::microbenchmark(aggregate_table(tmp), agg2(tmp), agg3(tmp),
+#                                check = 'identical', times = 1000)
+
 check_all_matches <- function(flout, data) {
   max_covs <- length(flout$matched_on[[1]])
   min_covs <- length(flout$matched_on[[length(flout$matched_on)]])

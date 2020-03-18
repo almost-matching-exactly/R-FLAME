@@ -47,7 +47,7 @@ sort_cols <-
   function(df, outcome_in_data, treated_column_name, outcome_column_name,
            binning_method, type, is_missing = NULL) {
 
-  n_covs <- ncol(df[[1]]) - 2 # Ignore treatment, outcome
+  n_covs <- ncol(df[[1]]) - 1 - outcome_in_data # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
 
   # Treatment and outcome will be constant across imputations
@@ -97,6 +97,7 @@ sort_cols <-
 
     # To sort covariates in increasing order of number of levels
     sorting_order <- order(n_levels)
+
     # To make sure the column names are also reordered
     cov_names <- colnames(tmp_df)[1:n_covs][sorting_order]
 
@@ -121,7 +122,7 @@ sort_cols <-
 
     # covs denotes the covariates currently being matched on
     covs <- 1:n_covs
-    # browser()
+
     # Denote whether a unit is matched and to how many others, respectively
     if (type == 'data') {
       tmp_df$matched <- rep(FALSE, n)

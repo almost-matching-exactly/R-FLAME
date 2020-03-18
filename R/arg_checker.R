@@ -1,5 +1,6 @@
 check_args <-
-  function(data, holdout, C, treated_column_name, outcome_column_name,
+  function(data, holdout, outcome_in_data, C,
+           treated_column_name, outcome_column_name,
            binning_method,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
@@ -21,10 +22,8 @@ check_args <-
 
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
-  # browser()
-  outcome_in_data <- TRUE
-  if (length(data_cols) != length(holdout_cols))  { # Outcome not supplied in data
-    outcome_in_data <- FALSE
+
+  if (!outcome_in_data) {
     if (!identical(sort(data_cols),
                    sort(holdout_cols[-match(outcome_column_name, holdout_cols)]))) {
       stop('Non-outcome columns of data and holdout must have identical names.')
@@ -138,12 +137,15 @@ check_args <-
   if (!is.numeric(missing_data) | !(missing_data %in% c(0, 1, 2, 3))) {
     stop('missing_data must be one of: 0, 1, 2, 3')
   }
+
   if (!is.numeric(missing_holdout) | !(missing_holdout %in% c(0, 1, 2))) {
     stop('missing_data must be one of: 0, 1, 2')
   }
+
   if (!is.numeric(missing_data_imputations) | missing_data_imputations < 1) {
     stop('missing_data_imputations must be an integer greater than 1')
   }
+
   if (!is.numeric(missing_holdout_imputations) | missing_holdout_imputations < 1) {
     stop('missing_holdout_imputations must be an integer greater than 1')
   }
@@ -159,6 +161,4 @@ check_args <-
   if (!is.logical(impute_with_treatment)) {
     stop('impute_with_outcome must be a logical scalar')
   }
-
-  return(outcome_in_data)
 }

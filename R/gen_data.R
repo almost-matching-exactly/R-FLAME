@@ -1,14 +1,14 @@
 #' @export
 gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'FLAME.csv') {
   TE <- 5
-  covs <-
-    rbinom(n * p, 1, prob = 0.5) %>%
-    matrix(nrow = n)
   # covs <-
-  #   apply(rmultinom(n * p, size = 1, prob = c(0.3, 0.2, 0.4, 0.1)) == 1,
-  #         2,
-  #         which) %>%
+  #   rbinom(n * p, 1, prob = 0.5) %>%
   #   matrix(nrow = n)
+  covs <-
+    apply(rmultinom(n * p, size = 1, prob = c(0.3, 0.2, 0.4, 0.1)) == 1,
+          2,
+          which) %>%
+    matrix(nrow = n)
   treated <- rbinom(n, 1, prob = 0.5)
 
   # outcome <-
