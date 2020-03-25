@@ -70,11 +70,11 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
               Y_control = Y_control))
 }
 
-get_MSE <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
+get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
   fit <- do.call(fit_fun, c(list(X, Y), fit_params))
   preds <- do.call(predict_fun, c(list(fit, X), predict_params))
-  MSE <- mean((preds - Y) ^ 2)
-  return(MSE)
+  error <- mean((preds - Y) ^ 2) # MSE for continuous outcome; MCE for binary
+  return(error)
 }
 
 predict_master <-
@@ -91,15 +91,15 @@ predict_master <-
     Y_treat <- setup_out[[3]]
     Y_control <- setup_out[[4]]
 
-    MSE_treat <-
-      get_MSE(X_treat, Y_treat,
+    error_treat <-
+      get_error(X_treat, Y_treat,
               PE_fit, PE_predict, PE_fit_params, PE_predict_params)
 
-    MSE_control <-
-      get_MSE(X_control, Y_control,
+    error_control <-
+      get_error(X_control, Y_control,
               PE_fit, PE_predict, PE_fit_params, PE_predict_params)
 
-    PE[i] <- MSE_treat + MSE_control
+    PE[i] <- error_treat + error_control
   }
   return(mean(PE))
 }

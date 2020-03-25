@@ -1,9 +1,5 @@
 show_progress <- function(verbose, iter, data) {
-  if (verbose == 1) {
-    message(paste('Starting iteration', iter, 'of FLAME\r'), appendLF = FALSE)
-    flush.console()
-  }
-  else if (verbose == 2) {
+  if (verbose == 2) {
     if (iter %% 5 == 0) {
       message(paste0('Starting iteration ', iter, ' of FLAME (',
                      sum(!data$matched), ' unmatched units remaining)\r'),
@@ -64,39 +60,44 @@ early_stop_PE <- function(PE, early_stop_pe, early_stop_epsilon, baseline_PE, ve
   return(FALSE)
 }
 
+pretty_print <- function(to_print, iter, verbose) {
+  if (verbose == 0) {
+    return()
+  }
+  if ((verbose == 2 & (iter %% 5 == 0)) | verbose == 3) {
+    message('\n', appendLF = FALSE)
+  }
+  message(to_print)
+}
+
 early_stop <- function(iter, data, covs, early_stop_iterations, verbose) {
   if (length(covs) == 1) {
-    if (verbose != 0) {
-      message('FLAME stopping: all covariates dropped')
-    }
+    pretty_print('FLAME stopping: only one covariate remaining',
+                 iter, verbose)
     return(TRUE)
   }
 
   if (all(data$matched)) {
-    if (verbose != 0) {
-      message('FLAME stopping: all units matched')
-    }
+    pretty_print('FLAME stopping: all units matched',
+                 iter, verbose)
     return(TRUE)
   }
 
   if (iter >= early_stop_iterations) {
-    if (verbose != 0) {
-      message('FLAME stopping: completed ', iter, ' iterations')
-    }
+    pretty_print(paste0('FLAME stopping: completed ', iter, ' iterations'),
+                 iter, verbose)
     return(TRUE)
   }
 
   if (sum(!data$matched & data$treated == 0) == 0) {
-    if (verbose != 0) {
-      message('FLAME stopping: all control units matched')
-    }
+    pretty_print('FLAME stopping: all control units matched',
+                 iter, verbose)
     return(TRUE)
   }
 
   if (sum(!data$matched & data$treated == 1) == 0) {
-    if (verbose != 0) {
-      message('FLAME stopping: all treatment units matched')
-    }
+    pretty_print('FLAME stopping: all treatment units matched',
+                 iter, verbose)
     return(TRUE)
   }
 

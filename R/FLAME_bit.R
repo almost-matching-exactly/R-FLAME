@@ -11,6 +11,7 @@ aggregate_table <- function(vals) {
 # value), and a list of indices for the matched units (the second return value)
 
 update_matched_bit <- function(data, covs, n_levels) {
+  # n_levels <- apply(data[, covs, drop = FALSE], 2, max)
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
@@ -18,7 +19,7 @@ update_matched_bit <- function(data, covs, n_levels) {
   b_u <-
     gmp::`%*%`(data_wo_t, multiplier) %>%
     as.vector()
-
+  # browser()
   stopifnot(gmp::is.bigz(b_u))
 
   # Compute b_u+
@@ -163,8 +164,8 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
 
 get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   # Calculate number of units unmatched (available)
-  num_control <- sum(data$treated == 0)
-  num_treated <- sum(data$treated == 1)
+  n_control <- sum(data$treated[!data$matched & !data$missing] == 0)
+  n_treated <- sum(data$treated[!data$matched & !data$missing] == 1)
 
   # Number of matched units
   if (replace) {
@@ -187,8 +188,8 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   }
 
   # Newly matched
-  num_control_matched <- sum(data$treated[units_matched] == 0)
-  num_treated_matched <- sum(data$treated[units_matched] == 1)
+  n_control_matched <- sum(data$treated[units_matched] == 0)
+  n_treated_matched <- sum(data$treated[units_matched] == 1)
 
   # All matched units; for stopping rule purposes
   all_unmatched <-
@@ -197,14 +198,14 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
   n_control_unmatched <- sum(all_unmatched %in% which(data$treated == 0))
   n_treated_unmatched <- sum(all_unmatched %in% which(data$treated == 1))
 
-  prop_control_unmatched <- n_control_unmatched / num_control
-  prop_treated_unmatched <- n_treated_unmatched / num_treated
+  prop_control_unmatched <- n_control_unmatched / n_control
+  prop_treated_unmatched <- n_treated_unmatched / n_treated
 
   # Is this if_else really necessary? We should catch it earlier
-  BF <- dplyr::if_else(num_control == 0 | num_treated == 0,
+  BF <- dplyr::if_else(n_control == 0 | n_treated == 0,
                 0,
-                num_control_matched / num_control +
-                  num_treated_matched / num_treated)
+                n_control_matched / n_control +
+                  n_treated_matched / n_treated)
 
   return(list(BF = BF,
               prop_unmatched =
@@ -309,11 +310,11 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
 #'   matched multiple times, on different sets of covariates. Defaults to
 #'   \code{FALSE}.
-#' @param verbose Controls output while FLAME is running. If 0, no output. If 1,
-#'   outputs the iteration every iteration and the stopping condition. If 2,
-#'   outputs the iteration and number of unmatched units every 5 iterations, and
-#'   the stopping condition. If 3, outputs the iteration and number of unmatched
-#'   units every 5 iterations, and the stopping condition. Defaults to 2.
+#' @param verbose Controls how FLAME displays progress while running. If 0, no
+#'   output. If 1, only outputs the stopping condition. If 2, outputs the
+#'   iteration and number of unmatched units every 5 iterations, and the
+#'   stopping condition. If 3, outputs the iteration and number of unmatched
+#'   units every iteration, and the stopping condition. Defaults to 2.
 #' @param want_pe A logical scalar. If TRUE, the predictive error (PE) at each
 #'   iteration will be returned. Defaults to \code{FALSE}.
 #' @param want_bf A logical scalar. If TRUE, the balancing factor (BF) at each
@@ -367,8 +368,7 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 FLAME <-
   function(data, holdout = 0.1, C = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
-           binning_method = 'sturges',
-           PE_method = 'elasticnet',
+           binning_method = 'sturges', PE_method = 'elasticnet',
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
            replace = FALSE, verbose = 2, want_pe = FALSE, want_bf = FALSE,
@@ -384,7 +384,7 @@ FLAME <-
   holdout <- read_data_out[[2]]
 
   # Was outcome supplied by user?
-  if (length(colnames(data)) != length(colnames(holdout))) {
+  if (!(outcome_column_name %in% colnames(data))) {
     outcome_in_data <- FALSE
   }
   else {
@@ -415,6 +415,7 @@ FLAME <-
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
 
+  # browser()
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
     sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
               binning_method, type = 'data', is_missing)
@@ -422,13 +423,14 @@ FLAME <-
   holdout <-
     sort_cols(holdout, outcome_in_data = TRUE, treated_column_name, outcome_column_name,
               binning_method, type = 'holdout')[[1]]
-
+  # browser()
   n_iters <- length(data)
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
     if (missing_data == 2) {
       message('Running FLAME on imputed dataset ', i, ' of ', n_iters, '\r', appendLF = FALSE)
+      flush.console()
     }
     FLAME_out[[i]] <-
       FLAME_internal(data[[i]], outcome_in_data,
@@ -486,7 +488,6 @@ FLAME_internal <-
                                               cov_names,
                                               sorting_order)))
   }
-
   store_pe <- NULL
   store_bf <- NULL
 
@@ -495,7 +496,6 @@ FLAME_internal <-
                         user_PE_predict, user_PE_predict_params)
 
   iter <- 0
-
   while (!early_stop(iter, data, covs, early_stop_iterations, verbose)) {
     iter <- iter + 1
     show_progress(verbose, iter, data)
@@ -515,17 +515,18 @@ FLAME_internal <-
       upper_bound <- 2 * C - PE
 
       drop_candidates <- which(upper_bound >= best_lower_bound)
+      # browser()
       PE <- PE[drop_candidates]
-
       BF_out <-
         lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
       BF <- sapply(BF_out, function(x) x[['BF']])
+
       MQ <- C * BF - PE
     }
     else {
       MQ <- PE
     }
-
+  ############### FIX THIS FOR C = 0
     # (First, in unlikely case of ties) covariate yielding highest match quality
     drop <- which.max(MQ)
     prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
@@ -575,7 +576,7 @@ FLAME_internal <-
   }
 
   # Done matching!
-
+  is_missing <- data$missing
   # Substitute covariate values of all unmatched units with the unmatched
   # covariate symbol '*'
   data[!data$matched, 1:n_covs] <- '*'
@@ -609,7 +610,8 @@ FLAME_internal <-
          CATE = CATE,
          matched_on = matched_on,
          matching_covs = matching_covs,
-         dropped = covs_dropped)
+         dropped = covs_dropped,
+         missing = is_missing) ###### remove this
 
   if (!outcome_in_data) {
     ret_list$CATE <- NULL

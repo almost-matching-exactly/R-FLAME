@@ -1,3 +1,88 @@
+no_match_on_missing <- function(data, flout) {
+
+}
+
+compare_missing <- function(neha, me, me_missing) {
+  n_covs <- ncol(neha) - 1
+    # browser()
+  for (i in 2:(n_covs + 1)) {
+    if (is.factor(neha[[i]])) {
+      neha[[i]] <-
+        forcats::fct_recode(neha[[i]],
+                            '1' = '1.0', '2' = '2.0', '3' = '3.0', '4' = '4.0') %>%
+        forcats::fct_relevel('1', '2', '3', '4', '*')
+    }
+    else {
+      neha[[i]] <-
+        factor(neha[[i]], levels = c('1', '2', '3', '4', '*'))
+    }
+  }
+  # browser()
+  neha_counter <- 1
+  me_counter <- 1
+  for (i in 1:nrow(me)) {
+    if (me_missing[i]) {
+      me_counter <- me_counter + 1
+      next
+    }
+    if (!all(neha[neha_counter, 2:(n_covs + 1)] == me[me_counter, 1:n_covs])) {
+      print(neha_counter)
+      print(me_counter)
+      stop('bleh')
+    }
+    neha_counter <- neha_counter + 1
+    me_counter <- me_counter + 1
+  }
+  return(TRUE)
+}
+
+compare <- function(neha, me) {
+
+  n_covs <- ncol(neha) - 1
+  for (i in 2:(n_covs + 1)) {
+    if (is.factor(neha[[i]])) {
+      neha[[i]] <-
+        forcats::fct_recode(neha[[i]],
+                            '1' = '1.0', '2' = '2.0', '3' = '3.0', '4' = '4.0') %>%
+        forcats::fct_relevel('1', '2', '3', '4', '*')
+    }
+    else {
+      neha[[i]] <-
+        factor(neha[[i]], levels = c('1', '2', '3', '4', '*'))
+    }
+  }
+
+  tmp <-
+    me$data[-which(!me$data$matched), ] %>%
+    dplyr::select(-c(weight, outcome, matched, treated))
+  # if (dplyr::all_equal(tmp, dplyr::select(neha, -X))) {
+  #   return(TRUE)
+  # }
+
+  unmatched_neha <- setdiff(0:(nrow(me$data) - 1), neha$X) + 1
+  unmatched_me <- which(!me$data$matched)
+  # browser()
+  # stopifnot(length(unmatched_neha) == length(unmatched_me))
+  # stopifnot(all(sort(unmatched_neha) == sort(unmatched_me)))
+
+  for (i in 0:length(me$dropped)) {
+    unmatched_me <- which(apply(me$data, 1, function(x) sum(x == '*') == i))
+    unmatched_neha <- neha$X[which(apply(neha, 1, function(x) sum(x == '*') == i))] + 1
+    # browser()
+
+    if (length(unmatched_neha) != length(unmatched_me)) {
+      print(i)
+      return(FALSE)
+    }
+
+    if (all(sort(unmatched_neha) != sort(unmatched_me))) {
+      print(i)
+      return(FALSE)
+    }
+  }
+  return(TRUE)
+}
+
 # aggregate_table <- function(vec) {
 #   tab <- table(as.character(vec))
 #   tab <- unclass(tab)

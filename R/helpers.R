@@ -1,30 +1,33 @@
 # X is the subset of the data frame containing the continuous covariates
-bin_continuous_covariates <- function(X, rule) {
+bin_continuous_covariates <- function(X, rule, type) {
   n <- nrow(X)
   if (rule == 'sturges') {
-    bin_fun <- function(x) (max(x) - min(x)) / (log(n, base = 2) + 1)
+    bin_fun <- function(x) {
+      (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)) / (log(n, base = 2) + 1)}
   }
   else if (rule == 'scott') {
-    bin_fun <- function(x) 3.5 * sqrt(var(x)) / (n ^ (1 / 3))
+    bin_fun <- function(x) 3.5 * sqrt(var(x, na.rm = TRUE)) / (n ^ (1 / 3))
   }
   else if (rule == 'fd') {
-    bin_fun <- function(x) 2 * IQR(x) / (n ^ (1 / 3))
+    bin_fun <- function(x) 2 * IQR(x, na.rm = TRUE) / (n ^ (1 / 3))
   }
   else {
     stop('Unrecognized binning rule. Please supply one of "sturges", "scott", or "fd".')
   }
 
   is_continuous <- which(!sapply(X, is.factor))
-
   if (length(is_continuous) == 0) {
     return(X)
   }
-  warning('Binning continuous covariates. This is not recommended; users are encouraged to use methods specifically designed for continuous covariates.')
+  if (type == 'data') {
+    warning('Binning continuous covariates. This is not recommended; users are encouraged to use methods specifically designed for continuous covariates.')
+  }
 
   X_cont <- X[, is_continuous]
   cov_names <- colnames(X_cont)
   bin_sizes <- sapply(X_cont, bin_fun)
-  ranges <- sapply(X_cont, function(x) max(x) - min(x))
+  ranges <- sapply(X_cont, function(x) {
+    max(x, na.rm = TRUE) - min(x, na.rm = TRUE)})
   n_bins <- ceiling(ranges / bin_sizes)
 
   X_cont <-
@@ -45,7 +48,7 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
 
 sort_cols <-
   function(df, outcome_in_data, treated_column_name, outcome_column_name,
-           binning_method, type, is_missing = NULL) {
+           binning_method, type, is_missing = NULL) { # NULL default for holdout set
 
   n_covs <- ncol(df[[1]]) - 1 - outcome_in_data # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -71,11 +74,6 @@ sort_cols <-
   # For all imputed data sets
   for (i in 1:n_df) {
     tmp_df <- df[[i]]
-    # tmp_df %<>%
-      # dplyr::select(-c(!!rlang::enquo(treated_column_name),
-      #                  !!rlang::enquo(outcome_column_name))) %>%
-      # cbind(outcome_col) %>%
-      # cbind(treatment_col)
 
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
       tmp_df <-
@@ -90,10 +88,16 @@ sort_cols <-
     }
 
     tmp_df[, 1:n_covs] <-
-      bin_continuous_covariates(tmp_df[, 1:n_covs], rule = binning_method)
+      bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE], rule = binning_method, type)
 
     # Number of levels of each covariate
     n_levels <- sapply(tmp_df[, 1:n_covs, drop = FALSE], nlevels)
+    if (any(n_levels == nrow(tmp_df))) {
+      warning(paste("It looks like you might have passed in a continuous",
+                    "variable as a factor; you won't make any matches on it.",
+                    "If you want this variable to be binned, you should pass",
+                    "it as numeric; otherwise, you shouldn't include it at all."))
+    }
 
     # To sort covariates in increasing order of number of levels
     sorting_order <- order(n_levels)

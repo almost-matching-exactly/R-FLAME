@@ -119,54 +119,25 @@ MG <- function(units, FLAME_out, multiple = FALSE) {
   return(out)
 }
 
-group_CATE <- function(units, FLAME_out, multiple = FALSE) {
-  if (is.null(names(FLAME_out))) { # Is a list of data frames
-    n_df <- length(FLAME_out)
-  }
-  else { # Is a single data frame
-    FLAME_out <- list(FLAME_out)
-    n_df <- 1
-  }
-
-  out <- vector('list', length = n_df)
-
-  for (k in 1:n_df) {
-    MGs <- FLAME_out[[k]]$MGs # MGs made by FLAME
-    CATEs <- FLAME_out[[k]]$CATE
-
-    out[[k]] <- vector('list', length = length(units))
-
-    out[[k]] <- lapply(units, function(x) {
-      CATEs[which(sapply(MGs, function(y) x %in% y))]
-    })
-    # for (i in seq_along(units)) {
-    #
-    #   # To store CATEs of unit
-    #   in_MG <- which(sapply(MGs, function(x) units[i] %in% x))
-    #   out[[k]][[i]] <- CATEs[in_MG]
-    # }
-    # if (!multiple) { # Check this for replace = FALSE, multiple = FALSE
-    #   out[[k]] %<>% lapply(`[[`, 1)
-    # }
-  }
-  if (n_df == 1) {
-    out <- out[[1]]
-  }
-  return(out)
+CATE_internal <- function(FLAME_out, MG, which_MG = NULL, cov_names = NULL) {
+  outcomes <- FLAME_out$data$outcome[MG]
+  treated <- FLAME_out$data$treated[MG] == 1
+  CATE <- mean(outcomes[treated]) - mean(outcomes[!treated])
+  return(CATE)
 }
 
-#' Compute the treatment effect of a given unit.
-#'
-#' \code{CATE} Computes the treatment effect of unit \code{unit} as equal
-#' to the CATE of its matched group.
-#'
-#' @param FLAME_out An object returned by running \code{FLAME_bit}.
-#' @param units A vector of integers between 1 and \code{nrow(FLAME_out$data)}
-#'   whose matched groups are desired.
-#' @export
+MG_internal <- function(FLAME_out, MG, which_MG, cov_names) {
+  tmp <-
+    FLAME_out$data[MG, ] %>%
+    dplyr::select(-c(matched, weight))
+  keep <-
+    match(names(FLAME_out$matched_on[[which_MG]]), cov_names) %>%
+    c(n_cols - 3, n_cols - 2) # Keep outcome and treatment
+  tmp[, -keep] <- '*'
+  return(tmp)
+}
 
-CATE <- function(units, FLAME_out) {
-
+iterate <- function(fun, units, FLAME_out, multiple) {
   if (is.null(names(FLAME_out))) { # Is a list of data frames
     n_df <- length(FLAME_out)
   }
@@ -180,22 +151,85 @@ CATE <- function(units, FLAME_out) {
     colnames(FLAME_out[[1]]$data)[1:(n_cols - 4)]
 
   out <- vector('list', length = n_df)
+  for (k in 1:n_df) {
+    MGs <- FLAME_out[[k]]$MGs # MGs made by FLAME
 
-  MGs <- FLAME_out$MGs
-  sizes <- NULL
-  weighted_CATE_sum <- 0
-  for (unit in matched_units) {
-    for (i in 1:length(MGs)) {
-      if (unit %in% MGs[[i]]) {
-        MG_size <- length(MGs[[i]])
-        sizes %<>% c(MG_size)
-        weighted_CATE_sum %<>% add(FLAME_out$CATE[i] * MG_size)
-        break
+    out[[k]] <- vector('list', length = length(units))
+
+    for (i in seq_along(units)) {
+      unit <- units[i]
+
+      # Number of MGs to return for unit
+      # Only > 1 if multiple = TRUE and matched multiple times
+      n_unit_MGs <- ifelse(multiple, FLAME_out[[k]]$data$weight[unit], 1)
+
+      # To store MGs of unit
+      out[[k]][[i]] <- vector('list', length = n_unit_MGs)
+      counter <- 1
+      for (j in 1:length(MGs)) {
+        if (unit %in% MGs[[j]]) {
+          # browser()
+          out[[k]][[i]][[counter]] <- fun(FLAME_out[[k]], MGs[[j]], j, cov_names)
+          counter <- counter + 1
+          if (counter == n_unit_MGs + 1) {
+            break
+          }
+        }
       }
     }
+    if (!multiple) {
+      out[[k]] %<>% lapply(`[[`, 1)
+    }
   }
-  return(weighted_CATE_sum / sum(sizes))
+  if (n_df == 1) {
+    out <- out[[1]]
+  }
+  return(out)
 }
+
+CATE <- function(units, FLAME_out, multiple = FALSE) {
+  return(iterate(CATE_internal, units, FLAME_out, multiple))
+}
+
+
+# CATE <- function(units, FLAME_out) {
+#   if (is.null(names(FLAME_out))) { # Is a list of data frames
+#     n_df <- length(FLAME_out)
+#   }
+#   else { # Is a single data frame
+#     FLAME_out <- list(FLAME_out)
+#     n_df <- 1
+#   }
+#
+#   if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
+#     stop('Outcome was not supplied with data; cannot estimate CATE.')
+#   }
+#
+#   n_cols <- length(colnames(FLAME_out[[1]]$data))
+#   cov_names <-
+#     colnames(FLAME_out[[1]]$data)[1:(n_cols - 4)]
+#
+#   out <- vector('list', length = n_df)
+#
+#   for (k in 1:n_df) {
+#     MGs <- FLAME_out[[k]]$MGs
+#     sizes <- NULL
+#     weighted_CATE_sum <- 0
+#     for (unit in units) {
+#       for (i in 1:length(MGs)) {
+#         if (unit %in% MGs[[i]]) {
+#           MG_size <- length(MGs[[i]])
+#           sizes %<>% c(MG_size)
+#           weighted_CATE_sum %<>%
+#             magrittr::add(FLAME_out[[k]]$CATE[i] * MG_size)
+#           break
+#         }
+#       }
+#     }
+#     out[[k]] <- weighted_CATE_sum / sum(sizes)
+#   }
+#   return(out)
+# }
 
 #' Compute the ATE of a matched dataset.
 #'
@@ -213,6 +247,10 @@ ATE <- function(FLAME_out) {
   else { # Is a single data frame
     FLAME_out <- list(FLAME_out)
     n_df <- 1
+  }
+
+  if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
+    stop('Outcome was not supplied with data; cannot estimate ATE.')
   }
 
   out <- vector('numeric', length = n_df)
@@ -253,6 +291,10 @@ ATT <- function(FLAME_out) {
   else { # Is a single data frame
     FLAME_out <- list(FLAME_out)
     n_df <- 1
+  }
+
+  if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
+    stop('Outcome was not supplied with data; cannot estimate ATT.')
   }
 
   out <- vector('numeric', length = n_df)

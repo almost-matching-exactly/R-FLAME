@@ -15,7 +15,7 @@ gen_data <- function(n = 50, p = 5, write = FALSE, path = getwd(), filename = 'F
   #   1 * (covs[, 1] == 1 | ((covs[, 2] + covs[, 3] + treated * covs[, 4]) >= 2))
 
   outcome <-
-    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4]) %>%
+    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3]) %>%
     magrittr::add(rnorm(n)) %>%
     magrittr::add(TE * treated)
   # outcome <-
@@ -43,13 +43,14 @@ gen_mixed_data <- function(n = 200, p = 8) {
   covs <-
     cbind(rnorm(n, 5, 7),
           rnorm(n, 0, 1),
-          rnorm(n, -10, 1))
+          rbinom(n, 1, 0.3),
+          rbinom(n, 1, 0.7))
 
 
   treated <- rbinom(n, 1, prob = 0.5)
 
   outcome <-
-    outcome <- 10 * covs[, 1] + 5 * covs[, 2] %>%
+    outcome <- 10 * covs[, 1] + 5 * covs[, 3] %>%
     # (15 * covs[, 7] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4] + 3 * covs[, 6]) %>%
     magrittr::add(rnorm(n)) %>%
     magrittr::add(TE * treated)
@@ -58,13 +59,15 @@ gen_mixed_data <- function(n = 200, p = 8) {
   return(data)
 }
 
-gen_missing_data <- function(n = 50, p = 5, write = FALSE, percent_missing = 0.05) {
-  data <- gen_data(n = n, p = p, write = write)
+gen_missing_data <- function(n = 250, p = 3, write = FALSE, percent_missing = 0.05) {
+  data <- gen_data(n = n, p = p, write = write, filename = 'missing_data.csv')
+  # data <- gen_mixed_data(n = n, p = p)
+
   covs <- as.matrix(data[, 1:p])
   size <- n * p
   inds <- sample(1:size, size = round(percent_missing * size), replace = FALSE)
   covs[inds] <- NA
   data[, 1:p] <- covs
-  data[, 1:ncol(covs)] %<>% lapply(as.factor)
+  # data[, 1:ncol(covs)] %<>% lapply(as.factor)
   return(data)
 }

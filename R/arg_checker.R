@@ -23,14 +23,18 @@ check_args <-
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
 
+  if (!(outcome_column_name %in% holdout_cols)) { # I think I can kill this
+    stop('Holdout must contain outcome column with name outcome_column_name')
+  }
+
   if (!outcome_in_data) {
-    if (!identical(sort(data_cols),
-                   sort(holdout_cols[-match(outcome_column_name, holdout_cols)]))) {
+    if (!identical(data_cols,
+                   holdout_cols[-match(outcome_column_name, holdout_cols)])) {
       stop('Non-outcome columns of data and holdout must have identical names.')
     }
   }
   else {
-    if (!identical(sort(data_cols), sort(holdout_cols))) {
+    if (!identical(data_cols, holdout_cols)) {
       stop('If data outcome supplied, data and holdout must contain identical column names.')
     }
   }
@@ -40,7 +44,7 @@ check_args <-
   }
 
   if (!is.character(treated_column_name)) {
-    stop('If you specify treated_column_name, it must be a character.')
+    stop('treated_column_name must be a character.')
   }
 
   if (!(treated_column_name %in% data_cols)) {
@@ -76,11 +80,11 @@ check_args <-
   }
 
   if (is.factor(dplyr::pull(holdout, !!rlang::enquo(outcome_column_name)))) {
-    stop('Outcome variable in holdout must be numeric binary or continuous.')
+    stop('Outcome variable in holdout must be numeric binary or continuous')
   }
 
   if (!(binning_method %in% c('sturges', 'scott', 'fd'))) {
-    stop("binning_method must be one of: 'sturges', 'scott', or 'fd'.")
+    stop("binning_method must be one of: 'sturges', 'scott', or 'fd'")
   }
 
   if (!(PE_method %in% c('elasticnet', 'xgb'))) {
@@ -93,7 +97,7 @@ check_args <-
   }
 
   if (!(verbose %in% c(0, 1, 2, 3))) {
-    stop('Verbose must be one of: 0, 1, 2, 3.')
+    stop('Verbose must be one of: 0, 1, 2, 3')
   }
 
   if (!is.logical(want_pe)) {
@@ -116,7 +120,7 @@ check_args <-
   if (!is.numeric(early_stop_un_c_frac) |
       early_stop_un_c_frac < 0 |
       early_stop_un_c_frac > 1) {
-    stop('early_stop_un_c_frac must be a fraction between 0 and 1 (inclusive).')
+    stop('early_stop_un_c_frac must be a fraction between 0 and 1 (inclusive)')
   }
 
   if (!is.numeric(early_stop_un_t_frac) |

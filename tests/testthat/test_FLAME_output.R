@@ -1,3 +1,7 @@
+if (F) {
+  skip('Ignoring output tests')
+}
+
 # test_that('all correct drops', {
 #   data <- gen_data(500, 8)
 #   holdout <- gen_data(500, 8)
