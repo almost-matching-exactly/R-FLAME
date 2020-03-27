@@ -1,15 +1,20 @@
 show_progress <- function(verbose, iter, data) {
+  n <- nrow(data)
+  n_digits <- nchar(n)
+  padding <- rep(' ', n_digits)
   if (verbose == 2) {
     if (iter %% 5 == 0) {
       message(paste0('Starting iteration ', iter, ' of FLAME (',
-                     sum(!data$matched), ' unmatched units remaining)\r'),
+                     sum(!data$matched), ' unmatched units remaining)',
+                     padding, '\r'),
               appendLF = FALSE)
       flush.console()
     }
   }
   else if (verbose == 3) {
     message(paste0('Starting iteration ', iter, ' of FLAME (',
-                  sum(!data$matched), ' unmatched units remaining)\r'),
+                  sum(!data$matched), ' unmatched units remaining)',
+                  padding, '\r'),
             appendLF = FALSE)
     flush.console()
   }

@@ -303,8 +303,10 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param user_PE_fit_params A named list of optional parameters to be used by
 #'   \code{user_PE_fit}. Defaults to \code{NULL}.
 #' @param user_PE_predict An optional function supplied by the user that can be
-#'   used to generate predictions from the output of \code{user_PE_fit}. If not
-#'   supplied, defaults to \code{predict}. Defaults to \code{NULL}.
+#'   used to generate predictions from the output of \code{user_PE_fit}. As its
+#'   first argument, must take an object of the type returned by
+#'  \code{user_PE_fit} and as its second, a matrix of values for which to
+#'  generate predictions. If not supplied, defaults to \code{predict}.
 #' @param user_PE_predict_params A named list of optional parameters to be used
 #'   by \code{user_PE_params}. Defaults to \code{NULL}.
 #' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
