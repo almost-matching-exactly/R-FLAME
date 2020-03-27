@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 ```
 
 # Overview
-FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable matching method for causal inference. It matches units via a learned, weighted Hamming distance that determines what covariates are more important to match on. For more details, see the below section _Overview of the Algorithm_ or the original FLAME paper, linked [here](<https://arxiv.org/pdf/1707.06315.pdf>). 
+FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable matching method for causal inference. It matches units via a learned, weighted Hamming distance that determines which covariates are more important to match on. For more details, see the below section _Description of the Algorithm_ or the original FLAME paper, linked [here](<https://arxiv.org/pdf/1707.06315.pdf>). 
 
 We can start by loading FLAME...
 ```{r setup}
@@ -27,29 +27,44 @@ devtools::load_all()
 ... and generating some toy data:
 ```{r}
 set.seed(45)
-data <- gen_data() # Data we would like to match
-holdout <- gen_data() # Data we will train on, to compute PE 
+n <- 100
+p <- 5
+data <- gen_data(n, p) # Data we would like to match
+holdout <- gen_data(n, p) # Data we will train on, to compute PE 
 ```
 
+Note that all our covariates are _factors_, because FLAME is designed to work with categorical covariates:
+```{r}
+all(sapply(1:p, function(col) is.factor(data[[col]])))
+```
 
-To run FLAME with its default settings:
+If this is not the case, they will be assumed to be continuous covariates and binned prior to matching. _This use of FLAME is not recommended._ 
+
+In addition to the covariates to match on, `data` contains an outcome and a treated column:
+```{r}
+names(data)
+```
+
+The outcome must be numeric, either binary or continuous. FLAME focuses on binary treatments and the treatment column must either be logical or binary numeric. 
+
+From here, we can run FLAME with its default settings. This will match units on the covariates -- here, `X1`, `X2`, `X3`, `X4`, `X5` -- and output information about the matches that were made.
 ```{r}
 FLAME_out <- FLAME(data = data, holdout = holdout)
 ```
 
-By default, `FLAME` returns a list with *6* entries:
+By default, `FLAME` returns a list with 6 entries:
 ```{r}
 names(FLAME_out)
 ```
 
 The first, `FLAME_out$data` contains the original data frame with several modifications:
 
-1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not a unit was matched. This can be useful if, for example, you'd like to use only the matched data for subsequent analysis:
+1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not a unit was matched. This can be useful if, for example, you'd like to use only the units that were matched for subsequent analysis:
 ```{r}
 matched_data <- dplyr::filter(FLAME_out$data, matched)
 ```
 
-2. There is an extra numeric column, `FLAME_out$data$weight` that denotes on how many different sets of covariates a unit was matched. By default, this will be 1 if a unit is matched and 0 otherwise. With the `repeats = TRUE` argument, however, units are allowed to match several times on multiple sets of covariates and their values for `weight` can therefore be greater than 1.  These weights can be used to estimate average treatment effects.
+2. There is an extra numeric column, `FLAME_out$data$weight` that denotes on how many different sets of covariates a unit was matched. By default, this will be 1 if a unit is matched and 0 otherwise. With the `repeats = TRUE` argument, however, units are allowed to match several times on multiple sets of covariates and their values for `weight` can therefore be greater than 1.  These weights can be used to estimate treatment effects.
 
 3. Regardless of their original names, the columns denoting treatment and outcome in the data will be renamed `treated` and `outcome` and they are moved to be located after all the covariate data.
 
@@ -57,16 +72,16 @@ matched_data <- dplyr::filter(FLAME_out$data, matched)
 ```{r}
 head(FLAME_out$data)
 ```
-The above, for example, implies that while unit 1 was matched to units that also had values (X1, X2, X3, X4, X5) = (1, 1, 0, 0, 0), unit 3 was matched to units that shared values of (X2, X3) = (1, 0), but that differed in their values of X1, X4, and X5. Units 3 and 4 were not matched at all.
+The above, for example, implies that while unit 2 was matched to units that also had values (`X1`, `X2`, `X3`, `X4`, `X5`) = (0, 0, 0, 0, 0), unit 1 was matched to units that shared values of (`X1`, `X2`, `X3`) = (1, 1, 0), but that differed in their values of `X4` and `X5`. Units 3 and 5 were not matched at all.
 
 The second, `MGs` is a list, each entry of which contains the units in a single matched group. 
 ```{r}
 FLAME_out$MGs[[1]]
 length(FLAME_out$MGs)
 ```
-That is, units 1, 15, 23, and 41 were all matched together and there are 13 matched groups total. 
+That is, units 2, 58, 60, 75, and 95 were all matched together and there are 19 matched groups total. 
 
-The third, `CATE`, complements `MGs` by supplying the CATE for each matched group. For example, the CATE for the matched group above, of units 1, 15, 23, and 41, is given by:
+The third, `CATE`, complements `MGs` by supplying the conditional average treatment effect (CATE) for each matched group. For example, the CATE of the matched group above is given by:
 ```{r}
 FLAME_out$CATE[1]
 ```
@@ -75,102 +90,111 @@ The fourth, `matched_on`, is a list also corresponding to `MGs` that gives the c
 ```{r}
 FLAME_out$matched_on[[1]]
 ```
-The above shows that each of the units in the first matched group had covariate values (X1, X2, X3, X4, X5) = (1, 1, 0, 0, 0). For matched groups not formed on all covariates, some of these entries will be missing:
+The above shows that each of the units in the first matched group had covariate values (`X1`, `X2`, `X3`, `X4`, `X5`) = (0, 0, 0, 0, 0). For matched groups not formed on all covariates, some of these entries will be missing:
 ```{r}
-FLAME_out$matched_on[[7]]
+FLAME_out$matched_on[[17]]
 ```
-Thus, the units in the seventh matched group, as defined by `MGs[[7]]`, shared the same values of X1, X2, X3, and X4, but not of X5. 
+Thus, the units in the 17th matched group, as defined by `MGs[[7]]`, shared the same values of `X1`, `X2`, `X3`, and `X4`, but not of `X5`. 
 
 The fifth, `matching_covs` is a list, which shows the covariates that were used to match on every iteration of FLAME:
 ```{r}
 FLAME_out$matching_covs
 ```
-Thus, first, some units were matched on covariates X1, X2, X3, X4, X5. Then, more units were matched on all covariates but X5, and so on. Note that entries of `matching_covs` do not necessarily denote covariates on which matches were _successfully_ made; rather, they denote the covariates which were used to (try and) match on every iteration of FLAME. 
+Thus, first, some units were matched on covariates `X1`, `X2`, `X3`, `X4`, `X5`. Then, more units were matched on all covariates but `X5`, and so on. Note that entries of `matching_covs` do not necessarily denote covariates on which matches were _successfully_ made; rather, they denote the covariates which were used to (try and) match on every iteration of FLAME. 
 
 The sixth, `dropped` describes the order in which covariates were dropped:
 ```{r}
 FLAME_out$dropped
 ```
-Thus, first covariate X5 was dropped, then X4, and so on. This information is directly inferrable from `matching_covs`, but for large numbers of covariates, `dropped` provides an easier way of identifying this order.
+Thus, first covariate `X5` was dropped, then `X4`, and so on. This information is directly inferrable from `matching_covs`, but for large numbers of covariates, `dropped` provides an easier way of identifying this order.
 
 # Description of Arguments
 
-## Data Arguments
+Below are brief descriptions of the main arguments that may be passed to `FLAME`. For their complete descriptions, and those of all acceptable arguments, please refer to the documentation. 
 
-* `data`: Either a data frame or path to a .csv file (which will be read via `read.csv` with the `header = TRUE` argument) containing the data to be matched. Treatments are assumed to be binary (can be input as logical), outcomes numeric or binary, and covariates categorical (they will be coerced to factors). Treatments and outcome should not be coded as factors. 
-* `holdout`: Either a data frame, or path to a .csv file (which will be read via `read.csv` with the `header = TRUE` argument) or a value between 0 and 1. In the first two cases, the argument indicates the holdout set to be used for computing predictive error. In the third case, that proportion of `data` will be used as a holdout set and only the remaining proportion will be matched. Restrictions on column types are the same as for `data`. 
-* `treated_column_name`: A character with the name of the treatment column in `data`. Defaults to 'treated'. 
-* `outcome_column_name`: A character with the name of the outcome column in `data`. Defaults to 'outcome'. 
+## Data Arguments
+These are arguments that govern the format in which data is passed to `FLAME`. 
+* `data`: Either a data frame or path to a .csv file (which will be read via `read.csv`) containing the data to be matched. Treatments are assumed to be binary (can be input as logical) and outcomes numeric or binary. Treatments and outcome should not be coded as factors. Covariates should be factors; otherwise, they will be interpreted as continuous covariates and binned prior to matching. Using FLAME to match on binned, continuous covariates is _not_ recommended.  
+* `holdout`: Either a data frame, or path to a .csv file (which will be read via `read.csv`) or a value between 0 and 1. In the first two cases, the argument indicates the holdout set to be used for computing predictive error. In the third case, that proportion of `data` will be used as a holdout set and only the remaining proportion will be matched. In this case, the rows (units) of the original `data` input to `FLAME` that are matched are those specified by `rownames(FLAME_out$data)`. Restrictions on column types are the same as for `data`. 
+* `treated_column_name`: A character with the name of the column to be used as treatment in `data`. Defaults to 'treated'. 
+* `outcome_column_name`: A character with the name of the column to be used as outcome in `data`. Defaults to 'outcome'. 
 
 ## Algorithmic Arguments
+These are arguments that deal with features of the underlying FLAME algorithm. 
+* `C`: The hyperparameter governing the relative weights of the balancing factor and predictive error in determining match quality. 
+* `return_pe`: If `TRUE`, the predictive error at each iteration will be returned by `FLAME`. 
+* `return_bf`: If `TRUE`, the balancing factor at each iteration will be returned by `FLAME`.
+* `replace`: If `TRUE`, allows the same unit to be matched multiple times, on different sets of covariates. For example, if two units match exactly on all covariates, they will also match on every subsequent iteration of FLAME. 
+* `verbose`: Controls how FLAME displays progress while running. If 0, no output. If 1, only outputs the stopping condition. If 2, outputs the iteration and number of unmatched units every 5 iterations, and the stopping condition. If 3, outputs the iteration and number of unmatched units every iteration, and the stopping condition. 
+* `PE_method`: One of 'ridge' or 'xgb', respectively denoting whether ridge regression or xgboost is used to compute the predictive error on the holdout set. The former relies on `glmnet::cv.glmnet` and cross validates over $\lambda$, with `alpha = 0`, `nfolds = 5`, and all other parameters at their defaults. The latter relies on `xgboost::xgb.cv` and cross validates over `eta`, `max_depth`, `alpha`, `nrounds`, and `subsample`, leaving all other parameters at their defaults. Ignored if `user_PE_func` is supplied.
+* `user_PE_fit` and `user_PE_fit_params`: The former is an optional, user supplied function used to compute PE by predicting an outcome from covariates instead of the options allowed for by `PE_method`. Must take in a matrix of covariates as its first argument and a vector outcome as its second argument. The latter is a named list of optional parameters to be used by `user_PE_fit`. 
+* `user_PE_predict` and `user_PE_predict_params`: The former is an optional, user supplied function to generate predictions from the output of `user_PE_fit`. If not supplied, defaults to `predict`. The latter is a named list of optional parameters to be used by `user_PE_predict`.
 
-* `C`: The hyperparameter governing the relative weights of the balancing factor and predictive error in determining match quality. Defaults to 0.1. 
-* `want_pe`: If `TRUE`, the predictive error at each iteration will be returned by `FLAME`. Defaults to `FALSE`.
-* `want_bf`: If `TRUE`, the balancing factor at each iteration will be returned by `FLAME`. Defaults to `FALSE`.
-* `repeats`: If `TRUE`, allows the same unit to be matched multiple times, on different sets of covariates. For example, if two units match exactly on all covariates, they will also match on every subsequent iteration of FLAME. Defaults to `FALSE`. 
-* `verbose`: Controls output while FLAME is running. If 0, no output. If 1, outputs the iteration every iteration, as well as the stopping condition. If 2, outputs the iteration and number of unmatched units every 5 iterations, as well as the stopping condition. If 3, outputs the iteration and number of unmatched units every 5 iterations, as well as the stopping condition.
-* `PE_method`: One of 'elasticnet' or 'xgb', respectively denoting whether ridge regression (via `glmnet`, with defaults of `alpha = 0`, `lambda = 0.1` and all other parameters at their defaults) or xgboost (via `xgboost`, with a default of `nrounds = 100` and all other parameters at their defaults) is used to compute the predictive error. Ignored if `user_PE_func` is supplied.
-* `user_PE_func` and `user_PE_func_params`: The former is a user supplied function for fitting an outcome model to compute the predictive error and the latter, a named list with optional, additional parameters that can be passed to it. `user_PE_func` must be of the form `fun(X, Y, additional_params)` and have a predict method allowing it to generate predictions for `X` via `predict(fun(X, Y, additional_params), X)`. For example, to run ridge regression, but with a `lambda` of 1 instead of 0.1 as is the default:
-```{r,eval=FALSE}
-my_fun <- glmnet::glmnet
-my_fun_params <- list(alpha = 0, lambda = 1)
-FLAME(data = data, holdout = holdout, 
-      user_PE_func = my_fun, user_PE_func_params = my_fun_params)
+To illustrate the usage of these last four parameters, we can have `FLAME` compute PE via Bayesian Additive Regression Trees (BART) with 100 trees as follows:
+```{r, eval=F}
+library(dbarts)
+my_fit <- dbarts::bart
+my_fit_params <- list(ntree = 100, verbose = FALSE, keeptrees = TRUE)
+my_predict <- function(bart_fit, new_data) {
+  return(colMeans(predict(bart_fit, new_data)))
+}
+FLAME_out <- 
+  FLAME(data = data, holdout = holdout, 
+        user_PE_fit = my_fit, user_PE_fit_params = my_fit_params,
+        user_PE_predict = my_predict)
 ```
 
 
 ## Early Stopping Arguments
 By default, FLAME terminates when all covariates have been dropped or all control / treatment units have been matched. There are various early stopping arguments that can be supplied to alter this behavior. In all cases, however, FLAME still terminates if all covariates have been dropped or all control / treatment units have been matched, even if the user-specified stopping condition has not yet been met. 
 
-* `early_stop_iterations`: A number of iterations, corresponding to a number of covariates dropped, after which FLAME will automatically exit. A value of 0 has FLAME perform a single round of exact matching on all covariates and then exit. Defaults to infinity. 
+* `early_stop_iterations`: A number of iterations, corresponding to a number of covariates dropped, after which FLAME will automatically stop. A value of 0 has FLAME perform a single round of exact matching on all covariates and then stop. 
 
-* `early_stop_epsilon`: If the predictive error at any iteration rises above 100 * early_stop_epsilon percent of the error associated with predicting the outcome using _all_ covariates, FLAME exits. 
+* `early_stop_epsilon`: If FLAME attemts to drop a covariate that would raise the PE above (1 + early_stop_epsilon) times the baseline PE (the PE before any covariates have been dropped), FLAME will stop. 
 
-* `early_stop_bf`: A number between 0 and 2 (the minimum and maximum possible balancing factors). If the balancing factor at any iteration would fall below `early_stop_bf`, FLAME exits _without dropping the covariate that would lead to this low balancing factor._ Defaults to 0. 
+* `early_stop_bf`: If FLAME attempts to drop a covariate that would lead to a BF below this value, FLAME stops.
 
-* `early_stop_un_c_frac`: If the proportion of control units that are unmatched falls below this value, FLAME exits. 
+* `early_stop_pe`: If FLAME attempts to drop a covariate that would lead to a PE below this value, FLAME stops.
 
-* `early_stop_un_t_frac`: If the proportion of treatment units that are unmatched falls below this value, FLAME exits. 
+* `early_stop_un_c_frac`: If the proportion of control units that are unmatched falls below this value, FLAME stops 
 
+* `early_stop_un_t_frac`: If the proportion of treatment units that are unmatched falls below this value, FLAME stops 
 
 ## Missing Data Arguments 
 FLAME offers several options for dealing with missing data, outlined below:
 
-* `missing_data` and `n_data_imputations`: These two arguments govern FLAME's response to missingness in the data to be matched. If `missing_data` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, units will be prevented from matching on the covariates they are missing. If it is 3, `n_data_imputations` imputed datasets are generated using `MICE`. In this case, the output of `FLAME` is a list of length `n_data_imputations`, corresponding to the standard `FLAME` output on each imputed dataset.
+* `missing_data` and `n_data_imputations`: These two arguments govern FLAME's response to missingness in the data to be matched. If `missing_data` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, `n_data_imputations` imputed datasets are generated using `MICE`. In this case, the FLAME algorithm will be run on each imputed dataset and all results returned. If it is 3, units will be prevented from matching on the covariates they are missing. 
 
 * `missing_holdout` and `n_holdout_imputations`: These two arguments govern FLAME's response to missingness in the holdout data. If `missing_holdout` is 0, it is assumed that there is no missingness. If it is 1, units with missingness are dropped. If it is 2, `n_holdout_imputations` imputed holdout datasets are generated using `MICE`. In this case, the predictive error computed by `FLAME` is the average of the predictive errors across the imputed holdout datasets. 
 
-
 # Post-Matching Analysis
-After `FLAME` has been run, the matched data can be used for a variety of purposes. The FLAME package provides functionality for a few quick, post-matching analyses, via the functions `CATE`, `ATE`, `ATT`, and `MG`.
+After `FLAME` has been run, the matched data can be used for a variety of purposes. The `FLAME` package provides functionality for a few quick, post-matching analyses, via the functions `MG`, `CATE`, `ATE`, and `ATT`.
 
-`CATE(units, FLAME_out)` takes in `units`, the units for which you would like an estimate of the conditional treatment effect, and the output of a run of FLAME, `FLAME_out`. You may supply only a single unit for the `units` argument. 
+The function `MG(units, FLAME_out, index_only = FALSE)` takes in a vector of units, whose matched groups you would like returned, and the output of a call to `FLAME`. If we want to see the matched group of units 3 and 4, for example, we can run:
 
-In this way, we can find the treatment effect for a unit of interest, say, unit 5...
-```{r,eval=FALSE}
-CATE(units = 5, FLAME_out = FLAME_out)
+```{r}
+MG(c(1, 2), FLAME_out)
 ```
 
-... or for a class of units for which the treatment effect is of particular interest:
-```{r,eval=FALSE}
-CATE(units = which(data$age < 30 & data$treated == 1), FLAME_out = FLAME_out)
+This returns a list of two data frames, the first corresponding to unit 3 and the second to unit 4. Each contains information for all units in the corresponding matched groups. The asterisks in the last two columns indicate that these two units did not match on `X4` or `X5`. If we only want the indices of the units in each matched group, we can specify `index_only = TRUE`:
+```{r}
+MG(c(1, 2), FLAME_out, index_only = TRUE)
 ```
 
-`ATE(FLAME_out)` and `ATT(FLAME_out)` return the estimated average treatment effect and the estimated average treatment effect on the treated, respectively. 
-```{r,eval=FALSE}
+`CATE(units, FLAME_out)` takes in the same first two arguments and gives the estimated CATEs of the units in `units`. The CATE of a unit is defined to be the CATE of its matched group and the CATE of a matched group is difference between average treated and control outcomes in the matched group. 
+
+The CATEs of units 1 and 2 are thus
+```{r}
+CATE(c(1, 2), FLAME_out)
+```
+
+`ATE(FLAME_out)` and `ATT(FLAME_out)` take in the output of a call to `FLAME` and return the estimated average treatment effect and the estimated average treatment effect on the treated, respectively. 
+```{r}
 ATE(FLAME_out = FLAME_out)
 ATT(FLAME_out = FLAME_out)
 ```
 
-Lastly, we can use `MG(units, FLAME_out)` to get a list of the members of the matched groups of all units in `units`:
-```{r, eval = FALSE}
-MG(units = 5, FLAME_out = FLAME_out)
-MG(units = which(data$age < 30 & data$treated == 1), FLAME_out = FLAME_out)
-```
-
-Note that if the value supplied to the `holdout` argument is a proportion between 0 and 1, the values supplied to the `units` argument in the functions above will be indexed with respect to `FLAME_out$data` _and not with respect to the data passed in _`data`.
-
-# Overview of the Algorithm 
+# Description of the Algorithm 
 FLAME operates by iteratively matching all possible units on a set of covariates and then dropping one of those covariates to make more matches. Roughly, units are said to 'match' on a set of covariates if they have identical values of all those covariates. FLAME is thus designed to be run on categorical covariates. However, continuous covariates can be discretized, via rules such as those employed by Coarsened Exact Matching (see [here](<https://cran.r-project.org/web/packages/cem/vignettes/cem.pdf>)), and then passed to FLAME. 
 
 More specifically, we define our inputs to the algorithm as the datasets $\mathcal{S} = (X, Y, T)$ and $\mathcal{S}^H = (X^H, Y^H, T^H)$, where $X \in \mathbb{R}^{n \times d}$ denotes the $d$ covariates of the $n$ units, $Y \in \mathbb{R}^n$ denotes their outcomes, and $T \in \mathbb{R}^n$ denotes their _binary_ treatment assignments. We will refer to a unit $i$ as 'control' if $T_i = 0$ and as 'treated' if $T_i = 1$. The dataset $\mathcal{S}^H$ is identically structured, but for a separate, holdout set of units.

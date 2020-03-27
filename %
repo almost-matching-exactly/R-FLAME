@@ -1,0 +1,131 @@
+NAMESPACE:importFrom(magrittr,"%<>%")
+NAMESPACE:importFrom(magrittr,"%>%")
+NAMESPACE:importFrom(zeallot,"%<-%")
+R/gen_data.R:  #   rbinom(n * p, 1, prob = 0.5) %>%
+R/gen_data.R:          which) %>%
+R/gen_data.R:    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4]) %>%
+R/gen_data.R:    magrittr::add(rnorm(n)) %>%
+R/gen_data.R:  #   (15 * (covs[, 1] == 3) - 10 * (covs[, 2] == 1) + 5 * (covs[, 3] == 2)) %>%
+R/gen_data.R:  #   magrittr::add(rnorm(n)) %>%
+R/gen_data.R:  data[, 1:ncol(covs)] %<>% lapply(as.factor)
+R/gen_data.R:  #   rbinom(n * (p - 3), 1, prob = 0.5) %>%
+R/gen_data.R:  #   matrix(nrow = n) %>%
+R/gen_data.R:    outcome <- 10 * covs[, 1] + 5 * covs[, 2] %>%
+R/gen_data.R:    # (15 * covs[, 7] - 10 * covs[, 2] + 5 * covs[, 3] - 2.5 * covs[, 4] + 3 * covs[, 6]) %>%
+R/gen_data.R:    magrittr::add(rnorm(n)) %>%
+R/gen_data.R:  # data[, 1:(ncol(covs) - 3)] %<>% lapply(as.factor)
+R/gen_data.R:  data[, 1:ncol(covs)] %<>% lapply(as.factor)
+R/time_trial.R:#   sample(1:12, size = 1000, replace = TRUE) %>%
+R/time_trial.R:    if (i %in% matched) {
+R/time_trial.R:      if (j == i | j %in% matched) { # If they've already been matched, carry on
+R/time_trial.R:        if (i %in% MGs[[k]]) { # If i found
+R/time_trial.R:      if (i %in% MGs[[k]]) { #if FLAME did match i
+R/time_trial.R:#   c(data, holdout, covs, n_covs, n_levels, cov_names, sorting_order) %<-% x
+R/time_trial.R:#   expand.grid(eta, max_depth, alpha, nrounds, subsample) %>%
+R/time_trial.R:#     `colnames<-`(c('eta', 'max_depth', 'alpha', 'nrounds', 'subsample')) %>%
+R/time_trial.R:#   rbind(saved_times[,,1], saved_times[,,2]) %>%
+R/time_trial.R:#   as.data.frame() %>%
+R/time_trial.R:#   reshape2::melt(saved_times, id.vars = 'FLAME') %>%
+R/time_trial.R:#   rbind(saved_sd_times[,,1], saved_sd_times[,,2]) %>%
+R/time_trial.R:#   as.data.frame() %>%
+R/time_trial.R:#   dplyr::mutate(FLAME = rep(c('Old', 'New'), each = nrow(.) / 2)) %>%
+R/time_trial.R:#   reshape2::melt(id.vars = 'FLAME') %>%
+R/time_trial.R:# ggdata %<>%
+R/time_trial.R:# ggdata %<>%
+R/time_trial.R:# #   new_times %<>% rbind(cbind(rep(n[i], 2), mean_times, sd_times))
+R/time_trial.R:# # new_times %<>%
+R/time_trial.R:# #   cbind(p) %>%
+R/time_trial.R:# #   as.data.frame() %>%
+R/time_trial.R:# #   `colnames<-`(c('n_obs', 'avg', 'sd', 'p')) %>%
+R/time_trial.R:# # # times %<>%
+R/time_trial.R:# # #   cbind(p) %>%
+R/time_trial.R:# # #   as.data.frame() %>%
+R/time_trial.R:# # #   `colnames<-`(c('n_obs', 'avg', 'sd', 'p')) %>%
+R/time_trial.R:# # times %<>% rbind(new_times)
+R/stopping.R:    if (iter %% 5 == 0) {
+R/stopping.R:              100 * early_stop_epsilon, '% above the baseline.')
+R/simulations.R:  baseline <- X[, 1:p_rel] %*% alpha
+R/simulations.R:  linear_treated <- X[, 1:p_rel] %*% beta * Z
+R/simulations.R:    nonlinear_treated %<>%
+R/simulations.R:  rbinom(n * p, size = 1, prob = 0.5) %>%
+R/simulations.R:  cbind(X, treatment, Y) %>%
+R/simulations.R:df[, 1:p] %<>% lapply(as.factor)
+R/simulations.R:holdout[, 1:p] %<>% lapply(as.factor)
+R/simulations.R:  rbinom(n * p_rel, size = 1, prob = 0.5) %>%
+R/simulations.R:  cbind(X, treatment, Y) %>%
+R/simulations.R:df[, 1:p] %<>% lapply(as.factor)
+R/simulations.R:holdout[, 1:p] %<>% lapply(as.factor)
+R/post_matching.R:        if (unit %in% MGs[[j]]) {
+R/post_matching.R:            FLAME_out[[k]]$data[MGs[[j]], ] %>%
+R/post_matching.R:            match(names(FLAME_out[[k]]$matched_on[[j]]), cov_names) %>%
+R/post_matching.R:      out[[k]] %<>% lapply(`[[`, 1)
+R/post_matching.R:      CATEs[which(sapply(MGs, function(y) x %in% y))]
+R/post_matching.R:    #   in_MG <- which(sapply(MGs, function(x) units[i] %in% x))
+R/post_matching.R:    #   out[[k]] %<>% lapply(`[[`, 1)
+R/post_matching.R:      if (unit %in% MGs[[i]]) {
+R/post_matching.R:        sizes %<>% c(MG_size)
+R/post_matching.R:        weighted_CATE_sum %<>% add(FLAME_out$CATE[i] * MG_size)
+R/post_matching.R:      MG_controls <- MGs[[j]][MGs[[j]] %in% controls]
+R/post_matching.R:      MG_treated <- MGs[[j]][MGs[[j]] %in% treated]
+R/arg_checker.R:  if (!(treated_column_name %in% data_cols)) {
+R/arg_checker.R:  if (!(treated_column_name %in% holdout_cols)) {
+R/arg_checker.R:  if (outcome_in_data & !(outcome_column_name %in% data_cols)) {
+R/arg_checker.R:  if (!(outcome_column_name %in% holdout_cols)) {
+R/arg_checker.R:  if (!(binning_method %in% c('sturges', 'scott', 'fd'))) {
+R/arg_checker.R:  if (!(PE_method %in% c('elasticnet', 'xgb'))) {
+R/arg_checker.R:  if (!(verbose %in% c(0, 1, 2, 3))) {
+R/arg_checker.R:  if (!is.numeric(missing_data) | !(missing_data %in% c(0, 1, 2, 3))) {
+R/arg_checker.R:  if (!is.numeric(missing_holdout) | !(missing_holdout %in% c(0, 1, 2))) {
+R/missing.R:             predictorMatrix = pred_mat, printFlag = FALSE) %>%
+R/missing.R:    mice::complete(action = 'all') %>%
+R/missing.R:    holdout %<>%
+R/missing.R:    holdout %<>% list()
+R/missing.R:    data %<>% list()
+R/missing.R:      levels(data[[i]][, j]) %<>% c('*')
+R/FLAME_bit.R:    gmp::`%*%`(data_wo_t, multiplier) %>%
+R/FLAME_bit.R:    gmp::`%*%`(data_wo_t, multiplier) %>%
+R/FLAME_bit.R:    gmp::add.bigz(data$treated) %>%
+R/FLAME_bit.R:      data[members[1], covs, drop = FALSE] %>%
+R/FLAME_bit.R:  if (!replace & any(units_matched %in% which(data$matched))) {
+R/FLAME_bit.R:  n_control_unmatched <- sum(all_unmatched %in% which(data$treated == 0))
+R/FLAME_bit.R:  n_treated_unmatched <- sum(all_unmatched %in% which(data$treated == 1))
+R/FLAME_bit.R:#' @importFrom magrittr %>%
+R/FLAME_bit.R:#' @importFrom magrittr %<>%
+R/FLAME_bit.R:#' @importFrom zeallot %<-%
+R/FLAME_bit.R:  c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
+R/FLAME_bit.R:    matching_covs %<>% c(list(order_cov_names(cov_names[covs],
+R/FLAME_bit.R:    store_pe %<>% c(PE[drop])
+R/FLAME_bit.R:    store_bf %<>% c(BF[drop])
+R/FLAME_bit.R:    matching_covs %<>% c(list(order_cov_names(cov_names[covs],
+R/FLAME_bit.R:  data[, 1:n_covs] %<>% dplyr::select(order(sorting_order))
+R/FLAME_bit.R:    ret_list %<>% c('PE' = list(store_pe))
+R/FLAME_bit.R:    ret_list %<>% c('BF' = list(store_bf))
+R/helpers.R:    }) %>%
+R/helpers.R:    as.data.frame() %>%
+R/helpers.R:    df[[1]] %>%
+R/helpers.R:      df[[1]] %>%
+R/helpers.R:    which(!(1:ncol(df[[1]]) %in% c(treatment_col_ind, outcome_col_ind)))
+R/helpers.R:    # tmp_df %<>%
+R/helpers.R:      #                  !!rlang::enquo(outcome_column_name))) %>%
+R/helpers.R:      # cbind(outcome_col) %>%
+R/helpers.R:        tmp_df[, covariates] %>%
+R/helpers.R:        cbind(outcome_col) %>%
+R/helpers.R:        tmp_df[, covariates] %>%
+R/helpers.R:        levels(tmp_df[, j]) %<>% c('*')
+Binary file avgs.rds matches
+man/MG.Rd:% Generated by roxygen2: do not edit by hand
+man/MG.Rd:% Please edit documentation in R/post_matching.R
+man/FLAME.Rd:% Generated by roxygen2: do not edit by hand
+man/FLAME.Rd:% Please edit documentation in R/FLAME_bit.R
+man/ATT.Rd:% Generated by roxygen2: do not edit by hand
+man/ATT.Rd:% Please edit documentation in R/post_matching.R
+man/CATE.Rd:% Generated by roxygen2: do not edit by hand
+man/CATE.Rd:% Please edit documentation in R/post_matching.R
+man/ATE.Rd:% Generated by roxygen2: do not edit by hand
+man/ATE.Rd:% Please edit documentation in R/post_matching.R
+Binary file scalability.png matches
+tests/testthat/test_FLAME_output.R:    if (!(all(lst[[i]] %in% lst[[i + 1]]))) {
+tests/testthat/test_FLAME_output.R:    MGs <- which(sapply(flout$MGs, function(x) i %in% x))
+vignettes/FLAME_overview.Rmd:  %\VignetteIndexEntry{Introduction to FLAME}
+vignettes/FLAME_overview.Rmd:  %\VignetteEngine{knitr::rmarkdown}
+vignettes/FLAME_overview.Rmd:  %\VignetteEncoding{UTF-8}

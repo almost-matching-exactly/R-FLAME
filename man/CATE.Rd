@@ -2,17 +2,60 @@
 % Please edit documentation in R/post_matching.R
 \name{CATE}
 \alias{CATE}
-\title{Compute the treatment effect of a given unit.}
+\title{Conditional Average Treatment Effects}
 \usage{
-CATE(units, FLAME_out)
+CATE(units, FLAME_out, multiple = FALSE)
 }
 \arguments{
-\item{units}{A vector of integers between 1 and \code{nrow(FLAME_out$data)}
-whose matched groups are desired.}
+\item{units}{A vector of indices for the units whose CATEs
+are desired.}
 
-\item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
+\item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
+
+\item{multiple}{A logical scalar. If \code{FALSE} (default), then
+\code{CATE} will return CATEs of main matched groups (those with matches on
+the greatest number of covariates). See below for details.}
+}
+\value{
+\strong{If passing a single set of matched data}
+
+  A list of length \code{length(units)}. Each entry is a CATE (a numeric scalar)
+  (if
+  \code{multiple = FALSE}) or a list of CATEs (if \code{multiple =
+  TRUE}). If a unit is not matched, the corresponding CATE will be
+  \code{NULL}.
+
+  Note that this is the return format also if passing a single set of
+  imputed data.
+
+  \strong{If passing multiple sets of matched, imputed data}
+
+  A list of length \code{length(FLAME_out)}, where each entry has the
+  structure described above, corresponding to that imputed data set.
 }
 \description{
-\code{CATE} Computes the treatment effect of unit \code{unit} as equal
-to the CATE of its matched group.
+\code{CATE} returns the conditional
+average treatment effects (CATEs) of \code{units}.
+}
+\details{
+The CATE of a matched group is defined to be the difference between average
+treated and control outcomes within that matched group. When we refer to
+the CATE(s) of a unit, we mean the CATE(s) of its matched group(s).
+
+Setting \code{multiple = TRUE} will request that CATEs corresponding to all
+matched groups be returned for each unit -- if \code{\link{FLAME}} was run
+with \code{replace = TRUE} to generate \code{FLAME_out} in the first place.
+Otherwise, if \code{\link{FLAME}} was run with \code{replace = TRUE}, but
+\code{multiple = FALSE}, only the CATE of the main matched groups will be returned. The main
+matched group of a unit contains the first units it matches with (and
+therefore those with which it matches on the largest number of covariates).
+If \code{\link{FLAME}} was run with \code{replace = FALSE}, then the user
+should only supply \code{multiple = FALSE}.
+
+Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
+generate \code{FLAME_out}, then \code{CATE} will return CATE
+information for all \code{missing_data_imputations} imputations.
+}
+\seealso{
+\code{\link{FLAME}}
 }

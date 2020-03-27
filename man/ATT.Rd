@@ -2,7 +2,7 @@
 % Please edit documentation in R/post_matching.R
 \name{ATT}
 \alias{ATT}
-\title{Compute the ATT of a matched dataset.}
+\title{ATT of a matched dataset}
 \usage{
 ATT(FLAME_out)
 }
@@ -10,10 +10,10 @@ ATT(FLAME_out)
 \item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
 }
 \description{
-\code{ATT} Computes the average treatment effect on the treated (ATT) of a matched dataset.
+\code{ATT} computes the average treatment effect on the treated (ATT) of a matched dataset.
 }
 \details{
-For each treated unit, its counterfactual outcome is estimated via the mean
+The counterfactual outcome of each treated unit is estimated via the mean
 outcome of control units in its matched group. This value is then averaged
-across all treated units.
+across all treated units to generate the ATT.
 }

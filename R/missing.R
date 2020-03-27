@@ -93,10 +93,11 @@ handle_missing_data <-
   else if (missing_data == 2) {
     is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
+      message('Starting imputation of `data`\r', appendLF = FALSE)
       data <- impute_missing(data, outcome_in_data, missing_data_imputations,
                              treated_column_name, outcome_column_name,
                              impute_with_treatment, impute_with_outcome)
-
+      message('Finished imputation of `data`\r', appendLF = FALSE)
     }
     else {
       message('No missing data found; skipping imputation.')
@@ -113,16 +114,20 @@ handle_missing_data <-
       }
 
       tmp_data <- data
-
       for (cov in cov_inds) {
-        tmp_data[[cov]] %<>% as.numeric()
+        # -1 for conversion from factor to numeric
+        max_val <- max(as.numeric(tmp_data[[cov]]), na.rm = TRUE) - 1
         which_missing <- is.na(tmp_data[[cov]])
+        n_missing <- sum(which_missing)
         if (sum(which_missing) > 0) {
+          new_levels <- c(levels(tmp_data[[cov]]), max_val + seq_len(n_missing))
+          tmp_data[[cov]] %<>%
+            as.numeric() %>%
+            magrittr::subtract(1)
           tmp_data[[cov]][which_missing] <-
-            max(as.numeric(tmp_data[[cov]]), na.rm = TRUE) %>%
-            magrittr::add(seq_len(sum(which_missing)))
+            max_val + seq_len(sum(which_missing))
+          tmp_data[[cov]] %<>% factor(levels = new_levels)
         }
-        tmp_data[[cov]] %<>% as.factor()
       }
 
       data <- tmp_data
@@ -145,9 +150,11 @@ handle_missing_data <-
   }
   else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
+      message('Starting imputation of `holdout`\r', appendLF = FALSE)
       holdout <- impute_missing(holdout, outcome_in_data, missing_holdout_imputations,
                                 treated_column_name, outcome_column_name,
                                 impute_with_treatment, impute_with_outcome)
+      message('Finished imputation of `holdout`\r', appendLF = FALSE)
     }
   }
 

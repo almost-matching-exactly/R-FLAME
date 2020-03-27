@@ -72,6 +72,7 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
 
 get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
   fit <- do.call(fit_fun, c(list(X, Y), fit_params))
+  # browser()
   preds <- do.call(predict_fun, c(list(fit, X), predict_params))
   error <- mean((preds - Y) ^ 2) # MSE for continuous outcome; MCE for binary
   return(error)

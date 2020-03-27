@@ -98,11 +98,11 @@ by \code{user_PE_params}. Defaults to \code{NULL}.}
 matched multiple times, on different sets of covariates. Defaults to
 \code{FALSE}.}
 
-\item{verbose}{Controls output while FLAME is running. If 0, no output. If 1,
-outputs the iteration every iteration and the stopping condition. If 2,
-outputs the iteration and number of unmatched units every 5 iterations, and
-the stopping condition. If 3, outputs the iteration and number of unmatched
-units every 5 iterations, and the stopping condition. Defaults to 2.}
+\item{verbose}{Controls how FLAME displays progress while running. If 0, no
+output. If 1, only outputs the stopping condition. If 2, outputs the
+iteration and number of unmatched units every 5 iterations, and the
+stopping condition. If 3, outputs the iteration and number of unmatched
+units every iteration, and the stopping condition. Defaults to 2.}
 
 \item{want_pe}{A logical scalar. If TRUE, the predictive error (PE) at each
 iteration will be returned. Defaults to \code{FALSE}.}

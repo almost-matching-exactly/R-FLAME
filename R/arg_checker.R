@@ -87,8 +87,8 @@ check_args <-
     stop("binning_method must be one of: 'sturges', 'scott', or 'fd'")
   }
 
-  if (!(PE_method %in% c('elasticnet', 'xgb'))) {
-    stop("PE_method must be one of 'elasticnet' or 'xgb'.
+  if (!(PE_method %in% c('ridge', 'xgb'))) {
+    stop("PE_method must be one of 'ridge' or 'xgb'.
          To supply your own model to fit, use user_PE_fit.")
   }
 

@@ -2,15 +2,17 @@
 % Please edit documentation in R/post_matching.R
 \name{ATE}
 \alias{ATE}
-\title{Compute the ATE of a matched dataset.}
+\title{ATE of a matched dataset}
 \usage{
 ATE(FLAME_out)
 }
 \arguments{
-\item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
+\item{FLAME_out}{An object returned by running \code{FLAME}.}
 }
 \description{
-\code{ATE} Computes the average treatment effect (ATE) of a matched dataset
-via the difference of the weighted treated and the weighted control outcomes
-A unit's weight is the number of times it was matched.
+\code{ATE} computes the average treatment effect (ATE) of a matched dataset.
+}
+\details{
+The ATE is computed as the difference between the weighted treated and the weighted control outcomes
+in the dataset. A unit's weight is the number of times it was matched.
 }

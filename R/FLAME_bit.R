@@ -128,7 +128,7 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
     PE_fit_params <- user_PE_fit_params
   }
   else {
-    if (PE_method == 'elasticnet') {
+    if (PE_method == 'ridge') {
       PE_fit <- glmnet::cv.glmnet
       if (length(unique(holdout$outcome)) == 2) {
         family <- 'binomial'
@@ -288,13 +288,13 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
 #' or the Freedman-Diaconis rule for determining number of bins in a histogram.
 #' Each continuous covariate will be binned into the corresponding number of bins.
-#' @param PE_method Either "elasticnet" or "xgb". Denotes the method to be used
-#'   to compute PE. If "elasticnet", uses \code{glmnet::cv.glmnet} with default
+#' @param PE_method Either "ridge" or "xgb". Denotes the method to be used
+#'   to compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
 #'   parameters and then the default predict method to estimate the outcome. If
 #'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
 #'   cross-validate and find the best with respect to RMSE (for continuous
 #'   outcomes) or binary misclassification rate (for binary outcomes). Then uses
-#'   default predict method to estimate the outcome. Defaults to "elasticnet".
+#'   default predict method to estimate the outcome. Defaults to "ridge".
 #' @param user_PE_fit An optional function supplied by the user that can be used
 #'   instead of those allowed for by \code{PE_method} to fit a model fitting the
 #'   outcome from the covariates. Must take in a matrix of covariates as its
@@ -315,16 +315,16 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #'   iteration and number of unmatched units every 5 iterations, and the
 #'   stopping condition. If 3, outputs the iteration and number of unmatched
 #'   units every iteration, and the stopping condition. Defaults to 2.
-#' @param want_pe A logical scalar. If TRUE, the predictive error (PE) at each
+#' @param return_pe A logical scalar. If TRUE, the predictive error (PE) at each
 #'   iteration will be returned. Defaults to \code{FALSE}.
-#' @param want_bf A logical scalar. If TRUE, the balancing factor (BF) at each
+#' @param return_bf A logical scalar. If TRUE, the balancing factor (BF) at each
 #'   iteration will be returned. Defaults to \code{FALSE}.
 #' @param early_stop_iterations A nonnegative integer, denoting the number of
 #'   iterations of FLAME to be performed. If 0, one round of exact matching is
 #'   performed before stopping. Defaults to \code{Inf}.
 #' @param early_stop_epsilon A nonnegative numeric. If FLAME attemts to drop a
 #'   covariate that would raise the PE above (1 + early_stop_epsilon) times the
-#'   baseline PE (the PE ebefore any covariates have been dropped), FLAME will
+#'   baseline PE (the PE before any covariates have been dropped), FLAME will
 #'   stop. Defaults to 0.25.
 #' @param early_stop_un_c_frac A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of control units that are unmatched falls below this value,
@@ -368,10 +368,10 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 FLAME <-
   function(data, holdout = 0.1, C = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
-           binning_method = 'sturges', PE_method = 'elasticnet',
+           binning_method = 'sturges', PE_method = 'ridge',
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
-           replace = FALSE, verbose = 2, want_pe = FALSE, want_bf = FALSE,
+           replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
@@ -396,7 +396,7 @@ FLAME <-
              binning_method,
              PE_method, user_PE_fit, user_PE_fit_params,
              user_PE_predict, user_PE_predict_params,
-             replace, verbose, want_pe, want_bf,
+             replace, verbose, return_pe, return_bf,
              early_stop_iterations, early_stop_epsilon,
              early_stop_un_c_frac, early_stop_un_t_frac,
              early_stop_pe, early_stop_bf,
@@ -415,7 +415,6 @@ FLAME <-
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
 
-  # browser()
   c(data, covs, n_covs, n_levels, cov_names, sorting_order) %<-%
     sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
               binning_method, type = 'data', is_missing)
@@ -423,7 +422,7 @@ FLAME <-
   holdout <-
     sort_cols(holdout, outcome_in_data = TRUE, treated_column_name, outcome_column_name,
               binning_method, type = 'holdout')[[1]]
-  # browser()
+
   n_iters <- length(data)
 
   FLAME_out <- vector(mode = 'list', length = n_iters)
@@ -438,7 +437,7 @@ FLAME <-
                      cov_names, sorting_order, C,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params,
-                     replace, verbose, want_pe, want_bf,
+                     replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
                      early_stop_un_c_frac, early_stop_un_t_frac,
                      early_stop_pe, early_stop_bf)
@@ -454,7 +453,7 @@ FLAME_internal <-
   function(data, outcome_in_data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C,
            PE_method, user_PE_fit, user_PE_fit_params ,
            user_PE_predict, user_PE_predict_params,
-           replace, verbose, want_pe, want_bf,
+           replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
            early_stop_un_c_frac, early_stop_un_t_frac,
            early_stop_pe, early_stop_bf) {
@@ -610,17 +609,16 @@ FLAME_internal <-
          CATE = CATE,
          matched_on = matched_on,
          matching_covs = matching_covs,
-         dropped = covs_dropped,
-         missing = is_missing) ###### remove this
+         dropped = covs_dropped)
 
   if (!outcome_in_data) {
     ret_list$CATE <- NULL
   }
 
-  if (want_pe) {
+  if (return_pe) {
     ret_list %<>% c('PE' = list(store_pe))
   }
-  if (want_bf) {
+  if (return_bf) {
     ret_list %<>% c('BF' = list(store_bf))
   }
 

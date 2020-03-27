@@ -2,19 +2,19 @@
 % Please edit documentation in R/post_matching.R
 \name{MG}
 \alias{MG}
-\title{Matched groups of units.}
+\title{Matched Groups}
 \usage{
 MG(units, FLAME_out, multiple = FALSE)
 }
 \arguments{
-\item{units}{A vector of integers between 1 and \code{nrow(FLAME_out$data)}
-whose matched groups are desired.}
+\item{units}{A vector of indices for the units whose matched groups
+are desired.}
 
 \item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
 
-\item{multiple}{A logical scalar. If \code{FALSE} (default), then will only
-return the matched group of each unit with matches on the greatest number
-of covariates; otherwise, will return all of them. See below for details.}
+\item{multiple}{A logical scalar. If \code{FALSE} (default), then \code{MG}
+will only return a main matched group for each unit (the first matched group
+that unit was a part of). See below for details.}
 }
 \value{
 \strong{If passing a single set of matched data}
@@ -23,23 +23,8 @@ of covariates; otherwise, will return all of them. See below for details.}
   \code{multiple = FALSE}) or a list of data frames (if \code{multiple =
   TRUE}). For a given entry, these data frames are subsets of \code{data}
   passed to \code{\link{FLAME}} to generate \code{FLAME_out}, whose rows
-  correspond to the units in the matched group(s) of that entry.
-
-  Each entry thus always corresponds to the matched group(s) of the
-  corresponding unit in \code{units}, but the structure of the entries
-  depends on the value of \code{multiple} and on whether or not the call to
-  \code{\link{FLAME}} that generated \code{FLAME_out} specified \code{replace
-  = TRUE} or not. If it did, a unit may have several matched groups,
-  corresponding to several sets of covariates it was matched on. In this
-  case, \code{multiple = FALSE} requests that only the matched group with
-  matches on the greatest number of covariates be returned and \code{multiple
-  = TRUE} requests that all matched groups involving that unit be returned.
-  If the call to \code{\link{FLAME}} specified \code{replace = FALSE}, a unit
-  only has one matched group that will be returned. Regardless of the value
-  of \code{replace}, if \code{multiple = TRUE}, each entry of the returned
-  list will be a list of one or more data frames (matched groups). And if
-  \code{multiple = FALSE}, each entry will be a single data frame (matched
-  group).
+  correspond to the units in the matched group(s) of that entry. If a unit
+  is not matched, the corresponding CATE will be \code{NULL}.
 
   The starred entries (*) in the returned data frames have the same meaning
   as in \code{FLAME_out$data}, except for if both \code{multiple = TRUE} and
@@ -57,17 +42,23 @@ of covariates; otherwise, will return all of them. See below for details.}
   structure described above, corresponding to that imputed data set.
 }
 \description{
-Returns the matched groups of units, as well as the covariates,
-treatment, and outcome of the units in each matched group.
+\code{MG} returns the matched groups (matched units and their covariates, treatment,
+and outcome) of the supplied units.
 }
 \details{
-\code{MG} returns the covariates, treatments, and outcomes of the units in
-the matched groups of \code{units}. Multiple matched groups per unit may be
-returned if their creation was allowed when originally running
-\code{\link{FLAME}} with \code{replace = TRUE}. Additionally, if
-\code{\link{FLAME}} was run with \code{missing_data = 2} to generate
-\code{FLAME_out}, then \code{MG} will return matched group information for
-all \code{missing_data_imputations} imputations.
+Setting \code{multiple = TRUE} will request that all matched groups be returned
+for each unit -- if \code{\link{FLAME}} was run with \code{replace = TRUE}
+to generate \code{FLAME_out} in the first place. Otherwise, if
+\code{\link{FLAME}} was run with \code{replace = TRUE}, but \code{multiple =
+FALSE}, only main matched groups will be returned.
+The main matched group of a unit contains the first units it matches with
+(and therefore those with which it matches on the largest number of
+covariates). If \code{\link{FLAME}} was run with \code{replace = FALSE}, then
+the user should only supply \code{multiple = FALSE}.
+
+Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
+generate \code{FLAME_out}, then \code{MG} will return matched group
+information for all \code{missing_data_imputations} imputations.
 }
 \seealso{
 \code{\link{FLAME}}
