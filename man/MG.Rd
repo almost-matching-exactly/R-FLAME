@@ -4,7 +4,7 @@
 \alias{MG}
 \title{Matched Groups}
 \usage{
-MG(units, FLAME_out, multiple = FALSE)
+MG(units, FLAME_out, multiple = FALSE, index_only = FALSE)
 }
 \arguments{
 \item{units}{A vector of indices for the units whose matched groups
@@ -13,8 +13,11 @@ are desired.}
 \item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
 
 \item{multiple}{A logical scalar. If \code{FALSE} (default), then \code{MG}
-will only return a main matched group for each unit (the first matched group
-that unit was a part of). See below for details.}
+will only return a main matched group for each unit (the first matched
+group that unit was a part of). See below for details.}
+
+\item{index_only}{A logical scalar. If \code{TRUE} then only the indices of
+units in each matched group are returned.}
 }
 \value{
 \strong{If passing a single set of matched data}
@@ -42,19 +45,23 @@ that unit was a part of). See below for details.}
   structure described above, corresponding to that imputed data set.
 }
 \description{
-\code{MG} returns the matched groups (matched units and their covariates, treatment,
-and outcome) of the supplied units.
+\code{MG} returns the matched groups of the supplied units.
 }
 \details{
-Setting \code{multiple = TRUE} will request that all matched groups be returned
-for each unit -- if \code{\link{FLAME}} was run with \code{replace = TRUE}
-to generate \code{FLAME_out} in the first place. Otherwise, if
+By default, \code{MG} returns the covariate, treatment, and outcome
+information for all the units in the relevant matched groups. If only the
+indices of units in the matched groups are desired, \code{index_only} can be
+set to \code{TRUE}.
+
+Setting \code{multiple = TRUE} will request that all matched groups be
+returned for each unit -- if \code{\link{FLAME}} was run with \code{replace =
+TRUE} to generate \code{FLAME_out} in the first place. Otherwise, if
 \code{\link{FLAME}} was run with \code{replace = TRUE}, but \code{multiple =
-FALSE}, only main matched groups will be returned.
-The main matched group of a unit contains the first units it matches with
-(and therefore those with which it matches on the largest number of
-covariates). If \code{\link{FLAME}} was run with \code{replace = FALSE}, then
-the user should only supply \code{multiple = FALSE}.
+FALSE}, only main matched groups will be returned. The main matched group of
+a unit contains the first units it matches with (and therefore those with
+which it matches on the largest number of covariates). If \code{\link{FLAME}}
+was run with \code{replace = FALSE}, then the user should only supply
+\code{multiple = FALSE}.
 
 Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
 generate \code{FLAME_out}, then \code{MG} will return matched group

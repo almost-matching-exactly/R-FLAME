@@ -12,17 +12,16 @@ are desired.}
 
 \item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
 
-\item{multiple}{A logical scalar. If \code{FALSE} (default), then
-\code{CATE} will return CATEs of main matched groups (those with matches on
-the greatest number of covariates). See below for details.}
+\item{multiple}{A logical scalar. If \code{FALSE} (default), then \code{CATE}
+will return CATEs of main matched groups (those with matches on the
+greatest number of covariates). See below for details.}
 }
 \value{
 \strong{If passing a single set of matched data}
 
-  A list of length \code{length(units)}. Each entry is a CATE (a numeric scalar)
-  (if
-  \code{multiple = FALSE}) or a list of CATEs (if \code{multiple =
-  TRUE}). If a unit is not matched, the corresponding CATE will be
+  A list of length \code{length(units)}. Each entry is a CATE (a numeric
+  scalar) (if \code{multiple = FALSE}) or a list of CATEs (if \code{multiple
+  = TRUE}). If a unit is not matched, the corresponding CATE will be
   \code{NULL}.
 
   Note that this is the return format also if passing a single set of
@@ -46,11 +45,11 @@ Setting \code{multiple = TRUE} will request that CATEs corresponding to all
 matched groups be returned for each unit -- if \code{\link{FLAME}} was run
 with \code{replace = TRUE} to generate \code{FLAME_out} in the first place.
 Otherwise, if \code{\link{FLAME}} was run with \code{replace = TRUE}, but
-\code{multiple = FALSE}, only the CATE of the main matched groups will be returned. The main
-matched group of a unit contains the first units it matches with (and
-therefore those with which it matches on the largest number of covariates).
-If \code{\link{FLAME}} was run with \code{replace = FALSE}, then the user
-should only supply \code{multiple = FALSE}.
+\code{multiple = FALSE}, only the CATE of the main matched groups will be
+returned. The main matched group of a unit contains the first units it
+matches with (and therefore those with which it matches on the largest number
+of covariates). If \code{\link{FLAME}} was run with \code{replace = FALSE},
+then the user should only supply \code{multiple = FALSE}.
 
 Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
 generate \code{FLAME_out}, then \code{CATE} will return CATE

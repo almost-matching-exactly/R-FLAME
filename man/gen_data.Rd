@@ -28,10 +28,10 @@ functionality.
 }
 \details{
 \code{gen_data} simulates data in the format accepted by \code{FLAME}.
-  Covariates \eqn{X_i} and treatment \eqn{T} are both independently generated according
-  to a Bernoulli(0.5) distribution. The outcome \eqn{Y} is generated according to
-  \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T + \epsilon}, where
-  \eqn{\epsilon \sim N(0, I_n)}. Thus, the value of
-  \code{p} must be at least 3 and any additional covariates beyond
-  \eqn{X_1, X_2, X_3} are irrelevant.
+  Covariates \eqn{X_i} and treatment \eqn{T} are both independently generated
+  according to a Bernoulli(0.5) distribution. The outcome \eqn{Y} is
+  generated according to \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T + \epsilon},
+  where \eqn{\epsilon \sim N(0, I_n)}. Thus, the value of \code{p} must be at
+  least 3 and any additional covariates beyond \eqn{X_1, X_2, X_3} are
+  irrelevant.
 }

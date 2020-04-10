@@ -5,10 +5,10 @@ aggregate_table <- function(vals) {
   return(as.vector(tab[match(vals, name)]))
 }
 
-# update_matched_bit takes a dataframe, a set of covariates to match on,
-# the treatment indicator column and the matched indicator column.
-# it returns the array indicating whether each unit is matched (the first return
-# value), and a list of indices for the matched units (the second return value)
+# update_matched_bit takes a dataframe, a set of covariates to match on, the
+# treatment indicator column and the matched indicator column. it returns the
+# array indicating whether each unit is matched (the first return value), and a
+# list of indices for the matched units (the second return value)
 
 update_matched_bit <- function(data, covs, n_levels) {
   # n_levels <- apply(data[, covs, drop = FALSE], 2, max)
@@ -19,8 +19,6 @@ update_matched_bit <- function(data, covs, n_levels) {
   b_u <-
     gmp::`%*%`(data_wo_t, multiplier) %>%
     as.vector()
-  # browser()
-  stopifnot(gmp::is.bigz(b_u))
 
   # Compute b_u+
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels))
@@ -29,7 +27,6 @@ update_matched_bit <- function(data, covs, n_levels) {
     gmp::`%*%`(data_wo_t, multiplier) %>%
     gmp::add.bigz(data$treated) %>%
     as.vector()
-  stopifnot(gmp::is.bigz(b_u_plus))
 
   # Compute c_u
   c_u <- aggregate_table(b_u)
@@ -45,14 +42,19 @@ update_matched_bit <- function(data, covs, n_levels) {
               index = index))
 }
 
-make_MGs <- function(data, outcome_in_data, index, matched_units, covs, cov_names) {
-  # Takes all the units that were matched on these p' covariates and separates them
-  # into matched groups based off their unique values of those covariates
-  # Returns a list with three items:
-  ## MGs: a list, each entry of which corresponds to a different MG and contains the indices of the corresponding units
-  ## CATEs: a vector the same length as MGs, each entry of which is the CATE for the corresponding MG
-  ## matched_on: a list the same length as MGs, each entry of which is a named vector detailing the covariates
-  ##  and their values that the units in the corresponding MG matched on
+make_MGs <-
+  function(data, outcome_in_data, index, matched_units, covs, cov_names) {
+  # Takes all the units that were matched on these p covariates and separates
+  # them into matched groups based off their unique values of those covariates
+  # Returns a list with three items
+    # MGs: a list, each entry of which corresponds to a different MG and
+    #   contains the indices of the corresponding units
+    # CATEs: a vector the same length as MGs, each entry of which is the CATE
+    #   for the corresponding MG
+    # matched_on: a list the same length as MGs, each entry of which is a named
+    #   vector detailing the covariates and their values that the units in the
+    #   corresponding MG matched on
+
   unique_MGs <- unique(index)
   n_MGs <- length(unique_MGs)
 
@@ -91,7 +93,6 @@ process_matches <-
     units_matched <- which(!data$missing)[match_index]
   }
   else {
-    # browser()
     match_out <-
       update_matched_bit(data[!data$matched & !data$missing, ], covs, n_levels)
     match_index <- match_out[[1]]
@@ -105,7 +106,8 @@ process_matches <-
   made_matches <- sum(match_index) > 0
 
   if (made_matches) {
-    new_MGs <- make_MGs(data, outcome_in_data, index, units_matched, covs, cov_names)
+    new_MGs <-
+      make_MGs(data, outcome_in_data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
     CATE <- c(CATE, new_MGs$CATEs)
     matched_on <- c(matched_on, new_MGs$matched_on)
@@ -163,28 +165,29 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
 }
 
 get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
-  # Calculate number of units unmatched (available)
-  n_control <- sum(data$treated[!data$matched & !data$missing] == 0)
-  n_treated <- sum(data$treated[!data$matched & !data$missing] == 1)
 
-  # Number of matched units
+  # Calculate number of units eligible to be matched
+  if (replace) {
+    n_control <- sum(data$treated[!data$missing] == 0)
+    n_treated <- sum(data$treated[!data$missing] == 1)
+  }
+  else {
+    n_control <- sum(data$treated[!data$matched & !data$missing] == 0)
+    n_treated <- sum(data$treated[!data$matched & !data$missing] == 1)
+  }
+
   if (replace) {
     match_index <-
       update_matched_bit(data[!data$missing, ], setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
+                         n_levels[-which(covs == cov_to_drop)])$match_index
     units_matched <- which(!data$missing)[match_index]
   }
   else {
     match_index <-
       update_matched_bit(data[!data$matched & !data$missing, ],
                          setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])[['match_index']]
+                         n_levels[-which(covs == cov_to_drop)])$match_index
     units_matched <- which(!data$matched & !data$missing)[match_index]
-  }
-
-  if (!replace & any(units_matched %in% which(data$matched))) {
-    browser()
-    stop('Rematching a matched unit')
   }
 
   # Newly matched
@@ -260,21 +263,28 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' imputed \code{holdout} datasets.
 #'
 #' @param data Data to be matched. Either a data frame or a path to a .csv file
-#'   to be read (via \code{read.csv}) into a data frame. Treatment must be
-#'   described in a logical or binary column with name
-#'   \code{treated_column_name}. Outcome, if supplied, must be either binary
-#'   continuous (both numeric). If not supplied, matching will be performed but
-#'   post-matching, treatment effect estimation will not be possible. All other
-#'   columns will be assumed to be covariates to be used for matching. If they
-#'   are factors, they will be assumed to be categorical; if they are numeric,
-#'   they will be assumed continuous and binned into categories as specified by
-#'   \code{binning_method}. The input of continuous covariates is not
-#'   recommended. There is no default for \code{data}.
+#'   to be read (via \code{read.csv}) into a data frame. If path to a .csv file,
+#'   all covariates will be assumed to be factors. Treatment must be described
+#'   in a logical or binary column with name \code{treated_column_name}.
+#'   Outcome, if supplied, must be either binary continuous (both numeric). If
+#'   not supplied, matching will be performed but matched group CATEs will not
+#'   be returned and post-matching, treatment effect estimation will not be
+#'   possible. All other columns will be assumed to be covariates to be used for
+#'   matching. If they are factors, they will be assumed to be categorical; if
+#'   they are numeric, they will be assumed continuous and binned into
+#'   categories as specified by \code{binning_method}. \emph{Any
+#'   covariates that are not continuous, on which units are to match exactly,
+#'   must be passed to FLAME as factors}. The input of continuous covariates is
+#'   not recommended. There is no default for \code{data}. In addition, if a
+#'   supplied factor has k levels, they must be: 0, 1, ..., k - 1. This will
+#'   change in a future update.
 #' @param holdout Holdout data to be used to compute predictive error. If a
 #'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
 #'   into a holdout set and only the remaining proportion of \code{data} will be
-#'   matched. Otherwise, a dataframe or a path to a .csv file. Must have the
-#'   same column names as \code{data}. This data will \emph{not} be matched.
+#'   matched. Otherwise, a dataframe or a path to a .csv file. If a path to a
+#'   .csv file, all covariates will be assumed to be factors. Restrictions on
+#'   column types are the same as for \code{data}. Must have the same column
+#'   names and order as \code{data}. This data will \emph{not} be matched.
 #'   Defaults to 0.1
 #' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
 #'   the FLAME algorithm. Higher C prioritizes more matches and lower C
@@ -284,12 +294,15 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param outcome_column_name A character with the name of the outcome column in
 #'   \code{holdout} and also in \code{data}, if supplied in the latter.
 #'   Defaults to 'outcome'.
-#' @param binning_method The method to be used to bin continuous covariates in the
-#' data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
-#' or the Freedman-Diaconis rule for determining number of bins in a histogram.
-#' Each continuous covariate will be binned into the corresponding number of bins.
-#' @param PE_method Either "ridge" or "xgb". Denotes the method to be used
-#'   to compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
+#' @param binning_method The method to be used to bin continuous covariates in
+#'   the data. One of: "sturges", "scott", or "fd", denoting Sturges' rule,
+#'   Scott's rule, or the Freedman-Diaconis rule for determining number of bins
+#'   in a histogram. Each continuous covariate will be binned into the
+#'   corresponding number of bins. If covariates are binned, the \code{data}
+#'   entry of the object returned from \code{FLAME} will contain the binned,
+#'   and not the original, values.
+#' @param PE_method Either "ridge" or "xgb". Denotes the method to be used to
+#'   compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
 #'   parameters and then the default predict method to estimate the outcome. If
 #'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
 #'   cross-validate and find the best with respect to RMSE (for continuous
@@ -328,10 +341,10 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #'   covariate that would raise the PE above (1 + early_stop_epsilon) times the
 #'   baseline PE (the PE before any covariates have been dropped), FLAME will
 #'   stop. Defaults to 0.25.
-#' @param early_stop_un_c_frac A numeric value between 0 and 1 (inclusive). If
+#' @param early_stop_control A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of control units that are unmatched falls below this value,
 #'   FLAME stops. Defaults to 0.
-#' @param early_stop_un_t_frac A numeric value between 0 and 1 (inclusive). If
+#' @param early_stop_treated A numeric value between 0 and 1 (inclusive). If
 #'   the proportion of treatment units that are unmatched falls below this
 #'   value, FLAME stops. Defaults to 0.
 #' @param early_stop_pe A numeric value between 0 and 1 (inclusive). If FLAME
@@ -340,12 +353,15 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param early_stop_bf A numeric value between 0 and 1 (inclusive). If FLAME
 #'   attempts to drop a covariate that would lead to a BF below this value,
 #'   FLAME stops. Defaults to 0.
-#' @param missing_data If 0, assumes no missingness in \code{data}. If 1,
-#'   eliminates units with missingness from \code{data}. If 2, performs
-#'   \code{missing_data_imputations} of MICE to impute the missing data. In this
-#'   case, FLAME will be run on each imputed dataset and a list of the results
-#'   for each dataset will be returned. If 3, will not match a unit on a
-#'   covariate that it is missing. Defaults to 0.
+#' @param missing_data If 0, assumes no missingness in \code{data}. If 1, does
+#'   not match units with missingness in \code{data}. In this case, the
+#'   balancing factor is computed ignoring units with missingness. If 2,
+#'   performs \code{missing_data_imputations} of MICE to impute the missing
+#'   data. In this case, the results of running \code{FLAME} on each imputed
+#'   dataset will be returned in a list. Within each of these list entries,
+#'   the \code{data} entry will contain the imputed, not missing, values.
+#'   If 3, will not
+#'   match a unit on a covariate that it is missing. Defaults to 0.
 #' @param missing_holdout If 0, assumes no missing data in \code{holdout}. If 1,
 #'   eliminates units with missingness from \code{holdout}. If 2, performs
 #'   \code{missing_holdout_imputations} of MICE to impute the missing data. In
@@ -357,7 +373,35 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
 #' @param missing_data_imputations If \code{missing_data} = 2, performs this
 #'   many imputations of the missing data in \code{data} using MICE. Defaults to
 #'   5.
-
+#'
+#' @return The basic object returned by \code{FLAME} is a list of 6 entries:
+#' \describe{
+#' \item{data}{The original data frame with several modifications:
+#'   \enumerate{
+#'     \item An extra logical column, \code{data$matched},
+#'     that indicates whether or not a unit was matched.
+#'     \item An extra numeric column, \code{data$weight},
+#'     that denotes on how many different sets of covariates a unit was matched.
+#'     This will only be greater than 1 when \code{replace = TRUE}.
+#'     \item Regardless of their original names, the columns denoting treatment
+#'     and outcome in the data will be renamed 'treated' and 'outcome' and they
+#'     are moved to be located after all the covariate data.
+#'     \item Units that were not matched on all covariates will have a '*'
+#'     in place of their covariate value for all covariates for which they
+#'     were not matched.
+#'     }
+#'  }
+#'  \item{MGs}{A list, each entry of which contains the units in a
+#'    single matched group}
+#'  \item{CATE}{A numeric vector with the conditional average treatment effect
+#'    of every matched group in \code{MGs}}
+#'  \item{matched_on}{A list corresponding to \code{MGs} that gives the covariates,
+#'  and their values, on which units in each matched group were matched.}
+#'  \item{matching_covs}{A list with the covariates used for matching on every
+#'  iteration of FLAME}
+#'  \item{dropped}{A vector with the covariate dropped at each iteration of FLAME}
+#' }
+#'
 #' @examples
 #' data <- gen_data()
 #' holdout <- gen_data()
@@ -375,13 +419,15 @@ FLAME <-
            user_PE_predict = NULL, user_PE_predict_params = NULL,
            replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
-           early_stop_un_c_frac = 0, early_stop_un_t_frac = 0,
+           early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0,
            missing_data_imputations = 5, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
 
-  read_data_out <- read_data(data, holdout)
+  read_data_out <-
+    read_data(data, holdout, treated_column_name, outcome_column_name)
+
   data <- read_data_out[[1]]
   holdout <- read_data_out[[2]]
 
@@ -400,7 +446,7 @@ FLAME <-
              user_PE_predict, user_PE_predict_params,
              replace, verbose, return_pe, return_bf,
              early_stop_iterations, early_stop_epsilon,
-             early_stop_un_c_frac, early_stop_un_t_frac,
+             early_stop_control, early_stop_treated,
              early_stop_pe, early_stop_bf,
              missing_data, missing_holdout,
              missing_data_imputations, missing_holdout_imputations,
@@ -422,7 +468,8 @@ FLAME <-
               binning_method, type = 'data', is_missing)
 
   holdout <-
-    sort_cols(holdout, outcome_in_data = TRUE, treated_column_name, outcome_column_name,
+    sort_cols(holdout, outcome_in_data = TRUE,
+              treated_column_name, outcome_column_name,
               binning_method, type = 'holdout')[[1]]
 
   n_iters <- length(data)
@@ -430,7 +477,8 @@ FLAME <-
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
     if (missing_data == 2) {
-      message('Running FLAME on imputed dataset ', i, ' of ', n_iters, '\r', appendLF = FALSE)
+      message('Running FLAME on imputed dataset ', i, ' of ', n_iters, '\r',
+              appendLF = FALSE)
       flush.console()
     }
     FLAME_out[[i]] <-
@@ -441,7 +489,7 @@ FLAME <-
                      user_PE_predict, user_PE_predict_params,
                      replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
-                     early_stop_un_c_frac, early_stop_un_t_frac,
+                     early_stop_control, early_stop_treated,
                      early_stop_pe, early_stop_bf)
   }
 
@@ -452,12 +500,13 @@ FLAME <-
 }
 
 FLAME_internal <-
-  function(data, outcome_in_data, holdout, covs, n_covs, n_levels, cov_names, sorting_order, C,
+  function(data, outcome_in_data, holdout, covs, n_covs, n_levels,
+           cov_names, sorting_order, C,
            PE_method, user_PE_fit, user_PE_fit_params ,
            user_PE_predict, user_PE_predict_params,
            replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
-           early_stop_un_c_frac, early_stop_un_t_frac,
+           early_stop_control, early_stop_treated,
            early_stop_pe, early_stop_bf) {
 
   # List of MGs, each entry contains the corresponding MG's entries
@@ -511,30 +560,24 @@ FLAME_internal <-
       break
     }
 
-    if (C != 0) { # Computing BF is time intensive so only do so if C is not 0
-      best_lower_bound <- max(-PE)
-      upper_bound <- 2 * C - PE
+    best_lower_bound <- max(-PE)
+    upper_bound <- 2 * C - PE
 
-      drop_candidates <- which(upper_bound >= best_lower_bound)
-      # browser()
-      PE <- PE[drop_candidates]
-      BF_out <-
-        lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
-      BF <- sapply(BF_out, function(x) x[['BF']])
+    drop_candidates <- which(upper_bound >= best_lower_bound)
+    PE <- PE[drop_candidates]
+    BF_out <-
+      lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
+    BF <- sapply(BF_out, function(x) x[['BF']])
 
-      MQ <- C * BF - PE
-    }
-    else {
-      MQ <- PE
-    }
-  ############### FIX THIS FOR C = 0
-    # (First, in unlikely case of ties) covariate yielding highest match quality
+    MQ <- C * BF - PE
+
+    # (First, in unlikely case of ties) covariate yielding highest MQ
     drop <- which.max(MQ)
     prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
 
     if (early_stop_BF(BF[drop], early_stop_bf,
                       prop_unmatched[['control']], prop_unmatched[['treated']],
-                      early_stop_un_c_frac, early_stop_un_t_frac,
+                      early_stop_control, early_stop_treated,
                       verbose)) {
       break
     }
@@ -598,12 +641,6 @@ FLAME_internal <-
   }
 
   colnames(data) <- original_colnames
-
-  if (!replace) {
-    matched <- which(data$matched)
-    stopifnot(all(data$weight[matched] == 1))
-    stopifnot(all(data$weight[-matched] == 0))
-  }
 
   ret_list <-
     list(data = data,

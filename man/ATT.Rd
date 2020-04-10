@@ -10,7 +10,8 @@ ATT(FLAME_out)
 \item{FLAME_out}{An object returned by running \code{FLAME_bit}.}
 }
 \description{
-\code{ATT} computes the average treatment effect on the treated (ATT) of a matched dataset.
+\code{ATT} computes the average treatment effect on the treated (ATT) of a
+matched dataset.
 }
 \details{
 The counterfactual outcome of each treated unit is estimated via the mean

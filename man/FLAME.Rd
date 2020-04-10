@@ -11,19 +11,19 @@ FLAME(
   treated_column_name = "treated",
   outcome_column_name = "outcome",
   binning_method = "sturges",
-  PE_method = "elasticnet",
+  PE_method = "ridge",
   user_PE_fit = NULL,
   user_PE_fit_params = NULL,
   user_PE_predict = NULL,
   user_PE_predict_params = NULL,
   replace = FALSE,
   verbose = 2,
-  want_pe = FALSE,
-  want_bf = FALSE,
+  return_pe = FALSE,
+  return_bf = FALSE,
   early_stop_iterations = Inf,
   early_stop_epsilon = 0.25,
-  early_stop_un_c_frac = 0,
-  early_stop_un_t_frac = 0,
+  early_stop_control = 0,
+  early_stop_treated = 0,
   early_stop_pe = Inf,
   early_stop_bf = 0,
   missing_data = 0,
@@ -36,22 +36,29 @@ FLAME(
 }
 \arguments{
 \item{data}{Data to be matched. Either a data frame or a path to a .csv file
-to be read (via \code{read.csv}) into a data frame. Treatment must be
-described in a logical or binary column with name
-\code{treated_column_name}. Outcome, if supplied, must be either binary
-continuous (both numeric). If not supplied, matching will be performed but
-post-matching, treatment effect estimation will not be possible. All other
-columns will be assumed to be covariates to be used for matching. If they
-are factors, they will be assumed to be categorical; if they are numeric,
-they will be assumed continuous and binned into categories as specified by
-\code{binning_method}. The input of continuous covariates is not
-recommended. There is no default for \code{data}.}
+to be read (via \code{read.csv}) into a data frame. If path to a .csv file,
+all covariates will be assumed to be factors. Treatment must be described
+in a logical or binary column with name \code{treated_column_name}.
+Outcome, if supplied, must be either binary continuous (both numeric). If
+not supplied, matching will be performed but matched group CATEs will not
+be returned and post-matching, treatment effect estimation will not be
+possible. All other columns will be assumed to be covariates to be used for
+matching. If they are factors, they will be assumed to be categorical; if
+they are numeric, they will be assumed continuous and binned into
+categories as specified by \code{binning_method}. \emph{To reiterate: any
+covariates that are not continuous, on which units are to match exactly,
+must be passed to FLAME as factors}. The input of continuous covariates is
+not recommended. There is no default for \code{data}. In addition, if a
+supplied factor has k levels, they must be: 0, 1, ..., k - 1. This will
+change in a future update.}
 
 \item{holdout}{Holdout data to be used to compute predictive error. If a
 numeric scalar between 0 and 1, that proportion of \code{data} will be made
 into a holdout set and only the remaining proportion of \code{data} will be
-matched. Otherwise, a dataframe or a path to a .csv file. Must have the
-same column names as \code{data}. This data will \emph{not} be matched.
+matched. Otherwise, a dataframe or a path to a .csv file. If a path to a
+.csv file, all covariates will be assumed to be factors. Restrictions on
+column types are the same as for \code{data}. Must have the same column
+names and order as \code{data}. This data will \emph{not} be matched.
 Defaults to 0.1}
 
 \item{C}{A finite, positive scalar denoting the tradeoff between BF and PE in
@@ -65,18 +72,19 @@ in \code{data} and \code{holdout}. Defaults to 'treated'.}
 \code{holdout} and also in \code{data}, if supplied in the latter.
 Defaults to 'outcome'.}
 
-\item{binning_method}{The method to be used to bin continuous covariates in the
-data. One of: "sturges", "scott", or "fd", denoting Sturges' rule, Scott's rule,
-or the Freedman-Diaconis rule for determining number of bins in a histogram.
-Each continuous covariate will be binned into the corresponding number of bins.}
+\item{binning_method}{The method to be used to bin continuous covariates in
+the data. One of: "sturges", "scott", or "fd", denoting Sturges' rule,
+Scott's rule, or the Freedman-Diaconis rule for determining number of bins
+in a histogram. Each continuous covariate will be binned into the
+corresponding number of bins.}
 
-\item{PE_method}{Either "elasticnet" or "xgb". Denotes the method to be used
-to compute PE. If "elasticnet", uses \code{glmnet::cv.glmnet} with default
+\item{PE_method}{Either "ridge" or "xgb". Denotes the method to be used to
+compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
 parameters and then the default predict method to estimate the outcome. If
 "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
 cross-validate and find the best with respect to RMSE (for continuous
 outcomes) or binary misclassification rate (for binary outcomes). Then uses
-default predict method to estimate the outcome. Defaults to "elasticnet".}
+default predict method to estimate the outcome. Defaults to "ridge".}
 
 \item{user_PE_fit}{An optional function supplied by the user that can be used
 instead of those allowed for by \code{PE_method} to fit a model fitting the
@@ -88,8 +96,10 @@ first argument and a vector outcome as its second argument. Defaults to
 \code{user_PE_fit}. Defaults to \code{NULL}.}
 
 \item{user_PE_predict}{An optional function supplied by the user that can be
-used to generate predictions from the output of \code{user_PE_fit}. If not
-supplied, defaults to \code{predict}. Defaults to \code{NULL}.}
+ used to generate predictions from the output of \code{user_PE_fit}. As its
+ first argument, must take an object of the type returned by
+\code{user_PE_fit} and as its second, a matrix of values for which to
+generate predictions. If not supplied, defaults to \code{predict}.}
 
 \item{user_PE_predict_params}{A named list of optional parameters to be used
 by \code{user_PE_params}. Defaults to \code{NULL}.}
@@ -104,10 +114,10 @@ iteration and number of unmatched units every 5 iterations, and the
 stopping condition. If 3, outputs the iteration and number of unmatched
 units every iteration, and the stopping condition. Defaults to 2.}
 
-\item{want_pe}{A logical scalar. If TRUE, the predictive error (PE) at each
+\item{return_pe}{A logical scalar. If TRUE, the predictive error (PE) at each
 iteration will be returned. Defaults to \code{FALSE}.}
 
-\item{want_bf}{A logical scalar. If TRUE, the balancing factor (BF) at each
+\item{return_bf}{A logical scalar. If TRUE, the balancing factor (BF) at each
 iteration will be returned. Defaults to \code{FALSE}.}
 
 \item{early_stop_iterations}{A nonnegative integer, denoting the number of
@@ -116,14 +126,14 @@ performed before stopping. Defaults to \code{Inf}.}
 
 \item{early_stop_epsilon}{A nonnegative numeric. If FLAME attemts to drop a
 covariate that would raise the PE above (1 + early_stop_epsilon) times the
-baseline PE (the PE ebefore any covariates have been dropped), FLAME will
+baseline PE (the PE before any covariates have been dropped), FLAME will
 stop. Defaults to 0.25.}
 
-\item{early_stop_un_c_frac}{A numeric value between 0 and 1 (inclusive). If
+\item{early_stop_control}{A numeric value between 0 and 1 (inclusive). If
 the proportion of control units that are unmatched falls below this value,
 FLAME stops. Defaults to 0.}
 
-\item{early_stop_un_t_frac}{A numeric value between 0 and 1 (inclusive). If
+\item{early_stop_treated}{A numeric value between 0 and 1 (inclusive). If
 the proportion of treatment units that are unmatched falls below this
 value, FLAME stops. Defaults to 0.}
 
@@ -135,12 +145,13 @@ FLAME stops. Defaults to \code{Inf}.}
 attempts to drop a covariate that would lead to a BF below this value,
 FLAME stops. Defaults to 0.}
 
-\item{missing_data}{If 0, assumes no missingness in \code{data}. If 1,
-eliminates units with missingness from \code{data}. If 2, performs
-\code{missing_data_imputations} of MICE to impute the missing data. In this
-case, FLAME will be run on each imputed dataset and a list of the results
-for each dataset will be returned. If 3, will not match a unit on a
-covariate that it is missing. Defaults to 0.}
+\item{missing_data}{If 0, assumes no missingness in \code{data}. If 1, does
+not match units with missingness in \code{data}. In this case, the
+balancing factor is computed ignoring units with missingness. If 2,
+performs \code{missing_data_imputations} of MICE to impute the missing
+data. In this case, FLAME will be run on each imputed dataset and a list of
+the results for each dataset will be returned. If 3, will not match a unit
+on a covariate that it is missing. Defaults to 0.}
 
 \item{missing_holdout}{If 0, assumes no missing data in \code{holdout}. If 1,
 eliminates units with missingness from \code{holdout}. If 2, performs
@@ -155,6 +166,35 @@ many imputations of the missing data in \code{data} using MICE. Defaults to
 \item{missing_holdout_imputations}{If \code{missing_holdout} = 2, performs
 this many imputations of the missing data in \code{holdout} using MICE.
 Defaults to 5.}
+}
+\value{
+The basic object returned by \code{FLAME} is a list of 6 entries:
+\describe{
+\item{data}{The original data frame with several modifications:
+  \enumerate{
+    \item An extra logical column, \code{data$matched},
+    that indicates whether or not a unit was matched.
+    \item An extra numeric column, \code{data$weight},
+    that denotes on how many different sets of covariates a unit was matched.
+    This will only be greater than 1 when \code{replace = TRUE}.
+    \item Regardless of their original names, the columns denoting treatment
+    and outcome in the data will be renamed 'treated' and 'outcome' and they
+    are moved to be located after all the covariate data.
+    \item Units that were not matched on all covariates will have a '*'
+    in place of their covariate value for all covariates for which they
+    were not matched.
+    }
+ }
+ \item{MGs}{A list, each entry of which contains the units in a
+   single matched group}
+ \item{CATE}{A numeric vector with the conditional average treatment effect
+   of every matched group in MGs}
+ \item{matched_on}{A list corresponding to MGs that gives the covariates,
+ and their values, on which units in each matched group were matched.}
+ \item{matching_covs}{A list with the covariates used for matching on every
+ iteration of FLAME}
+ \item{dropped}{A vector with the covariate dropped at each iteration of FLAME}
+}
 }
 \description{
 \code{FLAME} runs the bit-vectors implementation of the FLAME algorithm.

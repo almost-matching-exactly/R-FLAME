@@ -20,38 +20,43 @@ show_progress <- function(verbose, iter, data) {
   }
 }
 
-early_stop_BF <- function(BF, early_stop_bf, prop_c_unmatched, prop_t_unmatched,
-                          early_stop_un_c_frac, early_stop_un_t_frac,
-                          verbose) {
+early_stop_BF <-
+  function(BF, early_stop_bf, prop_c_unmatched, prop_t_unmatched,
+           early_stop_control, early_stop_treated, verbose) {
 
   if (BF < early_stop_bf) {
     if (verbose != 0) {
-      message('FLAME stopping: balancing factor would have dropped below ', early_stop_bf)
+      message('FLAME stopping: balancing factor would have dropped below ',
+              early_stop_bf)
     }
     return(TRUE)
   }
 
-  if (prop_c_unmatched < early_stop_un_c_frac) {
+  if (prop_c_unmatched < early_stop_control) {
     if (verbose != 0) {
       message('FLAME stopping: proportion of control units ',
-              'that are unmatched would have dropped below ', early_stop_un_c_frac)
+              'that are unmatched would have dropped below ',
+              early_stop_control)
     }
     return(TRUE)
   }
-  if (prop_t_unmatched < early_stop_un_t_frac) {
+  if (prop_t_unmatched < early_stop_treated) {
     if (verbose != 0) {
       message('FLAME stopping: proportion of treatment units ',
-              'that are unmatched would have dropped below ', early_stop_un_t_frac)
+              'that are unmatched would have dropped below ',
+              early_stop_treated)
     }
     return(TRUE)
   }
   return(FALSE)
 }
 
-early_stop_PE <- function(PE, early_stop_pe, early_stop_epsilon, baseline_PE, verbose) {
+early_stop_PE <-
+  function(PE, early_stop_pe, early_stop_epsilon, baseline_PE, verbose) {
   if (PE > early_stop_pe) { # should be >
     if (verbose != 0) {
-      message('FLAME stopping: predictive error would have risen above ', early_stop_pe)
+      message('FLAME stopping: predictive error would have risen above ',
+              early_stop_pe)
     }
     return(TRUE)
   }

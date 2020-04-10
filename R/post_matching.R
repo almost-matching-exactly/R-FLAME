@@ -7,6 +7,10 @@ iterate <- function(fun, units, FLAME_out, multiple) {
     n_df <- 1
   }
 
+  if (!all(units %in% as.numeric(rownames(FLAME_out[[1]]$data)))) {
+    stop('Supplied a unit not originally passed to FLAME.')
+  }
+
   out <- vector('list', length = n_df)
   for (k in 1:n_df) {
     MGs <- FLAME_out[[k]]$MGs # MGs made by FLAME
@@ -76,19 +80,20 @@ MG_internal <- function(FLAME_out, MG, which_MG) {
 #'
 #' \code{MG} returns the matched groups of the supplied units.
 #'
-#' By default, \code{MG} returns the covariate, treatment, and outcome information
-#' for all the units in the relevant matched groups. If only the indices of units
-#' in the matched groups are desired, \code{index_only} can be set to \code{TRUE}.
+#' By default, \code{MG} returns the covariate, treatment, and outcome
+#' information for all the units in the relevant matched groups. If only the
+#' indices of units in the matched groups are desired, \code{index_only} can be
+#' set to \code{TRUE}.
 #'
-#' Setting \code{multiple = TRUE} will request that all matched groups be returned
-#' for each unit -- if \code{\link{FLAME}} was run with \code{replace = TRUE}
-#' to generate \code{FLAME_out} in the first place. Otherwise, if
+#' Setting \code{multiple = TRUE} will request that all matched groups be
+#' returned for each unit -- if \code{\link{FLAME}} was run with \code{replace =
+#' TRUE} to generate \code{FLAME_out} in the first place. Otherwise, if
 #' \code{\link{FLAME}} was run with \code{replace = TRUE}, but \code{multiple =
-#' FALSE}, only main matched groups will be returned.
-#' The main matched group of a unit contains the first units it matches with
-#' (and therefore those with which it matches on the largest number of
-#' covariates). If \code{\link{FLAME}} was run with \code{replace = FALSE}, then
-#' the user should only supply \code{multiple = FALSE}.
+#' FALSE}, only main matched groups will be returned. The main matched group of
+#' a unit contains the first units it matches with (and therefore those with
+#' which it matches on the largest number of covariates). If \code{\link{FLAME}}
+#' was run with \code{replace = FALSE}, then the user should only supply
+#' \code{multiple = FALSE}.
 #'
 #' Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
 #' generate \code{FLAME_out}, then \code{MG} will return matched group
@@ -100,8 +105,8 @@ MG_internal <- function(FLAME_out, MG, which_MG) {
 #' are desired.
 #' @param FLAME_out The output of a call to \code{\link{FLAME}}.
 #' @param multiple A logical scalar. If \code{FALSE} (default), then \code{MG}
-#'   will only return a main matched group for each unit (the first matched group
-#'   that unit was a part of). See below for details.
+#'   will only return a main matched group for each unit (the first matched
+#'   group that unit was a part of). See below for details.
 #' @param index_only A logical scalar. If \code{TRUE} then only the indices of
 #' units in each matched group are returned.
 #'
@@ -151,11 +156,11 @@ MG <- function(units, FLAME_out, multiple = FALSE, index_only = FALSE) {
 #' matched groups be returned for each unit -- if \code{\link{FLAME}} was run
 #' with \code{replace = TRUE} to generate \code{FLAME_out} in the first place.
 #' Otherwise, if \code{\link{FLAME}} was run with \code{replace = TRUE}, but
-#' \code{multiple = FALSE}, only the CATE of the main matched groups will be returned. The main
-#' matched group of a unit contains the first units it matches with (and
-#' therefore those with which it matches on the largest number of covariates).
-#' If \code{\link{FLAME}} was run with \code{replace = FALSE}, then the user
-#' should only supply \code{multiple = FALSE}.
+#' \code{multiple = FALSE}, only the CATE of the main matched groups will be
+#' returned. The main matched group of a unit contains the first units it
+#' matches with (and therefore those with which it matches on the largest number
+#' of covariates). If \code{\link{FLAME}} was run with \code{replace = FALSE},
+#' then the user should only supply \code{multiple = FALSE}.
 #'
 #' Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
 #' generate \code{FLAME_out}, then \code{CATE} will return CATE
@@ -166,16 +171,15 @@ MG <- function(units, FLAME_out, multiple = FALSE, index_only = FALSE) {
 #' @param units A vector of indices for the units whose CATEs
 #'   are desired.
 #' @param FLAME_out The output of a call to \code{\link{FLAME}}.
-#' @param multiple A logical scalar. If \code{FALSE} (default), then
-#'   \code{CATE} will return CATEs of main matched groups (those with matches on
-#'   the greatest number of covariates). See below for details.
+#' @param multiple A logical scalar. If \code{FALSE} (default), then \code{CATE}
+#'   will return CATEs of main matched groups (those with matches on the
+#'   greatest number of covariates). See below for details.
 #'
 #' @return \strong{If passing a single set of matched data}
 #'
-#'   A list of length \code{length(units)}. Each entry is a CATE (a numeric scalar)
-#'   (if
-#'   \code{multiple = FALSE}) or a list of CATEs (if \code{multiple =
-#'   TRUE}). If a unit is not matched, the corresponding CATE will be
+#'   A list of length \code{length(units)}. Each entry is a CATE (a numeric
+#'   scalar) (if \code{multiple = FALSE}) or a list of CATEs (if \code{multiple
+#'   = TRUE}). If a unit is not matched, the corresponding CATE will be
 #'   \code{NULL}.
 #'
 #'   Note that this is the return format also if passing a single set of
@@ -195,8 +199,9 @@ CATE <- function(units, FLAME_out, multiple = FALSE) {
 #'
 #' \code{ATE} computes the average treatment effect (ATE) of a matched dataset.
 #'
-#' The ATE is computed as the difference between the weighted treated and the weighted control outcomes
-#' in the dataset. A unit's weight is the number of times it was matched.
+#' The ATE is computed as the difference between the weighted treated and the
+#' weighted control outcomes in the dataset. A unit's weight is the number of
+#' times it was matched.
 #'
 #' @param FLAME_out An object returned by running \code{FLAME}.
 #' @export
@@ -238,7 +243,8 @@ ATE <- function(FLAME_out) {
 
 #' ATT of a matched dataset
 #'
-#' \code{ATT} computes the average treatment effect on the treated (ATT) of a matched dataset.
+#' \code{ATT} computes the average treatment effect on the treated (ATT) of a
+#' matched dataset.
 #'
 #' The counterfactual outcome of each treated unit is estimated via the mean
 #' outcome of control units in its matched group. This value is then averaged
@@ -285,7 +291,8 @@ ATT <- function(FLAME_out) {
 
       for (k in seq_along(MG_treated)) {
         weighted_TT_sum <-
-          weighted_TT_sum + MG_weight * (outcomes[MG_treated[k]] - mean_control_outcome)
+          weighted_TT_sum +
+          MG_weight * (outcomes[MG_treated[k]] - mean_control_outcome)
       }
     }
 

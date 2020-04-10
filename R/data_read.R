@@ -1,4 +1,5 @@
-read_data <- function(data, holdout) {
+read_data <- function(data, holdout,
+                      treated_column_name, outcome_column_name) {
   if (is.character(data)) {
     tryCatch(
       error = function(cnd) {
@@ -6,6 +7,11 @@ read_data <- function(data, holdout) {
       },
       data <- read.csv(data, header = TRUE)
     )
+    cov_inds <-
+      which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+    for (cov in cov_inds) {
+      data[[cov]] <- as.factor(data[[cov]])
+    }
   }
 
   if (is.character(holdout)) {
@@ -15,6 +21,12 @@ read_data <- function(data, holdout) {
       },
       holdout <- read.csv(holdout, header = TRUE)
     )
+    cov_inds <- which(!(colnames(holdout) %in%
+                        c(treated_column_name, outcome_column_name)))
+
+    for (cov in cov_inds) {
+      holdout[[cov]] <- as.factor(holdout[[cov]])
+    }
   }
 
   if (is.numeric(holdout) & length(holdout) == 1) {

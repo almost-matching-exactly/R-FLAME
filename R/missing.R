@@ -35,38 +35,49 @@ handle_missing_data <-
   treatment_data <- data[[treatment_ind_data]]
   treatment_holdout <- holdout[[treatment_ind_holdout]]
 
-  # outcome_ind <- which(colnames(data) == outcome_column_name)
-
-  # treatment_data <- dplyr::pull(data, !!rlang::enquo(treated_column_name))
-  # treatment_holdout <- dplyr::pull(holdout, !!rlang::enquo(treated_column_name))
-
   if (any(is.na(treatment_data)) | any(is.na(treatment_holdout))) {
-    message('Found missingness in the treatment. Corresponding rows will automatically be dropped.')
-    # Do we drop these?
+    message('Found missingness in the treatment.',
+            ' Corresponding rows will automatically be ignored.')
+    if (any(is.na(treatment_data))) {
+      is_missing <- apply(data, 1, function(row) any(is.na(row)))
+    }
+    else {
+      holdout <- holdout[-apply(holdout, 1, function(row) any(is.na(row))), ]
+    }
   }
 
   outcome_ind_holdout <- which(colnames(holdout) == outcome_column_name)
   outcome_holdout <- holdout[[outcome_ind_holdout]]
-  # outcome_holdout <- dplyr::pull(holdout, !!rlang::enquo(outcome_column_name))
 
   if (outcome_in_data) {
     outcome_ind_data <- which(colnames(data) == outcome_column_name)
     outcome_data <- data[[outcome_ind_data]]
-    # outcome_data <- dplyr::pull(data, !!rlang::enquo(outcome_column_name))
     if (all(is.na(outcome_data))) {
-      stop('Outcome in data is entirely missing. If you do not have an outcome, do not supply a corresponding column.')
+      stop(paste('Outcome in data is entirely missing.',
+                 'If you do not have an outcome,',
+                 'do not supply a corresponding column.'))
     }
     if (all(is.na(outcome_holdout))) {
       stop('Outcome in holdout is entirely missing.')
     }
     if (any(is.na(outcome_data)) | any(is.na(outcome_holdout))) {
-      message('Found missingness in the outcome. Corresponding rows will automatically be dropped.')
+      message('Found missingness in the outcome.',
+              'Corresponding rows will automatically be ignored')
+
+      if (any(is.na(outcome_data))) {
+        is_missing <- apply(data, 1, function(row) any(is.na(row)))
+      }
+      else {
+        holdout <- holdout[-apply(holdout, 1, function(row) any(is.na(row))), ]
+      }
+
     }
     to_drop_data <- is.na(outcome_data) | is.na(treatment_data)
   }
   else {
     if (any(is.na(outcome_holdout))) {
-      message('Found missingness in the outcome. Corresponding rows will automatically be dropped.')
+      message('Found missingness in the outcome.',
+              'Corresponding rows will automatically be ignored')
     }
     to_drop_data <- is.na(treatment_data)
   }
@@ -79,15 +90,17 @@ handle_missing_data <-
   if (missing_data == 0) {
     is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
-      stop("Found missingness in 'data' but was told to assume there was none.\n
-           Please either change 'missing_data' to 1, 2, or 3, or supply 'data'
-           without missingness.")
+      stop(paste('Found missingness in `data` but was told to assume there',
+                 'was none. Please either change `missing_data` to 1, 2, or',
+                 '3, or supply `data` without missingness.'))
     }
   }
   else if (missing_data == 1) {
     is_missing <- apply(data, 1, function(row) any(is.na(row)))
     if (all(is_missing)) {
-      stop('All rows in data contain missingness. In this case, matches may only be made if missing_data = 2 or missing_data = 3')
+      stop(paste('All rows in data contain missingness.',
+                 'In this case, matches may only be made if missing_data = 2',
+                 'or missing_data = 3'))
     }
   }
   else if (missing_data == 2) {
@@ -107,7 +120,8 @@ handle_missing_data <-
     is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
       if (outcome_in_data) {
-        cov_inds <- setdiff(1:ncol(data), c(treatment_ind_data, outcome_ind_data))
+        cov_inds <-
+          setdiff(1:ncol(data), c(treatment_ind_data, outcome_ind_data))
       }
       else {
         cov_inds <- setdiff(1:ncol(data), treatment_ind_data)
@@ -120,7 +134,8 @@ handle_missing_data <-
         which_missing <- is.na(tmp_data[[cov]])
         n_missing <- sum(which_missing)
         if (sum(which_missing) > 0) {
-          new_levels <- c(levels(tmp_data[[cov]]), max_val + seq_len(n_missing))
+          new_levels <-
+            c(levels(tmp_data[[cov]]), max_val + seq_len(n_missing))
           tmp_data[[cov]] %<>%
             as.numeric() %>%
             magrittr::subtract(1)
@@ -133,15 +148,16 @@ handle_missing_data <-
       data <- tmp_data
     }
     else {
-      warning('Was directed to skip matches on missing values, but no missing values found.')
+      warning(paste('Was directed to skip matches on missing values,',
+                    'but no missing values found.'))
     }
   }
 
   if (missing_holdout == 0) {
     if (sum(is.na(holdout)) > 0) {
-      stop("Found missingness in 'holdout' but was told to assume there was none.\n
-           Please either change 'missing_holdout' to 1 or 2, or supply 'holdout'
-           without missingness.")
+      stop(paste('Found missingness in `holdout` but was told to assume',
+                 'there was none. Please either change `missing_holdout` to 1',
+                 'or 2, or supply `holdout` without missingness.'))
     }
   }
   else if (missing_holdout == 1) {
@@ -151,7 +167,8 @@ handle_missing_data <-
   else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
       message('Starting imputation of `holdout`\r', appendLF = FALSE)
-      holdout <- impute_missing(holdout, outcome_in_data, missing_holdout_imputations,
+      holdout <-
+        impute_missing(holdout, outcome_in_data, missing_holdout_imputations,
                                 treated_column_name, outcome_column_name,
                                 impute_with_treatment, impute_with_outcome)
       message('Finished imputation of `holdout`\r', appendLF = FALSE)
@@ -181,9 +198,6 @@ handle_missing_data <-
   }
 
   for (i in 1:n_imputations) {
-    # for (j in 1:(ncol(data[[i]]) - 1 - outcome_in_data)) {
-    #   levels(data[[i]][, j]) %<>% c('*')
-    # }
     for (j in covariates) {
       levels(data[[i]][, j]) %<>% c('*')
     }

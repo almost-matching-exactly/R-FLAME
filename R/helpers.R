@@ -12,7 +12,8 @@ bin_continuous_covariates <- function(X, rule, type) {
     bin_fun <- function(x) 2 * IQR(x, na.rm = TRUE) / (n ^ (1 / 3))
   }
   else {
-    stop('Unrecognized binning rule. Please supply one of "sturges", "scott", or "fd".')
+    stop(paste('Unrecognized binning rule.',
+               'Please supply one of "sturges", "scott", or "fd".'))
   }
 
   is_continuous <- which(!sapply(X, is.factor))
@@ -20,7 +21,9 @@ bin_continuous_covariates <- function(X, rule, type) {
     return(X)
   }
   if (type == 'data') {
-    warning('Binning continuous covariates. This is not recommended; users are encouraged to use methods specifically designed for continuous covariates.')
+    warning(paste('Binning continuous covariates. This is not recommended;',
+                  'users are encouraged to use methods specifically',
+                  'designed for continuous covariates.'))
   }
 
   X_cont <- X[, is_continuous]
@@ -46,9 +49,10 @@ order_cov_names <- function(subset, cov_names, sorting_order) {
   return(subset[order(match(subset, cov_names[order(sorting_order)]))])
 }
 
+# NULL default for holdout set
 sort_cols <-
   function(df, outcome_in_data, treated_column_name, outcome_column_name,
-           binning_method, type, is_missing = NULL) { # NULL default for holdout set
+           binning_method, type, is_missing = NULL) {
 
   n_covs <- ncol(df[[1]]) - 1 - outcome_in_data # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -88,7 +92,8 @@ sort_cols <-
     }
 
     tmp_df[, 1:n_covs] <-
-      bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE], rule = binning_method, type)
+      bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE],
+                                rule = binning_method, type)
 
     # Number of levels of each covariate
     n_levels <- sapply(tmp_df[, 1:n_covs, drop = FALSE], nlevels)
@@ -96,7 +101,7 @@ sort_cols <-
       warning(paste("It looks like you might have passed in a continuous",
                     "variable as a factor; you won't make any matches on it.",
                     "If you want this variable to be binned, you should pass",
-                    "it as numeric; otherwise, you shouldn't include it at all."))
+                    "it as numeric; otherwise, don't include it at all."))
     }
 
     # To sort covariates in increasing order of number of levels
