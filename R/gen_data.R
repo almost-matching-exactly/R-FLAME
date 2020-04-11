@@ -3,7 +3,7 @@
 #' \code{gen_data} generates toy data that can be used to explore FLAME's
 #' functionality.
 #'
-#' \code{gen_data} simulates data in the format accepted by \code{FLAME}.
+#' \code{gen_data} simulates data in the format accepted by \code{\link{FLAME}}.
 #'   Covariates \eqn{X_i} and treatment \eqn{T} are both independently generated
 #'   according to a Bernoulli(0.5) distribution. The outcome \eqn{Y} is
 #'   generated according to \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T + \epsilon},
@@ -21,6 +21,10 @@
 #'   \code{write = TRUE}. Defaults to \code{getwd()}.
 #' @param filename The name of the file to which the data should be written if
 #'   \code{write = TRUE}. Defaults to FLAME.csv.
+#'
+#' @return A data frame that may be passed to \code{\link{FLAME}}. Covariates
+#'   are categorical and therefore coded as factors. Treatment is binary numeric
+#'   and outcome is numeric.
 #' @export
 gen_data <- function(n = 250, p = 5,
                      write = FALSE, path = getwd(), filename = 'FLAME.csv') {
@@ -46,5 +50,16 @@ gen_data <- function(n = 250, p = 5,
     write.csv(data, file = paste0(path, '/', filename),
               row.names = FALSE)
   }
+  return(data)
+}
+
+gen_missing_data <- function(n = 250, p = 3, write = FALSE, percent_missing = 0.05) {
+  data <- gen_data(n = n, p = p, write = write, filename = 'missing_data.csv')
+  covs <- as.matrix(data[, 1:p])
+  size <- n * p
+  inds <- sample(1:size, size = round(percent_missing * size), replace = FALSE)
+  covs[inds] <- NA
+  data[, 1:p] <- covs
+  data[, 1:ncol(covs)] %<>% lapply(as.factor)
   return(data)
 }

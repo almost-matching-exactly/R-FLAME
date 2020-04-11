@@ -3,7 +3,7 @@ Type: Package
 Title: Fast Large-scale Almost Matching Exactly
 Version: 0.1.0
 Authors@R: as.person(c(
-    'Vittorio Orlandi <vdo@duke.edu> [aut, cre]', 
+    'Vittorio Orlandi <almost.matching.exactly@gmail.com> [aut, cre]', 
     'Sudeepa Roy <sudeepa@cs.duke.edu> [aut]', 
     'Cynthia Rudin <cynthia@cs.duke.edu> [aut]', 
     'Alexander Volfovsky <alexander.volfovsky@duke.edu> [aut]'
@@ -23,7 +23,8 @@ Imports:
   zeallot,
   rlang,
   tidyr,
-  xgboost
+  xgboost,
+  devtools
 RoxygenNote: 7.0.2
 Suggests: 
     testthat,

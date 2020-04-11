@@ -22,12 +22,17 @@ Defaults to \code{FALSE}.}
 \item{filename}{The name of the file to which the data should be written if
 \code{write = TRUE}. Defaults to FLAME.csv.}
 }
+\value{
+A data frame that may be passed to \code{\link{FLAME}}. Covariates
+  are categorical and therefore coded as factors. Treatment is binary numeric
+  and outcome is numeric.
+}
 \description{
 \code{gen_data} generates toy data that can be used to explore FLAME's
 functionality.
 }
 \details{
-\code{gen_data} simulates data in the format accepted by \code{FLAME}.
+\code{gen_data} simulates data in the format accepted by \code{\link{FLAME}}.
   Covariates \eqn{X_i} and treatment \eqn{T} are both independently generated
   according to a Bernoulli(0.5) distribution. The outcome \eqn{Y} is
   generated according to \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T + \epsilon},

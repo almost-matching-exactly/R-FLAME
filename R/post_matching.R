@@ -61,14 +61,15 @@ CATE_internal <- function(FLAME_out, MG, which_MG = NULL) {
 MG_internal <- function(FLAME_out, MG, which_MG) {
   n_cols <- ncol(FLAME_out$data)
   col_names <- colnames(FLAME_out$data)
-  cov_names <-
-    col_names %>%
-    magrittr::extract(which(!(col_names %in%
-                                c('treated', 'outcome', 'weight', 'matched'))))
 
-  tmp <-
-    FLAME_out$data[MG, ] %>%
-    dplyr::select(-c(matched, weight))
+  cov_names <-
+    col_names[which(!(col_names %in%
+                        c('treated', 'outcome', 'weight', 'matched')))]
+
+  keep_inds <-
+    which(!(colnames(FLAME_out$data[MG, ]) %in% c('matched', 'weight')))
+  tmp <- FLAME_out$data[MG, keep_inds]
+
   keep <-
     match(names(FLAME_out$matched_on[[which_MG]]), cov_names) %>%
     c(n_cols - 3, n_cols - 2) # Keep outcome and treatment
@@ -203,7 +204,7 @@ CATE <- function(units, FLAME_out, multiple = FALSE) {
 #' weighted control outcomes in the dataset. A unit's weight is the number of
 #' times it was matched.
 #'
-#' @param FLAME_out An object returned by running \code{FLAME}.
+#' @param FLAME_out An object returned by running \code{\link{FLAME}}
 #' @export
 ATE <- function(FLAME_out) {
 
@@ -248,8 +249,8 @@ ATE <- function(FLAME_out) {
 #'
 #' The counterfactual outcome of each treated unit is estimated via the mean
 #' outcome of control units in its matched group. This value is then averaged
-#' across all treated units to generate the ATT.
-#' @param FLAME_out An object returned by running \code{FLAME_bit}.
+#' across all treated units to compute the ATT.
+#' @param FLAME_out An object returned by running \code{\link{FLAME}}
 #' @export
 ATT <- function(FLAME_out) {
   if (is.null(names(FLAME_out))) { # Is a list of data frames

@@ -7,7 +7,7 @@
 ATE(FLAME_out)
 }
 \arguments{
-\item{FLAME_out}{An object returned by running \code{FLAME}.}
+\item{FLAME_out}{An object returned by running \code{\link{FLAME}}}
 }
 \description{
 \code{ATE} computes the average treatment effect (ATE) of a matched dataset.

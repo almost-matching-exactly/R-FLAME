@@ -16,6 +16,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+```{r, include=FALSE}
+devtools::load_all()
+```
+
 # Overview
 
 ## Introduction
@@ -23,8 +27,8 @@ FLAME (Fast, Large-scale Almost Matching Exactly) is a fast, interpretable match
 
 ## Making Matches
 We can start by loading FLAME...
-```{r setup}
-devtools::load_all()
+```{r setup,eval=FALSE}
+library(FLAME)
 ```
 
 ... and generating some toy data using the included `gen_data` function. 
@@ -145,7 +149,7 @@ Below are brief descriptions of the main arguments that may be passed to `FLAME`
 ## Data Arguments
 These are arguments that govern the format in which data is passed to `FLAME`. 
 
-* `data`: Either a data frame or path to a .csv file containing the data to be matched. If a path to a .csv file, all covariates will be assumed to be factors. Treatments are assumed to be binary (can be input as logical) and outcomes numeric or binary. Treatments and outcome should not be coded as factors. Covariates should be factors; otherwise, they will be interpreted as continuous covariates and binned prior to matching. Using FLAME to match on binned, continuous covariates is _not_ recommended. In addition, if a supplied factor
+* `data`: Either a data frame or path to a .csv file containing the data to be matched. If a path to a .csv file, all covariates will be assumed to be categorical Treatments are assumed to be binary (can be input as logical) and outcomes numeric or binary. Treatments and outcome should not be coded as factors. Covariates should be factors; otherwise, they will be interpreted as continuous covariates and binned prior to matching. Using FLAME to match on binned, continuous covariates is _not_ recommended. In addition, if a supplied factor
 has $k$ levels, they must be: $0, 1, \dots, k - 1$. This will change in a future update. 
 * `holdout`: Either a data frame, or path to a .csv file or a value between 0 and 1. In the first two cases, the argument indicates the holdout set to be used for computing predictive error. In the third case, that proportion of `data` will be used as a holdout set and only the remaining proportion will be matched. In this case, the rows (units) of the original `data` input to `FLAME` that are matched are those specified by `rownames(FLAME_out$data)`. Restrictions on column types are the same as for `data`. Must have same column names and order as `data`. 
 * `treated_column_name`: A character with the name of the column to be used as treatment in `data`. Defaults to 'treated'. 
