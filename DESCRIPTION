@@ -1,16 +1,30 @@
 Package: FLAME
 Type: Package
-Title: Fast Large-scale Almost Matching Exactly
-Version: 0.1.0
-Authors@R: as.person(c(
-    'Vittorio Orlandi <almost.matching.exactly@gmail.com> [aut, cre]', 
-    'Sudeepa Roy <sudeepa@cs.duke.edu> [aut]', 
-    'Cynthia Rudin <cynthia@cs.duke.edu> [aut]', 
-    'Alexander Volfovsky <alexander.volfovsky@duke.edu> [aut]'
-  ))
+Title: Interpretable Matching for Causal Inference
+Version: 2.0.0
+Authors@R: 
+  c(person(given = 'Vittorio', 
+           family = 'Orlandi',
+           role = c('aut', 'cre'),
+           email = 'almost.matching.exactly@gmail.com'),
+    person(given = 'Sudeepa',
+           family = 'Roy',
+           role = 'aut',
+           email = 'sudeepa@cs.duke.edu'),
+    person(given = 'Cynthia', 
+           family = 'Rudin', 
+           role = 'aut', 
+           email = 'cynthia@cs.duke.edu'),
+    person(given = 'Alexander',
+           family = 'Volfovsky',
+           role = 'aut', 
+           email = 'alexander.volfovsky@duke.edu'))
 BugReports: https://github.com/vittorioorlandi/FLAME/issues
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Efficient implementations of the algorithms in the 
+    Almost-Matching-Exactly framework for interpretable matching in causal
+    inference. These algorithms match units via a learned, weighted Hamming
+    distance that determines which covariates are more important to match on.
+    For more information and examples, see the Almost-Matching-Exactly website. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
