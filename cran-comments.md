@@ -1,6 +1,6 @@
 ## Test environments
 * local MacOS install, R 3.6.1
-* win-builder (release)
+* win-builder (devel and release)
 * Debian GNU/Linux 9 (stretch), R 3.5.2
 
 ## R CMD check results
