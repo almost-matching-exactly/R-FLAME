@@ -1,5 +1,7 @@
 ## Test environments
 * local MacOS install, R 3.6.1
+* win-builder (release)
+* Debian GNU/Linux 9 (stretch), R 3.5.2
 
 ## R CMD check results
 There were no ERRORs or WARNINGs.

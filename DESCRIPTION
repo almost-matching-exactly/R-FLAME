@@ -34,7 +34,6 @@ Imports:
   mice,
   glmnet,
   gmp,
-  zeallot,
   rlang,
   tidyr,
   xgboost,
