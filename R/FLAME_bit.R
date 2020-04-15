@@ -459,6 +459,14 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
+  remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
+  data <- remapped_data$df
+  mapping <- remapped_data$mapping
+
+  remapped_holdout <-
+    factor_remap(data, treated_column_name, outcome_column_name, mapping)
+  holdout <- remapped_holdout$df
+
   missing_out <-
     handle_missing_data(data, holdout, outcome_in_data,
                         treated_column_name, outcome_column_name,

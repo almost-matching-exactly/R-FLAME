@@ -188,6 +188,7 @@ handle_missing_data <-
     n_imputations <- length(data)
   }
 
+   # Can we condense this bc it won't say you're in outcome_ind_data if it doesn't exist?
   if (outcome_in_data) {
     covariates <-
       which(!(1:ncol(data[[1]]) %in% c(treatment_ind_data, outcome_ind_data)))
