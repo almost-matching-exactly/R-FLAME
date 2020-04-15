@@ -464,7 +464,7 @@ FLAME <-
   mapping <- remapped_data$mapping
 
   remapped_holdout <-
-    factor_remap(data, treated_column_name, outcome_column_name, mapping)
+    factor_remap(holdout, treated_column_name, outcome_column_name, mapping)
   holdout <- remapped_holdout$df
 
   missing_out <-

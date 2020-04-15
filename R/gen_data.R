@@ -37,6 +37,11 @@ gen_data <- function(n = 250, p = 5,
     rbinom(n * p, 1, prob = 0.5) %>%
     matrix(nrow = n)
 
+  covs <- apply(rmultinom(n * (p - 1), size = 1, prob = c(0.2, 0.3, 0.4, 0.1)) == 1,
+                2, which) %>%
+    matrix(nrow = n) %>%
+    cbind(rbinom(n, 1, prob = 0.5))
+
   treated <- rbinom(n, 1, prob = 0.5)
 
   outcome <-
