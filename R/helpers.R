@@ -108,13 +108,15 @@ sort_cols <-
     sorting_order <- order(n_levels)
 
     # To make sure the column names are also reordered
-    cov_names <- colnames(tmp_df)[1:n_covs][sorting_order]
+    cov_names <- colnames(tmp_df)[1:n_covs]
+    # cov_names <- colnames(tmp_df)[1:n_covs][sorting_order]
 
     # Sorted number of levels of each covariate
-    n_levels <- n_levels[sorting_order]
+    # n_levels <- n_levels[sorting_order]
 
     # Data sorted by n_levels
-    tmp_df[, 1:n_covs] <- tmp_df[, sorting_order]
+    # tmp_df[, 1:n_covs] <- tmp_df[, sorting_order]
+
     # Sorting data column names
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
       colnames(tmp_df) <- c(cov_names, 'outcome', 'treated')

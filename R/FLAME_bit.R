@@ -5,12 +5,12 @@ aggregate_table <- function(vals) {
   return(as.vector(tab[match(vals, name)]))
 }
 
-# update_matched_bit takes a dataframe, a set of covariates to match on, the
+# bit_match takes a dataframe, a set of covariates to match on, the
 # treatment indicator column and the matched indicator column. it returns the
 # array indicating whether each unit is matched (the first return value), and a
 # list of indices for the matched units (the second return value)
 
-update_matched_bit <- function(data, covs, n_levels) {
+bit_match <- function(data, covs, n_levels) {
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
@@ -42,7 +42,7 @@ update_matched_bit <- function(data, covs, n_levels) {
 }
 
 make_MGs <-
-  function(data, outcome_in_data, index, matched_units, covs, cov_names) {
+  function(data, outcome_in_data, index, matched_units, covs, cov_names, sorting_order) {
   # Takes all the units that were matched on these p covariates and separates
   # them into matched groups based off their unique values of those covariates
   # Returns a list with three items
@@ -84,16 +84,18 @@ make_MGs <-
 
 process_matches <-
   function(data, outcome_in_data, replace, covs, n_levels, MGs,
-           matched_on, matching_covs, CATE, cov_names) {
+           matched_on, matching_covs, CATE, cov_names, sorting_order) {
+  # browser()
+  index_order <- c(sorting_order, (max(sorting_order) + 1):ncol(data))
   if (replace) {
-    match_out <- update_matched_bit(data[!data$missing, ], covs, n_levels)
+    match_out <- bit_match(data[!data$missing, index_order], covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
     units_matched <- which(!data$missing)[match_index]
   }
   else {
     match_out <-
-      update_matched_bit(data[!data$matched & !data$missing, ], covs, n_levels)
+      bit_match(data[!data$matched & !data$missing, index_order], covs, n_levels)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
 
@@ -112,7 +114,7 @@ process_matches <-
     matched_on <- c(matched_on, new_MGs$matched_on)
   }
   matching_covs[[length(matching_covs) + 1]] <- cov_names[covs]
-
+  browser()
   return(list(CATE = CATE,
               MGs = MGs,
               matched_on = matched_on,
@@ -163,8 +165,8 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
   return(PE)
 }
 
-get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
-
+get_BF <- function(cov_to_drop, data, replace, covs, n_levels, sorting_order) {
+  # browser()
   # Calculate number of units eligible to be matched
   if (replace) {
     n_control <- sum(data$treated[!data$missing] == 0)
@@ -175,15 +177,17 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels) {
     n_treated <- sum(data$treated[!data$matched & !data$missing] == 1)
   }
 
+  index_order <- c(sorting_order, (max(sorting_order) + 1):ncol(data))
+
   if (replace) {
     match_index <-
-      update_matched_bit(data[!data$missing, ], setdiff(covs, cov_to_drop),
+      bit_match(data[!data$missing, index_order], setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)])$match_index
     units_matched <- which(!data$missing)[match_index]
   }
   else {
     match_index <-
-      update_matched_bit(data[!data$matched & !data$missing, ],
+      bit_match(data[!data$matched & !data$missing, index_order],
                          setdiff(covs, cov_to_drop),
                          n_levels[-which(covs == cov_to_drop)])$match_index
     units_matched <- which(!data$matched & !data$missing)[match_index]
@@ -459,13 +463,13 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
-  remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
-  data <- remapped_data$df
-  mapping <- remapped_data$mapping
-
-  remapped_holdout <-
-    factor_remap(data, treated_column_name, outcome_column_name, mapping)
-  holdout <- remapped_holdout$df
+  # remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
+  # data <- remapped_data$df
+  # mapping <- remapped_data$mapping
+  #
+  # remapped_holdout <-
+  #   factor_remap(data, treated_column_name, outcome_column_name, mapping)
+  # holdout <- remapped_holdout$df
 
   missing_out <-
     handle_missing_data(data, holdout, outcome_in_data,
@@ -545,7 +549,7 @@ FLAME_internal <-
   # Try and make matches on all covariates
   processed_matches <-
     process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
-                    matched_on, matching_covs, CATE, cov_names)
+                    matched_on, matching_covs, CATE, cov_names, sorting_order)
 
   CATE <- processed_matches[[1]]
   MGs <- processed_matches[[2]]
@@ -589,7 +593,7 @@ FLAME_internal <-
     drop_candidates <- which(upper_bound >= best_lower_bound)
     PE <- PE[drop_candidates]
     BF_out <-
-      lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels)
+      lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels, sorting_order)
     BF <- sapply(BF_out, function(x) x[['BF']])
 
     MQ <- C * BF - PE
@@ -621,7 +625,7 @@ FLAME_internal <-
     ## Ideally should just return this from MQ so you don't have to redo it
     processed_matches <-
       process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
-                      matched_on, matching_covs, CATE, cov_names)
+                      matched_on, matching_covs, CATE, cov_names, sorting_order)
     CATE <- processed_matches[[1]]
     MGs <- processed_matches[[2]]
     matched_on <- processed_matches[[3]]
