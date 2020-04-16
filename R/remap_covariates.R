@@ -1,8 +1,11 @@
 factor_remap <-
-  function(df, treated_column_name, outcome_column_name, mapping = NULL) {
-  browser()
+  function(df,
+           treated_column_name = 'treated',
+           outcome_column_name = 'outcome',
+           mapping = NULL) {
+  # browser()
   cov_inds <- which(!(colnames(df) %in% c(treated_column_name, outcome_column_name)))
-  mappings <- list() # Make sure we re-arrange the mappings after we sort!!
+  mappings <- list()
   counter <- 1
   for (ind in cov_inds) {
     if (is.factor(df[[ind]])) {

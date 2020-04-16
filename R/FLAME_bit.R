@@ -512,7 +512,7 @@ FLAME <-
                      replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
                      early_stop_control, early_stop_treated,
-                     early_stop_pe, early_stop_bf)
+                     early_stop_pe, early_stop_bf, mapping)
   }
 
   if (n_iters == 1) {
@@ -529,7 +529,7 @@ FLAME_internal <-
            replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
            early_stop_control, early_stop_treated,
-           early_stop_pe, early_stop_bf) {
+           early_stop_pe, early_stop_bf, mapping) {
 
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- list()
@@ -644,7 +644,7 @@ FLAME_internal <-
   }
 
   # Done matching!
-  is_missing <- data$missing
+  # is_missing <- data$missing
   # Substitute covariate values of all unmatched units with the unmatched
   # covariate symbol '*'
   data[!data$matched, 1:n_covs] <- '*'
@@ -666,6 +666,16 @@ FLAME_internal <-
   }
 
   colnames(data) <- original_colnames
+
+  # Swap back the original factor levels
+  rev_mapping <- lapply(mapping, function(x) {
+    tmp <- names(x)
+    names(tmp) <- x
+    return(tmp)
+  })
+
+  data <-
+    factor_remap(data, mapping = rev_mapping)$df
 
   ret_list <-
     list(data = data,
