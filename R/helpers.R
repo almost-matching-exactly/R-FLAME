@@ -45,10 +45,6 @@ bin_continuous_covariates <- function(X, rule, type) {
   return(X)
 }
 
-order_cov_names <- function(subset, cov_names, sorting_order) {
-  return(subset[order(match(subset, cov_names[order(sorting_order)]))])
-}
-
 # NULL default for holdout set
 sort_cols <-
   function(df, outcome_in_data, treated_column_name, outcome_column_name,
@@ -104,17 +100,8 @@ sort_cols <-
                     "it as numeric; otherwise, don't include it at all."))
     }
 
-    # To sort covariates in increasing order of number of levels
-    sorting_order <- order(n_levels)
+    cov_names <- colnames(tmp_df)[1:n_covs]
 
-    # To make sure the column names are also reordered
-    cov_names <- colnames(tmp_df)[1:n_covs][sorting_order]
-
-    # Sorted number of levels of each covariate
-    n_levels <- n_levels[sorting_order]
-
-    # Data sorted by n_levels
-    tmp_df[, 1:n_covs] <- tmp_df[, sorting_order]
     # Sorting data column names
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
       colnames(tmp_df) <- c(cov_names, 'outcome', 'treated')
@@ -144,7 +131,5 @@ sort_cols <-
   return(list(df = df,
               covs = covs,
               n_covs = n_covs,
-              n_levels = n_levels,
-              cov_names = cov_names,
-              sorting_order = sorting_order))
+              cov_names = cov_names))
 }
