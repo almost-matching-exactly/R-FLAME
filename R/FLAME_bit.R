@@ -462,13 +462,13 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
-  # remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
-  # data <- remapped_data$df
-  # mapping <- remapped_data$mapping
-  #
-  # remapped_holdout <-
-  #   factor_remap(data, treated_column_name, outcome_column_name, mapping)
-  # holdout <- remapped_holdout$df
+  remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
+  data <- remapped_data$df
+  mapping <- remapped_data$mapping
+
+  remapped_holdout <-
+    factor_remap(holdout, treated_column_name, outcome_column_name, mapping)
+  holdout <- remapped_holdout$df
 
   missing_out <-
     handle_missing_data(data, holdout, outcome_in_data,
@@ -513,7 +513,7 @@ FLAME <-
                      replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
                      early_stop_control, early_stop_treated,
-                     early_stop_pe, early_stop_bf)
+                     early_stop_pe, early_stop_bf, mapping)
   }
 
   if (n_iters == 1) {
@@ -530,7 +530,7 @@ FLAME_internal <-
            replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
            early_stop_control, early_stop_treated,
-           early_stop_pe, early_stop_bf) {
+           early_stop_pe, early_stop_bf, mapping) {
 
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- list()
@@ -645,6 +645,16 @@ FLAME_internal <-
   data[!data$matched, 1:n_covs] <- '*'
 
   data[, ncol(data)] <- NULL
+
+  # Swap back the original factor levels
+  rev_mapping <- lapply(mapping, function(x) {
+    tmp <- names(x)
+    names(tmp) <- x
+    return(tmp)
+  })
+
+  data <-
+    factor_remap(data, mapping = rev_mapping)$df
 
   ret_list <-
     list(data = data,
