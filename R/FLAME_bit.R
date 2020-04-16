@@ -10,8 +10,20 @@ aggregate_table <- function(vals) {
 # array indicating whether each unit is matched (the first return value), and a
 # list of indices for the matched units (the second return value)
 
-bit_match <- function(data, covs, n_levels) {
-  data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
+bit_match <- function(data, covs, n_levels, to_sort) {
+
+
+
+
+  if (!to_sort) {
+    n_levels <- sapply(data[, covs, drop = FALSE], nlevels) - 1
+    data_wo_t <- gmp::as.bigz(as.matrix(data[, covs[order(n_levels)]]))
+    n_levels <- sort(n_levels)
+  }
+  else{
+    data_wo_t <- gmp::as.bigz(as.matrix(data[, covs]))
+  }
+
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
 
@@ -72,6 +84,7 @@ make_MGs <-
     else {
       CATEs[i] <- NA
     }
+
     matched_on[[i]] <-
       data[members[1], covs, drop = FALSE] %>%
       `rownames<-`(NULL)
@@ -84,18 +97,20 @@ make_MGs <-
 
 process_matches <-
   function(data, outcome_in_data, replace, covs, n_levels, MGs,
-           matched_on, matching_covs, CATE, cov_names, sorting_order) {
-  # browser()
-  index_order <- c(sorting_order, (max(sorting_order) + 1):ncol(data))
+           matched_on, matching_covs, CATE, cov_names, sorting_order, to_sort) {
+
+  index_order <- 1:ncol(data)
+
   if (replace) {
-    match_out <- bit_match(data[!data$missing, index_order], covs, n_levels)
+    match_out <- bit_match(data[!data$missing, index_order], covs, n_levels, to_sort)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
     units_matched <- which(!data$missing)[match_index]
   }
   else {
+    browser()
     match_out <-
-      bit_match(data[!data$matched & !data$missing, index_order], covs, n_levels)
+      bit_match(data[!data$matched & !data$missing, index_order], covs, n_levels, to_sort)
     match_index <- match_out[[1]]
     index <- match_out[[2]]
 
@@ -114,7 +129,6 @@ process_matches <-
     matched_on <- c(matched_on, new_MGs$matched_on)
   }
   matching_covs[[length(matching_covs) + 1]] <- cov_names[covs]
-  browser()
   return(list(CATE = CATE,
               MGs = MGs,
               matched_on = matched_on,
@@ -165,9 +179,11 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
   return(PE)
 }
 
-get_BF <- function(cov_to_drop, data, replace, covs, n_levels, sorting_order) {
-  # browser()
+get_BF <- function(cov_to_drop, data, replace, covs, n_levels, sorting_order, to_sort) {
   # Calculate number of units eligible to be matched
+
+  index_order <- 1:ncol(data)
+
   if (replace) {
     n_control <- sum(data$treated[!data$missing] == 0)
     n_treated <- sum(data$treated[!data$missing] == 1)
@@ -177,19 +193,17 @@ get_BF <- function(cov_to_drop, data, replace, covs, n_levels, sorting_order) {
     n_treated <- sum(data$treated[!data$matched & !data$missing] == 1)
   }
 
-  index_order <- c(sorting_order, (max(sorting_order) + 1):ncol(data))
-
   if (replace) {
     match_index <-
       bit_match(data[!data$missing, index_order], setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])$match_index
+                         n_levels[-which(covs == cov_to_drop)], to_sort)$match_index
     units_matched <- which(!data$missing)[match_index]
   }
   else {
     match_index <-
       bit_match(data[!data$matched & !data$missing, index_order],
                          setdiff(covs, cov_to_drop),
-                         n_levels[-which(covs == cov_to_drop)])$match_index
+                         n_levels[-which(covs == cov_to_drop)], to_sort)$match_index
     units_matched <- which(!data$matched & !data$missing)[match_index]
   }
 
@@ -434,7 +448,8 @@ FLAME <-
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0,
            missing_data_imputations = 5, missing_holdout_imputations = 5,
-           impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+           impute_with_treatment = TRUE, impute_with_outcome = FALSE,
+           to_sort = FALSE) {
 
   read_data_out <-
     read_data(data, holdout, treated_column_name, outcome_column_name)
@@ -484,7 +499,7 @@ FLAME <-
 
   sort_cols_out <-
     sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
-              binning_method, type = 'data', is_missing)
+              binning_method, type = 'data', to_sort, is_missing)
 
   data <- sort_cols_out[[1]]
   covs <- sort_cols_out[[2]]
@@ -496,7 +511,7 @@ FLAME <-
   holdout <-
     sort_cols(holdout, outcome_in_data = TRUE,
               treated_column_name, outcome_column_name,
-              binning_method, type = 'holdout')[[1]]
+              binning_method, type = 'holdout', to_sort)[[1]]
 
   n_iters <- length(data)
 
@@ -516,7 +531,7 @@ FLAME <-
                      replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
                      early_stop_control, early_stop_treated,
-                     early_stop_pe, early_stop_bf)
+                     early_stop_pe, early_stop_bf, to_sort)
   }
 
   if (n_iters == 1) {
@@ -533,7 +548,7 @@ FLAME_internal <-
            replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
            early_stop_control, early_stop_treated,
-           early_stop_pe, early_stop_bf) {
+           early_stop_pe, early_stop_bf, to_sort) {
 
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- list()
@@ -549,7 +564,7 @@ FLAME_internal <-
   # Try and make matches on all covariates
   processed_matches <-
     process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
-                    matched_on, matching_covs, CATE, cov_names, sorting_order)
+                    matched_on, matching_covs, CATE, cov_names, sorting_order, to_sort)
 
   CATE <- processed_matches[[1]]
   MGs <- processed_matches[[2]]
@@ -560,10 +575,15 @@ FLAME_internal <-
   if (made_matches) {
     data$matched[units_matched] <- TRUE
     data$weight[units_matched] <- data$weight[units_matched] + 1
-    matching_covs <-
+    if (!to_sort) {
+      matching_covs <- c(matching_covs, list(cov_names[covs]))
+    }
+    else {
+      matching_covs <-
       c(matching_covs, list(order_cov_names(cov_names[covs],
                                            cov_names,
                                            sorting_order)))
+    }
   }
   store_pe <- NULL
   store_bf <- NULL
@@ -582,6 +602,7 @@ FLAME_internal <-
                  PE_method, user_PE_fit, user_PE_fit_params,
                  user_PE_predict, user_PE_predict_params)
 
+    ## min(PE)?
     if (early_stop_PE(min(PE), early_stop_pe,
                       early_stop_epsilon, baseline_PE, verbose)) {
       break
@@ -591,13 +612,14 @@ FLAME_internal <-
     upper_bound <- 2 * C - PE
 
     drop_candidates <- which(upper_bound >= best_lower_bound)
+
     PE <- PE[drop_candidates]
     BF_out <-
-      lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels, sorting_order)
+      lapply(covs[drop_candidates], get_BF, data, replace, covs, n_levels, sorting_order, to_sort)
     BF <- sapply(BF_out, function(x) x[['BF']])
 
     MQ <- C * BF - PE
-
+    print(BF)
     # (First, in unlikely case of ties) covariate yielding highest MQ
     drop <- which.max(MQ)
     prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
@@ -616,16 +638,22 @@ FLAME_internal <-
     covs <- covs[-drop_candidates[drop]]
     n_levels <- n_levels[-drop_candidates[drop]]
 
-    matching_covs <-
+    if (!to_sort) {
+      matching_covs <-
+        c(matching_covs, list(cov_names[covs]))
+    }
+    else {
+      matching_covs <-
       c(matching_covs, list(order_cov_names(cov_names[covs],
                                            cov_names,
                                            sorting_order)))
+    }
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
     processed_matches <-
       process_matches(data, outcome_in_data, replace, covs, n_levels, MGs,
-                      matched_on, matching_covs, CATE, cov_names, sorting_order)
+                      matched_on, matching_covs, CATE, cov_names, sorting_order, to_sort)
     CATE <- processed_matches[[1]]
     MGs <- processed_matches[[2]]
     matched_on <- processed_matches[[3]]
@@ -633,11 +661,11 @@ FLAME_internal <-
     made_matches <- processed_matches[[5]]
 
     if (made_matches) {
-      if (replace) {
+      if (replace) { #######SHOULDN"T NEED THE if-else bc data$weight equivalent with unmatched for !replace
         # Only use * to refer to main matched group
         # weight == 0 implies never matched before so this match is their MMG
         data[intersect(units_matched, which(data$weight == 0)),
-                       setdiff(1:n_covs, covs)] <- '*'
+                       setdiff(1:n_covs, covs)] <- '*' # can we just use dropped again here?
       }
       else {
         data[units_matched, setdiff(1:n_covs, covs)] <- '*'
@@ -648,28 +676,31 @@ FLAME_internal <-
   }
 
   # Done matching!
-  is_missing <- data$missing
+  # is_missing <- data$missing
   # Substitute covariate values of all unmatched units with the unmatched
   # covariate symbol '*'
   data[!data$matched, 1:n_covs] <- '*'
 
   # Reorder the data according to the original column order
-  data[, 1:n_covs] <-
-    dplyr::select(data[, 1:n_covs], order(sorting_order))
+  if (to_sort) {
+    data[, 1:n_covs] <-
+      dplyr::select(data[, 1:n_covs], order(sorting_order))
+  }
   data[, ncol(data)] <- NULL
 
-  if (outcome_in_data) {
-    original_colnames <-
-      c(colnames(data)[1:n_covs][order(sorting_order)],
-        'outcome', 'treated', 'matched', 'weight')
+  if (to_sort) {
+    if (outcome_in_data) {
+      original_colnames <-
+        c(colnames(data)[1:n_covs][order(sorting_order)],
+          'outcome', 'treated', 'matched', 'weight')
+    }
+    else {
+      original_colnames <-
+        c(colnames(data)[1:n_covs][order(sorting_order)],
+          'treated', 'matched', 'weight')
+    }
+    colnames(data) <- original_colnames
   }
-  else {
-    original_colnames <-
-      c(colnames(data)[1:n_covs][order(sorting_order)],
-        'treated', 'matched', 'weight')
-  }
-
-  colnames(data) <- original_colnames
 
   ret_list <-
     list(data = data,

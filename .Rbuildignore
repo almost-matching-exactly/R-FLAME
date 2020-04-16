@@ -4,3 +4,4 @@
 ^README\.md$
 ^NEWS\.md$
 ^CRAN-RELEASE$
+^\\R\\time_trial\.R$

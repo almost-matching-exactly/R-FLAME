@@ -59,6 +59,7 @@ CATE_internal <- function(FLAME_out, MG, which_MG = NULL) {
 }
 
 MG_internal <- function(FLAME_out, MG, which_MG) {
+  # browser()
   n_cols <- ncol(FLAME_out$data)
   col_names <- colnames(FLAME_out$data)
 
