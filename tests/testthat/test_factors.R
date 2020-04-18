@@ -48,3 +48,11 @@ test_that("non numeric factors work", {
   flout_non_num <- FLAME(data_non_num, holdout_non_num, C = 1e5)
   expect_identical(flout_non_num$MGs, flout_0_ind$MGs)
 })
+
+test_that("factors play nice with missing data", {
+
+})
+
+test_that("factors play nice with continuous data", {
+
+})

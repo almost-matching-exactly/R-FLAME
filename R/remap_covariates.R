@@ -29,6 +29,11 @@ factor_remap <-
 
 # Check this doesn't break anything if the factor is alright to begin with
 factor_remap_column <- function(column, mapping) {
+
+  # Not strictly necessary when mapping original levels to 0:(k - 1),
+  # but will come into play if missing_data = 3 to drop the 'fake' levels
+  column <- forcats::fct_drop(column)
+
   if (is.null(mapping)) {
     mapping <- levels(column)
     names(mapping) <- as.character(0:(length(mapping) - 1))

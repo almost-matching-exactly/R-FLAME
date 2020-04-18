@@ -26,7 +26,7 @@ bin_continuous_covariates <- function(X, rule, type) {
                   'designed for continuous covariates.'))
   }
 
-  X_cont <- X[, is_continuous]
+  X_cont <- X[, is_continuous, drop = FALSE]
   cov_names <- colnames(X_cont)
   bin_sizes <- sapply(X_cont, bin_fun)
   ranges <- sapply(X_cont, function(x) {

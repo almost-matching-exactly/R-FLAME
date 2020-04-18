@@ -35,12 +35,30 @@ check_args <-
       stop(paste('Non-outcome columns of data and holdout',
                  'must have identical names.'))
     }
+
+    data_cov_inds <-
+      which(!(colnames(data) %in% c(treated_column_name)))
+    holdout_cov_inds <-
+      which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+    sapply(seq_along(data_cov_inds), function(x) {
+      if (!identical(sort(levels(data[[data_cov_inds[x]]])),
+                     sort(levels(holdout[[holdout_cov_inds[x]]])))) {
+        stop('Levels of `data` and `holdout` must be identical')
+      }
+    })
   }
   else {
     if (!identical(data_cols, holdout_cols)) {
       stop(paste('If data outcome supplied, data and holdout must contain',
                  'identical column names.'))
     }
+    cov_inds <-
+      which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+    sapply(cov_inds, function(x) {
+      if (!identical(sort(levels(data[[x]])), sort(levels(holdout[[x]])))) {
+        stop('Levels of `data` and `holdout` must be identical')
+      }
+      })
   }
 
   if (!is.numeric(C) | C < 0 | is.infinite(C)) {
