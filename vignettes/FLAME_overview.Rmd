@@ -101,7 +101,7 @@ The above shows that each of the units in the first matched group had covariate 
 ```{r}
 FLAME_out$matched_on[[17]]
 ```
-Thus, the units in the 17th matched group, as defined by `MGs[[7]]`, shared the same values of `X1`, `X2`, `X3`, and `X4`, but not of `X5`. 
+Thus, the units in the 17th matched group, as defined by `MGs[[17]]`, shared the same values of `X1`, `X2`, `X3`, and `X4`, but not of `X5`. 
 
 The fifth, `matching_covs` is a list, which shows the covariates for matching on every iteration of FLAME:
 ```{r}
