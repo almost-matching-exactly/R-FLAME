@@ -1,4 +1,7 @@
+# Some hard-coded parameter values to cross-validate XGBoost over
+# If the user cares about this they'll just input their own PE function.
 cv_xgboost <- function(X, Y) {
+  # Return the best XGBoost fit for Y ~ X across various parameter configurations
   eta <- c(0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
   max_depth <- c(2, 3, 4, 6, 8)
   alpha <- c(0.01, 0.1, 0.5, 1, 5)
@@ -50,6 +53,8 @@ cv_xgboost <- function(X, Y) {
 }
 
 setup_preds <- function(holdout, covs, cov_to_drop) {
+  # Split the data into treat, control
+  # The model.matrix function binarizes categorical covariates
   n_cols <- ncol(holdout)
   covs_to_test <- setdiff(covs, cov_to_drop)
 

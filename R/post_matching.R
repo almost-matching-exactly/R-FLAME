@@ -1,3 +1,9 @@
+# A maybe not great way of factoring out a lot of common code involving
+# iterating through data frames and units for computing MGs and CATEs
+# Don't care about for loops because should be super fast unless maybe
+# you're asking for all the MGs on a million-unit dataset.
+
+# In any case, I wouldn't worry about going into this code.
 iterate <- function(fun, units, FLAME_out, multiple) {
   if (is.null(names(FLAME_out))) { # Is a list of data frames
     n_df <- length(FLAME_out)

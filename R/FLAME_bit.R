@@ -11,7 +11,8 @@ aggregate_table <- function(vals) {
 # list of indices for the matched units (the second return value)
 
 bit_match <- function(data, covs) {
-
+  # gmp::as.bigz is for handling lots and lots of covariates so we don't
+  # have trouble with overflow issues
   n_levels <- sapply(data[, covs, drop = FALSE], nlevels) - 1
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs[order(n_levels)]]))
   n_levels <- sort(n_levels)
@@ -90,7 +91,11 @@ make_MGs <-
 process_matches <-
   function(data, outcome_in_data, replace, covs, MGs,
            matched_on, matching_covs, CATE, cov_names) {
+  # Make matches implied by covs in data
+    # Store any relevant information
 
+  # Probably cleaner to relegate this if-statement (and ones like it elsewhere in the code)
+    # to the bit_match function
   if (replace) {
     match_out <- bit_match(data[!data$missing, ], covs)
     match_index <- match_out[[1]]
@@ -435,13 +440,15 @@ FLAME <-
            missing_data_imputations = 5, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
 
+  # Get matching and holdout data, from input .csv files, if necessary
   read_data_out <-
     read_data(data, holdout, treated_column_name, outcome_column_name)
 
   data <- read_data_out[[1]]
   holdout <- read_data_out[[2]]
 
-  # Was outcome supplied by user?
+  # Was outcome supplied by user (in matching data)?
+  # If so, CATEs will be computed as FLAME runs
   if (!(outcome_column_name %in% colnames(data))) {
     outcome_in_data <- FALSE
   }
@@ -449,6 +456,7 @@ FLAME <-
     outcome_in_data <- TRUE
   }
 
+  # Make sure the user didn't do anything funny
   check_args(data, holdout, outcome_in_data, C,
              treated_column_name, outcome_column_name,
              binning_method,
@@ -462,6 +470,9 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
+  # Map the factor levels of the covariates as supplied by the user to 0:k
+  #   so that bit matching works properly.
+  #   Store the mapping so you can return the data in the original format.
   remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
   data <- remapped_data$df
   mapping <- remapped_data$mapping
@@ -470,6 +481,9 @@ FLAME <-
     factor_remap(holdout, treated_column_name, outcome_column_name, mapping)
   holdout <- remapped_holdout$df
 
+  # Impute missing data, if requested, else, prepare to deal with missingness
+  #   as specified by missing_data
+  #   Returns a LIST of data frames (see definition of n_iters)
   missing_out <-
     handle_missing_data(data, holdout, outcome_in_data,
                         treated_column_name, outcome_column_name,
@@ -481,6 +495,8 @@ FLAME <-
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
 
+  # Put the columns in increasing order of number of levels so that bit-matching
+  #  works. Should maybe (probably?) be combined with factor_remap
   sort_cols_out <-
     sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
               binning_method, type = 'data', is_missing)
@@ -490,13 +506,16 @@ FLAME <-
   n_covs <- sort_cols_out[[3]]
   cov_names <- sort_cols_out[[4]]
 
+  # Also sort holdout so that data and holdout columns correspond to one another
   holdout <-
     sort_cols(holdout, outcome_in_data = TRUE,
               treated_column_name, outcome_column_name,
               binning_method, type = 'holdout')[[1]]
 
+  # data is now a list of data frames so as to accomodate multiple imputations
   n_iters <- length(data)
 
+  # For each imputed data set (just 1 if no missingness), run FLAME
   FLAME_out <- vector(mode = 'list', length = n_iters)
   for (i in 1:n_iters) {
     if (missing_data == 2) {
@@ -516,6 +535,7 @@ FLAME <-
                      early_stop_pe, early_stop_bf, mapping)
   }
 
+  # If 0 or 1 imputations, don't return a list
   if (n_iters == 1) {
     return(FLAME_out[[1]])
   }
@@ -532,6 +552,8 @@ FLAME_internal <-
            early_stop_control, early_stop_treated,
            early_stop_pe, early_stop_bf, mapping) {
 
+  # The lines after processed_matches suggest these several lines should be removed.
+  #   To do.
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- list()
   # List of CATEs, each entry contains the corresponding MG's CATE
@@ -562,6 +584,7 @@ FLAME_internal <-
   store_pe <- NULL
   store_bf <- NULL
 
+  # Predictive error using all covariates. Used for stopping condition.
   baseline_PE <- get_PE(cov_to_drop = NULL, covs, holdout,
                         PE_method, user_PE_fit, user_PE_fit_params,
                         user_PE_predict, user_PE_predict_params)
@@ -569,6 +592,7 @@ FLAME_internal <-
   iter <- 0
   while (!early_stop(iter, data, covs, early_stop_iterations, verbose)) {
     iter <- iter + 1
+    # Progress messages
     show_progress(verbose, iter, data)
 
     # Compute the PE associated with dropping each covariate
@@ -576,15 +600,22 @@ FLAME_internal <-
                  PE_method, user_PE_fit, user_PE_fit_params,
                  user_PE_predict, user_PE_predict_params)
 
-    ## min(PE)?
+    ## Note for Vittorio: min(PE)?
     if (early_stop_PE(min(PE), early_stop_pe,
                       early_stop_epsilon, baseline_PE, verbose)) {
       break
     }
 
+    # Because 0 < BF < 2, we have that -PE < MQ < 2 * C - PE
+    #   Thus if 2 * C - PE associated with a covariate X is not higher than
+    #   the highest -PE across all covariates, we'll never end up dropping X,
+    #   no matter the associated BF. So we can simply not compute it.
+    #   This scenario comes (e.g.) up when you have "pretty irrelevant" covariates because the
+    #   maximum -PE will be quite large so we'll never even consider dropping "pretty relevant" covariates.
     best_lower_bound <- max(-PE)
     upper_bound <- 2 * C - PE
 
+    # Based off the above, the covariates we'll consider dropping.
     drop_candidates <- which(upper_bound >= best_lower_bound)
 
     PE <- PE[drop_candidates]
@@ -593,6 +624,7 @@ FLAME_internal <-
     BF <- sapply(BF_out, function(x) x[['BF']])
 
     MQ <- C * BF - PE
+
     # (First, in unlikely case of ties) covariate yielding highest MQ
     drop <- which.max(MQ)
     prop_unmatched <- BF_out[[drop]][['prop_unmatched']]
@@ -604,6 +636,7 @@ FLAME_internal <-
       break
     }
 
+    # Store the PE and BF of the associated dropped covariate, to return if desired
     store_pe %<>% c(PE[drop])
     store_bf %<>% c(BF[drop])
 
@@ -624,7 +657,7 @@ FLAME_internal <-
     made_matches <- processed_matches[[5]]
 
     if (made_matches) {
-      if (replace) { #######SHOULDN"T NEED THE if-else bc data$weight equivalent with unmatched for !replace
+      if (replace) { # Note for VittoriO: shouldn't need the if-else bc data$weight equivalent with unmatched for !replace
         # Only use * to refer to main matched group
         # weight == 0 implies never matched before so this match is their MMG
         data[intersect(units_matched, which(data$weight == 0)),
@@ -640,6 +673,7 @@ FLAME_internal <-
 
   # Done matching!
   # is_missing <- data$missing
+
   # Substitute covariate values of all unmatched units with the unmatched
   # covariate symbol '*'
   data[!data$matched, 1:n_covs] <- '*'
