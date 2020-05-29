@@ -388,3 +388,19 @@ check_matches <- function(flout, n_covs, data, matched) {
 # # # #
 # # # microbenchmark(aggregate_table(bu), opt1(bu), check = 'identical')
 # # # microbenchmark({table(bu);as.numeric(names(bu))})
+
+# library(microbenchmark)
+#
+# bu <- sample(1:100, 5000, replace = T)
+# bu_p <- sample(1:100, 5000, replace = T)
+# cu <- aggregate_table(bu)
+# cu_p <- aggregate_table(bu_p)
+#
+# fun_a <- function(cu, cu_plus) {
+#   return(mapply(function(x,y) (x != y) && (x >= 2) && (y >= 1), cu, cu_plus))
+# }
+# fun_b <- function(cu, cu_plus) {
+#   return((cu != cu_plus) & (cu >= 2))
+# }
+#
+# microbenchmark(fun_a(cu, cu_p), fun_b(cu, cu_p), check = 'identical')

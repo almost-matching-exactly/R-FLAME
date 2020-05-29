@@ -38,8 +38,7 @@ bit_match <- function(data, covs) {
   # Compute c_u+
   c_u_plus <- aggregate_table(b_u_plus)
 
-  match_index <-
-    mapply(function(x,y) (x != y) && (x >= 2) && (y >= 1), c_u, c_u_plus)
+  match_index <- (c_u != c_u_plus) & (c_u >= 2)
   index <- b_u[match_index]
 
   return(list(match_index = match_index,
