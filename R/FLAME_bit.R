@@ -323,7 +323,7 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #'  \code{user_PE_fit} and as its second, a matrix of values for which to
 #'  generate predictions. If not supplied, defaults to \code{predict}.
 #' @param user_PE_predict_params A named list of optional parameters to be used
-#'   by \code{user_PE_params}. Defaults to \code{NULL}.
+#'   by \code{user_PE_predict}. Defaults to \code{NULL}.
 #' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
 #'   matched multiple times, on different sets of covariates. In this case,
 #'   balancing factor is computing by dividing by the total number of treatment
