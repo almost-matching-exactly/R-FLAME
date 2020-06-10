@@ -47,8 +47,9 @@ test_that("missing option 3 works", {
   flout3 <- FLAME(data = data, holdout = holdout,
                   missing_data = 3, missing_holdout = 1)
 
-  flout$data[[replace_inds_data[[2]]]] %<>%
-    factor(levels = levels(flout3$data[[replace_inds_data[[2]]]]))
+  flout$data[[replace_inds_data[[2]]]] <-
+    factor(flout$data[[replace_inds_data[[2]]]],
+           levels = levels(flout3$data[[replace_inds_data[[2]]]]))
 
   expect_identical(flout$data[-replace_inds_data[1], ],
                    flout3$data[-replace_inds_data[1], ])

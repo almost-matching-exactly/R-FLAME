@@ -20,4 +20,4 @@ For a more in-depth discussion of the package, please see the accompanying vigne
 # Installation 
 FLAME can be installed directly from CRAN via running `install.packages('FLAME')` in R. This will also install some tidyverse dependencies, `gmp` for FLAME's efficient bit-vectors implementation, `mice` for handling missing data, and `glmnet` and `xgboost` for outcome prediction. 
 
-Alternatively, you can install the package from the author's GitHub, [here](https://github.com/vittorioorlandi/FLAME) via `devtools::install_github('https://github.com/vittorioorlandi/FLAME')`.
+Alternatively, you can install the development version of the package from the author's GitHub, [here](https://github.com/vittorioorlandi/FLAME) via `devtools::install_github('https://github.com/vittorioorlandi/FLAME')`.

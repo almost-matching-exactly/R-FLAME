@@ -15,22 +15,18 @@ bit_match <- function(data, covs) {
   # have trouble with overflow issues
   n_levels <- sapply(data[, covs, drop = FALSE], nlevels) - 1
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs[order(n_levels)]]))
-  n_levels <- sort(n_levels)
+  n_levels <- sort(n_levels) # isn't this already sorted?
 
   # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
 
-  b_u <-
-    gmp::`%*%`(data_wo_t, multiplier) %>%
-    as.vector()
+  b_u <- as.vector(gmp::`%*%`(data_wo_t, multiplier))
 
   # Compute b_u+
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels))
 
   b_u_plus <-
-    gmp::`%*%`(data_wo_t, multiplier) %>%
-    gmp::add.bigz(data$treated) %>%
-    as.vector()
+    as.vector(gmp::add.bigz(gmp::`%*%`(data_wo_t, multiplier), data$treated))
 
   # Compute c_u
   c_u <- aggregate_table(b_u)
@@ -77,9 +73,9 @@ make_MGs <-
       CATEs[i] <- NA
     }
 
-    matched_on[[i]] <-
-      data[members[1], covs, drop = FALSE] %>%
-      `rownames<-`(NULL)
+    matched_on[[i]] <- data[members[1], covs, drop = FALSE]
+    rownames(matched_on[[i]]) <- NULL
+
     names(matched_on[[i]]) <- cov_names[covs]
   }
   return(list(MGs = MGs,
@@ -140,7 +136,7 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
   else {
     if (PE_method == 'ridge') {
       PE_fit <- glmnet::cv.glmnet
-      if (length(unique(holdout$outcome)) == 2) {
+      if (length(unique(holdout[[1]]$outcome)) == 2) {
         family <- 'binomial'
       }
       else {
@@ -211,10 +207,12 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
   prop_treated_unmatched <- n_treated_unmatched / n_treated
 
   # Is this if_else really necessary? We should catch it earlier
-  BF <- dplyr::if_else(n_control == 0 | n_treated == 0,
-                0,
-                n_control_matched / n_control +
-                  n_treated_matched / n_treated)
+  if (n_control == 0 | n_treated == 0) {
+    BF <- 0
+  }
+  else {
+    BF <- n_control_matched / n_control + n_treated_matched / n_treated
+  }
 
   return(list(BF = BF,
               prop_unmatched =
@@ -418,11 +416,8 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #' data <- gen_data()
 #' holdout <- gen_data()
 #' FLAME_out <- FLAME(data = data, holdout = holdout)
-#' @importFrom magrittr %>%
-#' @importFrom magrittr %<>%
-#' @importFrom rlang !!
 #' @importFrom stats IQR model.matrix predict rbinom rnorm var
-#' @importFrom utils combn flush.console read.csv write.csv
+#' @importFrom utils flush.console read.csv write.csv
 #' @importFrom devtools load_all
 #' @export
 FLAME <-
@@ -587,8 +582,8 @@ FLAME_internal <-
   baseline_PE <- get_PE(cov_to_drop = NULL, covs, holdout,
                         PE_method, user_PE_fit, user_PE_fit_params,
                         user_PE_predict, user_PE_predict_params)
-
   iter <- 0
+
   while (!early_stop(iter, data, covs, early_stop_iterations, verbose)) {
     iter <- iter + 1
     # Progress messages
@@ -636,8 +631,8 @@ FLAME_internal <-
     }
 
     # Store the PE and BF of the associated dropped covariate, to return if desired
-    store_pe %<>% c(PE[drop])
-    store_bf %<>% c(BF[drop])
+    store_pe <- c(store_pe, PE[drop])
+    store_bf <- c(store_bf, BF[drop])
 
     covs_dropped <- c(covs_dropped, cov_names[covs[drop_candidates[drop]]])
     covs <- covs[-drop_candidates[drop]]
@@ -702,10 +697,10 @@ FLAME_internal <-
   }
 
   if (return_pe) {
-    ret_list %<>% c('PE' = list(store_pe))
+    ret_list <- c(ret_list, 'PE' = list(store_pe))
   }
   if (return_bf) {
-    ret_list %<>% c('BF' = list(store_bf))
+    ret_list <- c(ret_list, 'BF' = list(store_bf))
   }
 
   return(ret_list)

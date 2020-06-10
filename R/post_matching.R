@@ -44,7 +44,7 @@ iterate <- function(fun, units, FLAME_out, multiple) {
       }
     }
     if (!multiple) {
-      out[[k]] %<>% lapply(`[[`, 1)
+      out[[k]] <- lapply(out[[k]], `[[`, 1)
     }
   }
   if (n_df == 1) {
@@ -77,9 +77,10 @@ MG_internal <- function(FLAME_out, MG, which_MG) {
     which(!(colnames(FLAME_out$data[MG, ]) %in% c('matched', 'weight')))
   tmp <- FLAME_out$data[MG, keep_inds]
 
-  keep <-
-    match(names(FLAME_out$matched_on[[which_MG]]), cov_names) %>%
-    c(n_cols - 3, n_cols - 2) # Keep outcome and treatment
+  # Keep outcome and treatment
+  keep <- c(match(names(FLAME_out$matched_on[[which_MG]]), cov_names),
+            n_cols - 3, n_cols - 2)
+
   tmp[, -keep] <- '*'
   return(tmp)
 }

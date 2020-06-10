@@ -17,10 +17,13 @@ impute_missing <- function(data, outcome_in_data, n_imputations,
 
   pred_mat[c(treatment_ind, outcome_ind), ] <- 0
 
-  mice::mice(data, m = n_imputations,
-             predictorMatrix = pred_mat, printFlag = FALSE) %>%
-    mice::complete(action = 'all') %>%
-    return()
+  mice_out <-
+    mice::mice(data, m = n_imputations,
+               predictorMatrix = pred_mat, printFlag = FALSE)
+
+  imputed_data <- mice::complete(mice_out, action = 'all')
+
+  return(imputed_data)
 }
 
 handle_missing_data <-
@@ -136,12 +139,13 @@ handle_missing_data <-
         if (sum(which_missing) > 0) {
           new_levels <-
             c(levels(tmp_data[[cov]]), max_val + seq_len(n_missing))
-          tmp_data[[cov]] %<>%
-            as.numeric() %>%
-            magrittr::subtract(1)
+
+          tmp_data[[cov]] <- as.numeric(tmp_data[[cov]]) - 1
+
           tmp_data[[cov]][which_missing] <-
             max_val + seq_len(sum(which_missing))
-          tmp_data[[cov]] %<>% factor(levels = new_levels)
+
+          tmp_data[[cov]] <- factor(tmp_data[[cov]], levels = new_levels)
         }
       }
 
@@ -161,8 +165,7 @@ handle_missing_data <-
     }
   }
   else if (missing_holdout == 1) {
-    holdout %<>%
-      tidyr::drop_na()
+    holdout <- holdout[complete.cases(holdout), ]
   }
   else if (missing_holdout == 2) {
     if (sum(is.na(holdout)) > 0) {
@@ -176,13 +179,13 @@ handle_missing_data <-
   }
 
   if (is.data.frame(holdout)) {
-    holdout %<>% list()
+    holdout <- list(holdout)
   }
 
   # Change levels to allow for 'unmatched on this covariate' indicator: '*'
   if (is.data.frame(data)) {
     n_imputations <- 1
-    data %<>% list()
+    data <- list(data)
   }
   else {
     n_imputations <- length(data)
@@ -200,7 +203,7 @@ handle_missing_data <-
 
   for (i in 1:n_imputations) {
     for (j in covariates) {
-      levels(data[[i]][, j]) %<>% c('*')
+      levels(data[[i]][, j]) <- c(levels(data[[i]][, j]), '*')
     }
   }
 

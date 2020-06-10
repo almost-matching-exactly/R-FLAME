@@ -68,7 +68,7 @@ The first, `FLAME_out$data` contains the original data frame with several modifi
 
 1. There is an extra logical column, `FLAME_out$data$matched`, that indicates whether or not a unit was matched. This can be useful if, for example, you'd like to use only the units that were matched for subsequent analysis:
 ```{r}
-matched_data <- dplyr::filter(FLAME_out$data, matched)
+matched_data <- FLAME_out$data[which(FLAME_out$data$matched), ]
 ```
 
 2. There is an extra numeric column, `FLAME_out$data$weight` that denotes on how many different sets of covariates a unit was matched. By default, this will be 1 if a unit is matched and 0 otherwise. With the `replace = TRUE` argument, however, units are allowed to match several times on multiple sets of covariates and their values for `weight` can therefore be greater than 1.  These weights can be used when estimating treatment effects.

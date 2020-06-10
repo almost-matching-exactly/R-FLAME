@@ -29,13 +29,9 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-  dplyr,
-  magrittr,
   mice,
   glmnet,
   gmp,
-  rlang,
-  tidyr,
   xgboost,
   devtools
 RoxygenNote: 7.0.2

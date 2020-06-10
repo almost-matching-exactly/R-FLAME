@@ -32,14 +32,16 @@ bin_continuous_covariates <- function(X, rule, type) {
   ranges <- sapply(X_cont, function(x) {
     max(x, na.rm = TRUE) - min(x, na.rm = TRUE)})
   n_bins <- ceiling(ranges / bin_sizes)
+  # browser()
 
   X_cont <-
     lapply(1:ncol(X_cont), function(i) {
       cut(X_cont[, i], breaks = n_bins[i], labels = 0:(n_bins[i] - 1))
-    }) %>%
-    as.data.frame() %>%
-    `colnames<-`(cov_names)
+    })
+  X_cont <- as.data.frame(X_cont)
+  colnames(X_cont) <- cov_names
 
+  # browser()
   X[, is_continuous] <- X_cont
 
   return(X)
@@ -54,14 +56,10 @@ sort_cols <-
   n_df <- length(df) # Always pass in a list of data frames
 
   # Treatment and outcome will be constant across imputations
-  treatment_col <-
-    df[[1]] %>%
-    dplyr::select(!!rlang::enquo(treated_column_name))
+  treatment_col <- df[[1]][treated_column_name]
 
   if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
-    outcome_col <-
-      df[[1]] %>%
-      dplyr::select(!!rlang::enquo(outcome_column_name))
+    outcome_col <- df[[1]][outcome_column_name]
   }
 
   n <- nrow(df[[1]])
@@ -76,15 +74,10 @@ sort_cols <-
     tmp_df <- df[[i]]
 
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
-      tmp_df <-
-        tmp_df[, covariates] %>%
-        cbind(outcome_col) %>%
-        cbind(treatment_col)
+      tmp_df <- cbind(tmp_df[, covariates], outcome_col, treatment_col)
     }
     else {
-      tmp_df <-
-        tmp_df[, covariates] %>%
-        cbind(treatment_col)
+      tmp_df <- cbind(tmp_df[, covariates], treatment_col)
     }
 
     tmp_df[, 1:n_covs] <-
@@ -112,7 +105,7 @@ sort_cols <-
 
     if (type == 'data') {
       for (j in 1:n_covs) {
-        levels(tmp_df[, j]) %<>% c('*')
+        levels(tmp_df[, j]) <- c(levels(tmp_df[, j]), '*')
       }
     }
 

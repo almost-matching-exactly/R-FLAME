@@ -25,7 +25,8 @@ check_args <-
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
 
-  if (!(outcome_column_name %in% holdout_cols)) { # Check if can remove
+  # Seems like I can remove but maybe there's a reason I put it up here...?
+  if (!(outcome_column_name %in% holdout_cols)) {
     stop('Holdout must contain outcome column with name outcome_column_name')
   }
 
@@ -40,6 +41,7 @@ check_args <-
       which(!(colnames(data) %in% c(treated_column_name)))
     holdout_cov_inds <-
       which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+
     sapply(seq_along(data_cov_inds), function(x) {
       if (!identical(sort(levels(data[[data_cov_inds[x]]])),
                      sort(levels(holdout[[holdout_cov_inds[x]]])))) {
@@ -77,11 +79,11 @@ check_args <-
     stop('treated_column_name must be the name of a column in holdout.')
   }
 
-  if (is.factor(dplyr::pull(data, !!rlang::enquo(treated_column_name)))) {
+  if (is.factor(data[[treated_column_name]])) {
     stop('Treated variable in data must be numeric binary or logical.')
   }
 
-  if (is.factor(dplyr::pull(holdout, !!rlang::enquo(treated_column_name)))) {
+  if (is.factor(holdout[[treated_column_name]])) {
     stop('Treated variable in holdout must be numeric binary or logical.')
   }
 
@@ -97,12 +99,11 @@ check_args <-
     stop('outcome_column_name must be the name of a column in holdout.')
   }
 
-  if (outcome_in_data &&
-      is.factor(dplyr::pull(data, !!rlang::enquo(outcome_column_name)))) {
+  if (outcome_in_data && is.factor(data[[outcome_column_name]])) {
     stop('Outcome variable in data must be numeric binary or continuous.')
   }
 
-  if (is.factor(dplyr::pull(holdout, !!rlang::enquo(outcome_column_name)))) {
+  if (is.factor(holdout[[outcome_column_name]])) {
     stop('Outcome variable in holdout must be numeric binary or continuous')
   }
 

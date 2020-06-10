@@ -78,6 +78,9 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
 get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
   fit <- do.call(fit_fun, c(list(X, Y), fit_params))
   preds <- do.call(predict_fun, c(list(fit, X), predict_params))
+  # preds <- predict(fit, X, type = 'class')
+  # error <- mean(preds != Y)
+  # browser()
   error <- mean((preds - Y) ^ 2) # MSE for continuous outcome; MCE for binary
   return(error)
 }
@@ -89,6 +92,7 @@ predict_master <-
   n_imputations <- length(holdout) # List of dataframes
 
   PE <- vector(mode = 'numeric', length = n_imputations)
+
   for (i in 1:n_imputations) {
     setup_out <- setup_preds(holdout[[i]], covs, cov_to_drop)
     X_treat <- setup_out[[1]]

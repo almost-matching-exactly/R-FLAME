@@ -33,28 +33,21 @@ gen_data <- function(n = 250, p = 5,
   }
   TE <- 5
 
+  covs <- matrix(rbinom(n * p, 1, prob = 0.5), nrow = n)
+
   covs <-
-    rbinom(n * p, 1, prob = 0.5) %>%
-    matrix(nrow = n)
-
-  # covs <- apply(rmultinom(n * (p - 1), size = 1, prob = c(0.2, 0.3, 0.4, 0.1)) == 1,
-  #               2, which) %>%
-  #   matrix(nrow = n) %>%
-  #   cbind(rbinom(n, 1, prob = 0.5))
-
-  covs <- apply(rmultinom(n * p, size = 1, prob = c(0.2, 0.3, 0.4, 0.1)) == 1,
-                2, which) %>%
-    matrix(nrow = n)
+    sample(1:4, size = n * p, replace = TRUE, prob = c(0.2, 0.3, 0.4, 0.1))
+  covs <- matrix(covs, nrow = n)
 
   treated <- rbinom(n, 1, prob = 0.5)
 
   outcome <-
-    (15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3]) %>%
-    magrittr::add(rnorm(n)) %>%
-    magrittr::add(TE * treated)
+    15 * covs[, 1] - 10 * covs[, 2] + 5 * covs[, 3] +
+    TE * treated +
+    rnorm(n)
 
   data <- data.frame(covs, outcome = outcome, treated = treated)
-  data[, 1:ncol(covs)] %<>% lapply(as.factor)
+  data[, 1:ncol(covs)] <-  lapply(data[, 1:ncol(covs)], as.factor)
   if (write) {
     write.csv(data, file = paste0(path, '/', filename),
               row.names = FALSE)
@@ -69,6 +62,6 @@ gen_missing_data <- function(n = 250, p = 3, write = FALSE, percent_missing = 0.
   inds <- sample(1:size, size = round(percent_missing * size), replace = FALSE)
   covs[inds] <- NA
   data[, 1:p] <- covs
-  data[, 1:ncol(covs)] %<>% lapply(as.factor)
+  data[, 1:ncol(covs)] <- lapply(data[, 1:ncol(covs)], as.factor)
   return(data)
 }

@@ -104,7 +104,7 @@ first argument and a vector outcome as its second argument. Defaults to
 generate predictions. If not supplied, defaults to \code{predict}.}
 
 \item{user_PE_predict_params}{A named list of optional parameters to be used
-by \code{user_PE_params}. Defaults to \code{NULL}.}
+by \code{user_PE_predict}. Defaults to \code{NULL}.}
 
 \item{replace}{A logical scalar. If \code{TRUE}, allows the same unit to be
 matched multiple times, on different sets of covariates. In this case,
