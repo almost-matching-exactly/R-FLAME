@@ -55,6 +55,39 @@ gen_data <- function(n = 250, p = 5,
   return(data)
 }
 
+gen_data2 <- function(n = 250, p_miss = 0) {
+  p <- 5
+  data <- data.frame(Gender = sample(c('M', 'F'), size = n, replace = TRUE),
+                        Race = sample(c('Black', 'Asian', 'White', 'Native American'),
+                                      size = n, replace = TRUE, prob = c(.15, .10, .7, .05)),
+                        Latino = sample(c('Yes', 'No', 'Not Recorded'),
+                                        size = n, replace = TRUE, prob = c(0.1, 0.88, 0.02)),
+                        NumPriors = sample(0:4,
+                                           size = n, replace = TRUE, prob = c(0.6, 0.2, 0.1, 0.05, 0.05)),
+                        Education = sample(c('Below HS', 'HS', 'College', 'Grad', 'Not Recorded'),
+                                           size = n, replace = TRUE,
+                                           prob = c(0.05, 0.3, 0.5, 0.1, 0.05)),
+                        treated = sample(c(T, F), size = n, replace = TRUE))
+  data$outcome <-
+    3 * (data$Race %in% c('White', 'Asian')) +
+    1 * (data$Latino == 'Yes') +
+    2 * (data$NumPriors == 0) + 2 * (data$NumPriors > 2) +
+    5.5 * data$treated +
+    3 * (data$Education %in% c('HS', 'College')) +
+    rnorm(n)
+
+  if (p_miss > 0) {
+    for (j in 1:p) {
+      data[[j]][sample(1:n, size = round(p_miss * n))] <- NA
+    }
+    # size <- n * p
+    # browser()
+    # inds <- sample(1:size, size = round(p_miss * size), replace = FALSE)
+    # data[inds] <- NA
+  }
+  return(data)
+}
+
 gen_missing_data <- function(n = 250, p = 3, write = FALSE, percent_missing = 0.05) {
   data <- gen_data(n = n, p = p, write = write, filename = 'missing_data.csv')
   covs <- as.matrix(data[, 1:p])

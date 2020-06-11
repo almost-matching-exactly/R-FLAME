@@ -1,51 +1,4 @@
-# X is the subset of the data frame containing the continuous covariates
-bin_continuous_covariates <- function(X, rule, type) {
-  n <- nrow(X)
-  if (rule == 'sturges') {
-    bin_fun <- function(x) {
-      (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)) / (log(n, base = 2) + 1)}
-  }
-  else if (rule == 'scott') {
-    bin_fun <- function(x) 3.5 * sqrt(var(x, na.rm = TRUE)) / (n ^ (1 / 3))
-  }
-  else if (rule == 'fd') {
-    bin_fun <- function(x) 2 * IQR(x, na.rm = TRUE) / (n ^ (1 / 3))
-  }
-  else {
-    stop(paste('Unrecognized binning rule.',
-               'Please supply one of "sturges", "scott", or "fd".'))
-  }
 
-  is_continuous <- which(!sapply(X, is.factor))
-  if (length(is_continuous) == 0) {
-    return(X)
-  }
-  if (type == 'data') {
-    warning(paste('Binning continuous covariates. This is not recommended;',
-                  'users are encouraged to use methods specifically',
-                  'designed for continuous covariates.'))
-  }
-
-  X_cont <- X[, is_continuous, drop = FALSE]
-  cov_names <- colnames(X_cont)
-  bin_sizes <- sapply(X_cont, bin_fun)
-  ranges <- sapply(X_cont, function(x) {
-    max(x, na.rm = TRUE) - min(x, na.rm = TRUE)})
-  n_bins <- ceiling(ranges / bin_sizes)
-  # browser()
-
-  X_cont <-
-    lapply(1:ncol(X_cont), function(i) {
-      cut(X_cont[, i], breaks = n_bins[i], labels = 0:(n_bins[i] - 1))
-    })
-  X_cont <- as.data.frame(X_cont)
-  colnames(X_cont) <- cov_names
-
-  # browser()
-  X[, is_continuous] <- X_cont
-
-  return(X)
-}
 
 # NULL default for holdout set
 sort_cols <-
@@ -64,6 +17,7 @@ sort_cols <-
 
   n <- nrow(df[[1]])
 
+  # easier way to do this
   treatment_col_ind <- which(colnames(df[[1]]) == treated_column_name)
   outcome_col_ind <- which(colnames(df[[1]]) == outcome_column_name)
   covariates <-
@@ -74,24 +28,15 @@ sort_cols <-
     tmp_df <- df[[i]]
 
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
-      tmp_df <- cbind(tmp_df[, covariates], outcome_col, treatment_col)
+      tmp_df <- cbind(tmp_df[, covariates, drop = FALSE], outcome_col, treatment_col)
     }
     else {
-      tmp_df <- cbind(tmp_df[, covariates], treatment_col)
+      tmp_df <- cbind(tmp_df[, covariates, drop = FALSE], treatment_col)
     }
 
-    tmp_df[, 1:n_covs] <-
-      bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE],
-                                rule = binning_method, type)
-
-    # Number of levels of each covariate
-    n_levels <- sapply(tmp_df[, 1:n_covs, drop = FALSE], nlevels)
-    if (any(n_levels == nrow(tmp_df))) {
-      warning(paste("It looks like you might have passed in a continuous",
-                    "variable as a factor; you won't make any matches on it.",
-                    "If you want this variable to be binned, you should pass",
-                    "it as numeric; otherwise, don't include it at all."))
-    }
+    # tmp_df[, 1:n_covs] <-
+    #   bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE],
+    #                             rule = binning_method, type)
 
     cov_names <- colnames(tmp_df)[1:n_covs]
 

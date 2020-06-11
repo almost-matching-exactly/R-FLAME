@@ -57,35 +57,42 @@ make_MGs <-
   unique_MGs <- unique(index)
   n_MGs <- length(unique_MGs)
 
-  MGs <- vector('list', length = n_MGs)
-  CATEs <- vector('numeric', length = n_MGs)
-  matched_on <- vector('list', length = n_MGs)
+  # MGs <- vector('list', length = n_MGs)
+  MGs <- list()
+  # CATEs <- vector('numeric', length = n_MGs)
+  # matched_on <- vector('list', length = n_MGs)
 
   for (i in 1:n_MGs) {
     members <- matched_units[which(index == unique_MGs[i])]
-    MGs[[i]] <- members
-    treated <- intersect(members, which(data$treated == 1))
-    control <- intersect(members, which(data$treated == 0))
-    if (outcome_in_data) {
-      CATEs[i] <- mean(data$outcome[treated]) - mean(data$outcome[control])
+    if (any(data$weight[members] == 0)) { # Only store new MGs if replace = TRUE
+      MGs <- c(MGs, list(members))
     }
-    else {
-      CATEs[i] <- NA
-    }
+    # treated <- intersect(members, which(data$treated == 1))
+    # control <- intersect(members, which(data$treated == 0))
+    # if (outcome_in_data) {
+    #   CATEs[i] <- mean(data$outcome[treated]) - mean(data$outcome[control])
+    # }
+    # else {
+    #   CATEs[i] <- NA
+    # }
 
-    matched_on[[i]] <- data[members[1], covs, drop = FALSE]
-    rownames(matched_on[[i]]) <- NULL
-
-    names(matched_on[[i]]) <- cov_names[covs]
+    # matched_on[[i]] <- data[members[1], covs, drop = FALSE]
+    # rownames(matched_on[[i]]) <- NULL
+    #
+    # names(matched_on[[i]]) <- cov_names[covs]
   }
-  return(list(MGs = MGs,
-              CATEs = CATEs,
-              matched_on = matched_on))
+  return(list(MGs = MGs))
+  # return(list(MGs = MGs,
+  #             CATEs = CATEs,
+  #             matched_on = matched_on))
 }
 
+# process_matches <-
+#   function(data, outcome_in_data, replace, covs, MGs,
+#            matched_on, matching_covs, CATE, cov_names) {
 process_matches <-
   function(data, outcome_in_data, replace, covs, MGs,
-           matched_on, matching_covs, CATE, cov_names) {
+           matching_covs, cov_names) {
   # Make matches implied by covs in data
     # Store any relevant information
 
@@ -114,20 +121,25 @@ process_matches <-
     new_MGs <-
       make_MGs(data, outcome_in_data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
-    CATE <- c(CATE, new_MGs$CATEs)
-    matched_on <- c(matched_on, new_MGs$matched_on)
+    # CATE <- c(CATE, new_MGs$CATEs)
+    # matched_on <- c(matched_on, new_MGs$matched_on)
   }
-  matching_covs[[length(matching_covs) + 1]] <- cov_names[covs]
-  return(list(CATE = CATE,
-              MGs = MGs,
-              matched_on = matched_on,
+  # matching_covs[[length(matching_covs) + 1]] <- cov_names[covs]
+  return(list(MGs = MGs,
               units_matched = units_matched,
               made_matches = made_matches))
+  # return(list(CATE = CATE,
+  #             MGs = MGs,
+  #             matched_on = matched_on,
+  #             units_matched = units_matched,
+  #             made_matches = made_matches))
 }
 
 get_PE <- function(cov_to_drop, covs, holdout, PE_method,
                    user_PE_fit, user_PE_fit_params,
                    user_PE_predict, user_PE_predict_params) {
+
+  PE_predict_params <- list()
 
   if (!is.null(user_PE_fit)) {
     PE_fit <- user_PE_fit
@@ -138,6 +150,11 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
       PE_fit <- glmnet::cv.glmnet
       if (length(unique(holdout[[1]]$outcome)) == 2) {
         family <- 'binomial'
+        PE_predict_params <- list(type = 'class')
+      }
+      else if (is.factor(holdout[[1]]$outcome)) {
+        family <- 'multinomial'
+        PE_predict_params <- list(type = 'class')
       }
       else {
         family <- 'gaussian'
@@ -146,7 +163,16 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
     }
     else if (PE_method == 'xgb') {
       PE_fit <- cv_xgboost
-      PE_fit_params <- list()
+      if (length(unique(holdout[[1]]$outcome)) == 2) {
+        obj <- 'binary:logistic'
+      }
+      else if (is.factor(holdout[[1]]$outcome)) {
+        obj <- 'multi:softmax'
+      }
+      else {
+        obj <- 'reg:squarederror'
+      }
+      PE_fit_params <- list(obj = obj)
     }
     else {
       stop('PE_method not recognized.
@@ -160,7 +186,6 @@ get_PE <- function(cov_to_drop, covs, holdout, PE_method,
   }
   else {
     PE_predict <- predict
-    PE_predict_params <- list()
   }
 
   PE <- predict_master(holdout, covs, cov_to_drop,
@@ -464,17 +489,38 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
+  # browser()
+  # Map everything to factor
+  cov_inds_data <- which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  data[, cov_inds_data] <- lapply(data[, cov_inds_data, drop = FALSE], as.factor)
+
+  # Number of levels of each covariate
+  n_levels <- sapply(data[, cov_inds_data, drop = FALSE], nlevels)
+  if (any(n_levels > nrow(data) / 10)) {
+    warning(paste("It looks like the variables {",
+                  colnames(data)[cov_inds_data][n_levels > nrow(data) / 10],
+                  "} might be continuous; you probably won't make many matches on them.",
+                  "If this is the case, please either bin variables prior to",
+                  "calling FLAME or do not include them at all."))
+  }
+
+  cov_inds_holdout <- which(!(colnames(holdout) %in% c(treated_column_name, outcome_column_name)))
+  holdout[, cov_inds_holdout] <- lapply(holdout[, cov_inds_holdout, drop = FALSE], as.factor)
+
+  # browser()
   # Map the factor levels of the covariates as supplied by the user to 0:k
   #   so that bit matching works properly.
   #   Store the mapping so you can return the data in the original format.
   remapped_data <- factor_remap(data, treated_column_name, outcome_column_name)
   data <- remapped_data$df
+
   mapping <- remapped_data$mapping
 
-  remapped_holdout <-
-    factor_remap(holdout, treated_column_name, outcome_column_name, mapping)
-  holdout <- remapped_holdout$df
+  # remapped_holdout <-
+  #   factor_remap(holdout, treated_column_name, outcome_column_name, mapping)
+  # holdout <- remapped_holdout$df
 
+  # browser()
   # Impute missing data, if requested, else, prepare to deal with missingness
   #   as specified by missing_data
   #   Returns a LIST of data frames (see definition of n_iters)
@@ -551,24 +597,29 @@ FLAME_internal <-
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- list()
   # List of CATEs, each entry contains the corresponding MG's CATE
-  CATE <- vector('numeric')
+  # CATE <- vector('numeric')
   # List of covariates and their values matched on for each corresponding MG
-  matched_on <- list()
+  # matched_on <- list()
 
   # List of covariates used to match at each level
   matching_covs <- list()
   covs_dropped <- NULL
 
   # Try and make matches on all covariates
+  # processed_matches <-
+  #   process_matches(data, outcome_in_data, replace, covs, MGs,
+  #                   matched_on, matching_covs, CATE, cov_names)
   processed_matches <-
     process_matches(data, outcome_in_data, replace, covs, MGs,
-                    matched_on, matching_covs, CATE, cov_names)
+                    matching_covs, cov_names)
 
-  CATE <- processed_matches[[1]]
-  MGs <- processed_matches[[2]]
-  matched_on <- processed_matches[[3]]
-  units_matched <- processed_matches[[4]]
-  made_matches <- processed_matches[[5]]
+  # CATE <- processed_matches[[1]]
+  MGs <- processed_matches[[1]]
+  # matched_on <- processed_matches[[3]]
+  # units_matched <- processed_matches[[4]]
+  units_matched <- processed_matches[[2]]
+  # made_matches <- processed_matches[[5]]
+  made_matches <- processed_matches[[3]]
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
@@ -641,14 +692,17 @@ FLAME_internal <-
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
+    # processed_matches <-
+    #   process_matches(data, outcome_in_data, replace, covs, MGs,
+    #                   matched_on, matching_covs, CATE, cov_names)
     processed_matches <-
       process_matches(data, outcome_in_data, replace, covs, MGs,
-                      matched_on, matching_covs, CATE, cov_names)
-    CATE <- processed_matches[[1]]
-    MGs <- processed_matches[[2]]
-    matched_on <- processed_matches[[3]]
-    units_matched <- processed_matches[[4]]
-    made_matches <- processed_matches[[5]]
+                      matching_covs, cov_names)
+    # CATE <- processed_matches[[1]]
+    MGs <- processed_matches[[1]]
+    # matched_on <- processed_matches[[3]]
+    units_matched <- processed_matches[[2]]
+    made_matches <- processed_matches[[3]]
 
     if (made_matches) {
       if (replace) { # Note for VittoriO: shouldn't need the if-else bc data$weight equivalent with unmatched for !replace
@@ -676,24 +730,48 @@ FLAME_internal <-
 
   # Swap back the original factor levels
   rev_mapping <- lapply(mapping, function(x) {
-    tmp <- names(x)
-    names(tmp) <- x
+    tmp <- c(names(x), '*')
+    names(tmp) <- c(x, '*')
     return(tmp)
   })
 
   data <-
     factor_remap(data, mapping = rev_mapping)$df
 
+  # Undoes rownames conflicting with functions in post_matching.R
+  # when holdout is taken from data
+  rownames(data) <- 1:nrow(data)
+
+  matched_on <- lapply(MGs, function(x) {
+    cols_matched_on <- sapply(data[x, 1:n_covs, drop = FALSE], function(y) all(y != '*'))
+    tmp <- data[x[1], 1:n_covs, drop = FALSE][1, cols_matched_on, drop = FALSE]
+    # if (n_covs == 1) { # weird behavior where column is renamed if drop == F and n_covs == 1
+    #   colnames(tmp) <- colnames(data)[1]
+    # }
+    rownames(tmp) <- NULL
+    return(tmp)
+  })
+
   ret_list <-
     list(data = data,
          MGs = MGs,
-         CATE = CATE,
          matched_on = matched_on,
          matching_covs = matching_covs,
          dropped = covs_dropped)
 
-  if (!outcome_in_data) {
-    ret_list$CATE <- NULL
+  # if (!outcome_in_data) {
+  #   ret_list$CATE <- NULL
+  # }
+
+  # implicitly checks that outcome exists in data; otherwise data$outcome returns NULL
+  if (is.numeric(data$outcome)) {
+    CATE <-
+      sapply(MGs, function(x) {
+        treated <- data$treated[x]
+        outcomes <- data$outcome[x]
+        mean(outcomes[treated == 1]) - mean(outcomes[treated == 0])
+      })
+    ret_list$CATE <- CATE
   }
 
   if (return_pe) {
@@ -702,6 +780,5 @@ FLAME_internal <-
   if (return_bf) {
     ret_list <- c(ret_list, 'BF' = list(store_bf))
   }
-
   return(ret_list)
 }

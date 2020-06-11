@@ -30,38 +30,49 @@ check_args <-
     stop('Holdout must contain outcome column with name outcome_column_name')
   }
 
-  if (!outcome_in_data) {
-    if (!identical(data_cols,
-                   holdout_cols[-match(outcome_column_name, holdout_cols)])) {
-      stop(paste('Non-outcome columns of data and holdout',
-                 'must have identical names.'))
-    }
+  cov_inds_data <- which(!(colnames(data) %in%
+                             c(treated_column_name, outcome_column_name)))
+  cov_inds_holdout <- which(!(colnames(holdout) %in%
+                                c(treated_column_name, outcome_column_name)))
 
-    data_cov_inds <-
-      which(!(colnames(data) %in% c(treated_column_name)))
-    holdout_cov_inds <-
-      which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  if (!identical(colnames(data)[cov_inds_data],
+                 colnames(holdout[cov_inds_holdout]))) {
+    stop(paste('Covariate columns of `data` and `holdout`',
+               'must have identical names.'))
+  }
 
-    sapply(seq_along(data_cov_inds), function(x) {
-      if (!identical(sort(levels(data[[data_cov_inds[x]]])),
-                     sort(levels(holdout[[holdout_cov_inds[x]]])))) {
-        stop('Levels of `data` and `holdout` must be identical')
-      }
-    })
-  }
-  else {
-    if (!identical(data_cols, holdout_cols)) {
-      stop(paste('If data outcome supplied, data and holdout must contain',
-                 'identical column names.'))
-    }
-    cov_inds <-
-      which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
-    sapply(cov_inds, function(x) {
-      if (!identical(sort(levels(data[[x]])), sort(levels(holdout[[x]])))) {
-        stop('Levels of `data` and `holdout` must be identical')
-      }
-      })
-  }
+  # if (!outcome_in_data) {
+  #   if (!identical(data_cols,
+  #                  holdout_cols[-match(outcome_column_name, holdout_cols)])) {
+  #     stop(paste('Non-outcome columns of data and holdout',
+  #                'must have identical names.'))
+  #   }
+  #
+  #   data_cov_inds <-
+  #     which(!(colnames(data) %in% c(treated_column_name)))
+  #   holdout_cov_inds <-
+  #     which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  #
+  #   sapply(seq_along(data_cov_inds), function(x) {
+  #     if (!identical(sort(levels(data[[data_cov_inds[x]]])),
+  #                    sort(levels(holdout[[holdout_cov_inds[x]]])))) {
+  #       stop('Levels of `data` and `holdout` must be identical')
+  #     }
+  #   })
+  # }
+  # else {
+  #   if (!identical(data_cols, holdout_cols)) {
+  #     stop(paste('If data outcome supplied, data and holdout must contain',
+  #                'identical column names.'))
+  #   }
+  #   cov_inds <-
+  #     which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  #   sapply(cov_inds, function(x) {
+  #     if (!identical(sort(levels(data[[x]])), sort(levels(holdout[[x]])))) {
+  #       stop('Levels of `data` and `holdout` must be identical')
+  #     }
+  #     })
+  # }
 
   if (!is.numeric(C) | C < 0 | is.infinite(C)) {
     stop('C must be a finite, nonnegative scalar.')
@@ -97,18 +108,6 @@ check_args <-
 
   if (!(outcome_column_name %in% holdout_cols)) {
     stop('outcome_column_name must be the name of a column in holdout.')
-  }
-
-  if (outcome_in_data && is.factor(data[[outcome_column_name]])) {
-    stop('Outcome variable in data must be numeric binary or continuous.')
-  }
-
-  if (is.factor(holdout[[outcome_column_name]])) {
-    stop('Outcome variable in holdout must be numeric binary or continuous')
-  }
-
-  if (!(binning_method %in% c('sturges', 'scott', 'fd'))) {
-    stop("binning_method must be one of: 'sturges', 'scott', or 'fd'")
   }
 
   if (!(PE_method %in% c('ridge', 'xgb'))) {

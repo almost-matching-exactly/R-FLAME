@@ -1,11 +1,11 @@
 # Some hard-coded parameter values to cross-validate XGBoost over
 # If the user cares about this they'll just input their own PE function.
-cv_xgboost <- function(X, Y) {
+cv_xgboost <- function(X, Y, obj) {
   # Return the best XGBoost fit for Y ~ X across various parameter configurations
   eta <- c(0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
   max_depth <- c(2, 3, 4, 6, 8)
   alpha <- c(0.01, 0.1, 0.5, 1, 5)
-  nrounds <- c(5, 10, 50, 100, 200)
+  nrounds <- c(5, 10, 50, 200, 500)
   subsample <- c(0.1, 0.3, 0.5, 0.75, 1)
 
   param_combs <-
@@ -16,18 +16,15 @@ cv_xgboost <- function(X, Y) {
 
   error <- vector(mode = 'numeric', length = length(param_combs))
 
-  if (length(unique(Y)) == 2) {
-    obj <- 'binary:logistic'
-  } else {
-    obj <- 'reg:squarederror'
-  }
-
   for (i in 1:length(param_combs)) {
     params <- list(objective = obj,
                    eta = param_combs$eta[i],
                    max_depth = param_combs$max_depth[i],
                    alpha = param_combs$alpha[i],
                    subsample = param_combs$subsample[i])
+    if (obj == 'multi:softmax') {
+      params <- c(params, list(num_class = length(unique(Y))))
+    }
     cv <-
       xgboost::xgb.cv(data = X,
                       label = Y,
@@ -39,13 +36,13 @@ cv_xgboost <- function(X, Y) {
   }
 
   best_params <- param_combs[which.min(error), ]
+  params <- c(best_params, list(objective = obj))
+  if (obj == 'multi:softmax') {
+    params <- c(params, list(num_class = length(unique(Y))))
+  }
   fit <- xgboost::xgboost(data = X,
                   label = Y,
-                  params = list(objective = obj,
-                                eta = best_params$eta,
-                                max_depth = best_params$max_depth,
-                                alpha = best_params$alpha,
-                                subsample = best_params$subsample),
+                  params = params,
                   nround = best_params$nrounds,
                   verbose = 0)
 
@@ -76,12 +73,39 @@ setup_preds <- function(holdout, covs, cov_to_drop) {
 }
 
 get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
+
+  if (length(unique(Y)) == 2) {
+    outcome_type <- 'binary'
+  }
+  else if (is.factor(Y)) {
+    outcome_type <- 'multiclass'
+  }
+  else {
+    outcome_type <- 'continuous'
+  }
+#####  should compute obj and family here so as not to do it in get_PE
+  # actually don't think you can because the arg names are dif. for xgboost
+  # could get around this by introducing nfolds argument in xgboost and calling
+  # obj family, but will think / leave for later
+  if (is.factor(Y)) {
+    Y <- as.numeric(Y) - 1
+  }
+
   fit <- do.call(fit_fun, c(list(X, Y), fit_params))
-  preds <- do.call(predict_fun, c(list(fit, X), predict_params))
-  # preds <- predict(fit, X, type = 'class')
-  # error <- mean(preds != Y)
-  # browser()
-  error <- mean((preds - Y) ^ 2) # MSE for continuous outcome; MCE for binary
+
+  preds <- as.numeric(do.call(predict_fun, c(list(fit, X), predict_params)))
+
+  if (outcome_type == 'binary') {
+    preds <- preds > 0.5 # to take care of xgboost
+  }
+
+  if (outcome_type != 'continuous') {
+    error <- mean(preds != Y)
+  }
+  else {
+    error <- mean((preds - Y) ^ 2)
+  }
+
   return(error)
 }
 
