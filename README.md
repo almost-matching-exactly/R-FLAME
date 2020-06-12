@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/vittorioorlandi/FLAME.svg?branch=master)](https://travis-ci.com/vittorioorlandi/FLAME)
+
 # Introduction
 The FLAME package offers an efficient implementation of the Fast, Large-Scale, Almost Matching Exactly algorithm, described in detail [here](https://arxiv.org/pdf/1707.06315.pdf). FLAME allows for interpretable matching within observational settings in causal inference. It does so by matching units via a learned, weighted Hamming distance that determines which covariates are more important to match on. The package will soon be updated to include other algorithms in the Almost Matching Exactly framework, such as [DAME](https://arxiv.org/pdf/1806.06802.pdf), [FLAME-Networks](https://arxiv.org/pdf/2003.00964.pdf), and [FLAME-IV](http://auai.org/uai2019/proceedings/papers/410.pdf).
 
