@@ -167,7 +167,6 @@ These are arguments that deal with features of the underlying FLAME algorithm.
 
 To illustrate the usage of these last four parameters, we can have `FLAME` compute PE via Bayesian Additive Regression Trees (BART) with 100 trees as follows:
 ```{r, eval=F}
-library(dbarts)
 my_fit <- dbarts::bart
 my_fit_params <- list(ntree = 100, verbose = FALSE, keeptrees = TRUE)
 my_predict <- function(bart_fit, new_data) {

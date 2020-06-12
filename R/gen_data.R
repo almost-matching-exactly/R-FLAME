@@ -47,7 +47,7 @@ gen_data <- function(n = 250, p = 5,
     rnorm(n)
 
   data <- data.frame(covs, outcome = outcome, treated = treated)
-  data[, 1:ncol(covs)] <-  lapply(data[, 1:ncol(covs)], as.factor)
+  # data[, 1:ncol(covs)] <-  lapply(data[, 1:ncol(covs)], as.factor)
   if (write) {
     write.csv(data, file = paste0(path, '/', filename),
               row.names = FALSE)

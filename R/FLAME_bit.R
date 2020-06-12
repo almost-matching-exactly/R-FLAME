@@ -5,7 +5,7 @@ aggregate_table <- function(vals) {
   return(as.vector(tab[match(vals, name)]))
 }
 
-# bit_match takes a dataframe, a set of covariates to match on, the
+# bit_match takes a data frame, a set of covariates to match on, the
 # treatment indicator column and the matched indicator column. it returns the
 # array indicating whether each unit is matched (the first return value), and a
 # list of indices for the matched units (the second return value)
@@ -288,27 +288,24 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #'
 #'
 #' @param data Data to be matched. Either a data frame or a path to a .csv file
-#'   to be read into a data frame. If path to a .csv file, all covariates will
-#'   be assumed to be categorical Treatment must be described by a logical or
-#'   binary column with name \code{treated_column_name}. Outcome, if supplied,
-#'   must be either binary continuous (both numeric). If not supplied, matching
-#'   will be performed but matched group CATEs will not be returned and
-#'   post-matching, treatment effect estimation will not be possible. All non-
-#'   outcome or treatment columns will be treated as covariates for matching. If
-#'   they are factors, they will be assumed to be categorical; if they are
-#'   numeric, they will be assumed continuous and binned into categories as
-#'   specified by \code{binning_method}. \emph{Any covariates that are not
-#'   continuous, on which units are to match exactly, must be passed to FLAME as
-#'   factors}. The input of continuous covariates is not recommended. In
-#'   addition, if a supplied factor has k levels, they must be: 0, 1, ..., k -
-#'   1. This will change in a future update. There is no default for
-#'   \code{data}.
+#'   to be read into a data frame. Treatment must be described by a logical or
+#'   binary numeric column with name \code{treated_column_name}. Outcome must be
+#'   described by a column with name \code{outcome_column_name}. The outcome
+#'   will be treated as continuous if numeric, as binary if a two-level factor
+#'   or numeric with two unique values, and as multi-class if a factor with more
+#'   than two levels. The outcome column may be omitted, in which case matching
+#'   will be performed but treatment effect estimation will not be possible. All
+#'   columns not containing outcome or treatment will be treated as covariates
+#'   for matching. Covariates are assumed to be categorical and will be coerced
+#'   to factors, though they may be passed as either factors or numeric. If you wish
+#'   to use continuous covariates for matching, they should be binned prior to being
+#'   passed to \code{FLAME}. There is no default for \code{data}.
 #' @param holdout Holdout data to be used to compute predictive error. If a
 #'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
 #'   into a holdout set and only the remaining proportion of \code{data} will be
-#'   matched. Otherwise, a dataframe or a path to a .csv file. If a path to a
-#'   .csv file, all covariates will be assumed to be categorical Restrictions on
-#'   column types are the same as for \code{data}. Must have the same column
+#'   matched. Otherwise, a data frame or a path to a .csv file. The holdout data must contain
+#'   an outcome column with name \code{outcome_column_name}; other restrictions on
+#'   column types are as for \code{data}. Covariate columns must have the same column
 #'   names and order as \code{data}. This data will \emph{not} be matched.
 #'   Defaults to 0.1.
 #' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
@@ -319,22 +316,15 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #' @param outcome_column_name A character with the name of the outcome column in
 #'   \code{holdout} and also in \code{data}, if supplied in the latter.
 #'   Defaults to 'outcome'.
-#' @param binning_method The method to be used to bin continuous covariates in
-#'   the data. One of: "sturges", "scott", or "fd", denoting Sturges' rule,
-#'   Scott's rule, or the Freedman-Diaconis rule for determining number of bins
-#'   in a histogram. Each continuous covariate will be binned into the
-#'   corresponding number of bins. If covariates are binned, the \code{data}
-#'   entry of the object returned from \code{FLAME} will contain the binned,
-#'   and not the original, values. Defaults to 'sturges'.
 #' @param PE_method Either "ridge" or "xgb". Denotes the method to be used to
 #'   compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
 #'   parameters and then the default predict method to estimate the outcome. If
 #'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
 #'   cross-validate and find the best with respect to RMSE (for continuous
-#'   outcomes) or binary misclassification rate (for binary outcomes). Then uses
-#'   the default predict method to estimate the outcome. Defaults to "ridge".
+#'   outcomes) or misclassification rate (for binary/multi-class outcomes). Then uses
+#'   the default \code{predict} method to estimate the outcome. Defaults to "ridge".
 #' @param user_PE_fit An optional function supplied by the user that can be used
-#'   instead of those allowed for by \code{PE_method} to fit a model fitting the
+#'   instead of those allowed for by \code{PE_method} to fit a model for the
 #'   outcome from the covariates. Must take in a matrix of covariates as its
 #'   first argument and a vector outcome as its second argument. Defaults to
 #'   \code{NULL}.
@@ -344,7 +334,9 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #'   used to generate predictions from the output of \code{user_PE_fit}. As its
 #'   first argument, must take an object of the type returned by
 #'  \code{user_PE_fit} and as its second, a matrix of values for which to
-#'  generate predictions. If not supplied, defaults to \code{predict}.
+#'  generate predictions. When the outcome is binary or multi-class, must
+#'  return the maximum probability class label. If not supplied,
+#'  defaults to \code{predict}.
 #' @param user_PE_predict_params A named list of optional parameters to be used
 #'   by \code{user_PE_predict}. Defaults to \code{NULL}.
 #' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
@@ -427,7 +419,8 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #'  \item{MGs}{A list of all the matched groups formed by FLAME. Each entry
 #'  contains the units in a single matched group}
 #'  \item{CATE}{A numeric vector with the conditional average treatment effect
-#'    of every matched group in \code{MGs}}
+#'    of every matched group in \code{MGs}. Returned only if the outcome is
+#'    numeric.}
 #'  \item{matched_on}{A list corresponding to \code{MGs} that gives the
 #'  covariates, and their values, on which units in each matched group were
 #'  matched.}
@@ -441,14 +434,14 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 #' data <- gen_data()
 #' holdout <- gen_data()
 #' FLAME_out <- FLAME(data = data, holdout = holdout)
-#' @importFrom stats IQR model.matrix predict rbinom rnorm var
+#' @importFrom stats model.matrix predict rbinom rnorm var
 #' @importFrom utils flush.console read.csv write.csv
 #' @importFrom devtools load_all
 #' @export
 FLAME <-
   function(data, holdout = 0.1, C = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
-           binning_method = 'sturges', PE_method = 'ridge',
+           PE_method = 'ridge',
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
            replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
@@ -478,7 +471,6 @@ FLAME <-
   # Make sure the user didn't do anything funny
   check_args(data, holdout, outcome_in_data, C,
              treated_column_name, outcome_column_name,
-             binning_method,
              PE_method, user_PE_fit, user_PE_fit_params,
              user_PE_predict, user_PE_predict_params,
              replace, verbose, return_pe, return_bf,
@@ -489,7 +481,6 @@ FLAME <-
              missing_data_imputations, missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
-  # browser()
   # Map everything to factor
   cov_inds_data <- which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
   data[, cov_inds_data] <- lapply(data[, cov_inds_data, drop = FALSE], as.factor)
@@ -539,7 +530,7 @@ FLAME <-
   #  works. Should maybe (probably?) be combined with factor_remap
   sort_cols_out <-
     sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
-              binning_method, type = 'data', is_missing)
+              type = 'data', is_missing)
 
   data <- sort_cols_out[[1]]
   covs <- sort_cols_out[[2]]
@@ -550,7 +541,7 @@ FLAME <-
   holdout <-
     sort_cols(holdout, outcome_in_data = TRUE,
               treated_column_name, outcome_column_name,
-              binning_method, type = 'holdout')[[1]]
+              type = 'holdout')[[1]]
 
   # data is now a list of data frames so as to accomodate multiple imputations
   n_iters <- length(data)
@@ -758,10 +749,6 @@ FLAME_internal <-
          matched_on = matched_on,
          matching_covs = matching_covs,
          dropped = covs_dropped)
-
-  # if (!outcome_in_data) {
-  #   ret_list$CATE <- NULL
-  # }
 
   # implicitly checks that outcome exists in data; otherwise data$outcome returns NULL
   if (is.numeric(data$outcome)) {

@@ -1,15 +1,49 @@
 ## Tests relating to column order
 p <- 4
-data <- gen_data(n = 250, p = p)
-holdout <- gen_data(n = 250, p = p)
+n <- 250
+data <- gen_data(n, p)
+holdout <- gen_data(n, p)
 flout <- FLAME(data = data, holdout = holdout)
 
-test_that("column order doesn't matter", {
+test_that("shared column order doesn't matter", {
   scrambling <- order(sample(1:(p + 2)))
   scrambled_data <- data[, scrambling]
   scrambled_holdout <- holdout[, scrambling]
   scrambled_flout <- FLAME(data = scrambled_data, holdout = scrambled_holdout)
   if (!identical(flout$MGs, scrambled_flout))
+  expect_identical(flout$MGs, scrambled_flout$MGs)
+})
+
+test_that("covariates needn't be arranged by level", {
+  data_unordered <- data
+  data_unordered$X2 <- rbinom(n, 1, prob = 0.5)
+
+  holdout_unordered <- holdout
+  holdout_unordered$X2 <- rbinom(n, 1, prob = 0.5)
+
+  data_ordered <- data_unordered[, c(2, 1, 3, 4, 5, 6)]
+  holdout_ordered <- holdout_unordered[, c(2, 1, 3, 4, 5, 6)]
+
+  flout_unordered <- FLAME(data_unordered, holdout_unordered)
+  flout_ordered <- FLAME(data_ordered, holdout_ordered)
+  if (identical(flout_ordered$dropped, flout_unordered$dropped)) {
+    expect_identical(flout_ordered$MGs, flout_unordered$MGs)
+  }
+  else {
+    expect_true(TRUE)
+  }
+})
+
+test_that("covariate columns must match", {
+  scrambled_data <- data[, c(2, 1, 3, 4, 5, 6)]
+  expect_error(scrambled_flout <- FLAME(scrambled_data, holdout))
+})
+
+test_that("can scramble treatment and outcome", {
+  # Keeping covariate order the same here
+  data <- data[, c(6, 1, 2, 5, 3, 4)]
+  holdout <- holdout[, c(5, 1, 6, 2, 3, 4)]
+  scrambled_flout <- FLAME(data, holdout)
   expect_identical(flout$MGs, scrambled_flout$MGs)
 })
 

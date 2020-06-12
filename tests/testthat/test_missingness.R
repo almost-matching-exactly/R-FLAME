@@ -1,6 +1,4 @@
-if (F) {
-  skip('Ignoring missingness tests')
-}
+
 test_that("replaced values don't show", {
   p <- 3
   data <- gen_missing_data(n = 250, p = p)
@@ -13,7 +11,7 @@ test_that("replaced values don't show", {
   expect_true(all(no_extra_vals))
 })
 
-p <- 3
+p <- 4
 n <- 250
 data <- gen_data(n = n, p = p)
 holdout <- gen_data(n = n, p = p)
@@ -23,12 +21,25 @@ replace_inds_holdout <- c(sample(1:n, 1), sample(1:p, 1))
 data[replace_inds_data[1], replace_inds_data[2]] <- NA
 holdout[replace_inds_holdout[1], replace_inds_holdout[2]] <- NA
 
+# Former matched group of now missing unit
+MG_of_missing <- MG(replace_inds_data[1], flout, index_only = TRUE)
+
+# Did the unit originally match on the value they're now missing
+matched_on_missing <-
+  flout$data[replace_inds_data[1], replace_inds_data[2]] != '*'
+
 test_that("missing option 1 works", {
   flout1 <- FLAME(data = data, holdout = holdout,
                   missing_data = 1, missing_holdout = 1)
 
-  expect_identical(flout$data[-replace_inds_data[1], ],
-                   flout1$data[-replace_inds_data[1], ])
+  # Avoid case in which the unit made missing was the only match for another unit
+  if (length(MG_of_missing) > 2) {
+    expect_identical(flout$data[-replace_inds_data[1], ],
+                     flout1$data[-replace_inds_data[1], ])
+  }
+  else {
+    expect_true(TRUE)
+  }
 })
 
 test_that("missing option 2 works", {
@@ -38,8 +49,16 @@ test_that("missing option 2 works", {
                   missing_data_imputations = n_imps)
 
   for (i in 1:n_imps) {
-    expect_identical(flout$data[-replace_inds_data[1], ],
-                     flout2[[i]]$data[-replace_inds_data[1], ])
+    # the missingness may have made me eligible
+    # for someone else that didn't otherwise get matched
+    if (length(MG_of_missing) > 2 &
+        length(MG(replace_inds_data[1], flout2, index_only = TRUE)) > 2) {
+      expect_identical(flout$data[-replace_inds_data[1], ],
+                       flout2[[i]]$data[-replace_inds_data[1], ])
+    }
+    else {
+      expect_true(TRUE)
+    }
   }
 })
 
@@ -51,6 +70,28 @@ test_that("missing option 3 works", {
     factor(flout$data[[replace_inds_data[[2]]]],
            levels = levels(flout3$data[[replace_inds_data[[2]]]]))
 
-  expect_identical(flout$data[-replace_inds_data[1], ],
-                   flout3$data[-replace_inds_data[1], ])
+  if (matched_on_missing) {
+    if (length(MG_of_missing) > 2 &
+        length(MG(replace_inds_data[1], flout3, index_only = TRUE)) > 2) {
+      expect_identical(flout$data[-replace_inds_data[1], ],
+                       flout3[[i]]$data[-replace_inds_data[1], ])
+    }
+    else {
+      expect_true(TRUE)
+    }
+  }
+  else {
+    if (all(flout$dropped == flout3$dropped)) {
+      expect_identical(flout$data, flout3$data)
+    }
+    else {
+      expect_true(TRUE)
+    }
+  }
+})
+
+test_that("imputation works with no outcome", {
+  data$outcome <- NULL
+  flout <- FLAME(data, holdout, missing_data = 2, missing_holdout = 1)
+  expect_true(TRUE)
 })

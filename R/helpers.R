@@ -3,7 +3,7 @@
 # NULL default for holdout set
 sort_cols <-
   function(df, outcome_in_data, treated_column_name, outcome_column_name,
-           binning_method, type, is_missing = NULL) {
+           type, is_missing = NULL) {
 
   n_covs <- ncol(df[[1]]) - 1 - outcome_in_data # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -33,10 +33,6 @@ sort_cols <-
     else {
       tmp_df <- cbind(tmp_df[, covariates, drop = FALSE], treatment_col)
     }
-
-    # tmp_df[, 1:n_covs] <-
-    #   bin_continuous_covariates(tmp_df[, 1:n_covs, drop = FALSE],
-    #                             rule = binning_method, type)
 
     cov_names <- colnames(tmp_df)[1:n_covs]
 

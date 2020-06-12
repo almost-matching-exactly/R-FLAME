@@ -4,6 +4,9 @@ data <- gen_data(n = n, p = p)
 holdout <- gen_data(n = n, p = p)
 flout_not_0_ind <- FLAME(data, holdout, C = 1e5)
 
+## Careful because these tests depend on the covariates generated
+## in gen_data.
+
 mapping <- as.character(c(1, 2, 3, 4))
 names(mapping) <- as.character(c(0, 1, 2, 3))
 mapping <- rep(list(mapping), p)
@@ -50,7 +53,7 @@ test_that("missing data 3 doesn't leave new levels", {
   data_non_num <- factor_remap(data, mapping = mapping)$df
   holdout_non_num <- factor_remap(holdout, mapping = mapping)$df
 
-  levels_in <- lapply(data_non_num[, 1:p], levels)
+  levels_in <- lapply(data_non_num[, 1:p], function(x) levels(factor(x)))
   for (i in 1:p) {
     data_non_num[[i]][sample(1:n, 10)] <- NA
   }

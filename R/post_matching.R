@@ -58,6 +58,9 @@ CATE_internal <- function(FLAME_out, MG, which_MG = NULL) {
     stop(paste0('Outcome not supplied in original call to `FLAME`;',
                 'cannot compute CATE'))
   }
+  if (is.factor(FLAME_out$data)) {
+    stop("Cannot estimate treatment effects with a categorical outcome.")
+  }
   outcomes <- FLAME_out$data$outcome[MG]
   treated <- FLAME_out$data$treated[MG] == 1
   CATE <- mean(outcomes[treated]) - mean(outcomes[!treated])
@@ -228,6 +231,10 @@ ATE <- function(FLAME_out) {
     stop('Outcome was not supplied with data; cannot estimate ATE.')
   }
 
+  if (is.factor(FLAME_out[[1]]$data)) {
+    stop("Cannot estimate treatment effects with a categorical outcome.")
+  }
+
   out <- vector('numeric', length = n_df)
 
   for (i in 1:n_df) {
@@ -271,6 +278,10 @@ ATT <- function(FLAME_out) {
 
   if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
     stop('Outcome was not supplied with data; cannot estimate ATT.')
+  }
+
+  if (is.factor(FLAME_out[[1]]$data)) {
+    stop("Cannot estimate treatment effects with a categorical outcome.")
   }
 
   out <- vector('numeric', length = n_df)

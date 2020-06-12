@@ -1,7 +1,6 @@
 check_args <-
   function(data, holdout, outcome_in_data, C,
            treated_column_name, outcome_column_name,
-           binning_method,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
            replace, verbose, want_pe, want_bf,
@@ -38,7 +37,7 @@ check_args <-
   if (!identical(colnames(data)[cov_inds_data],
                  colnames(holdout[cov_inds_holdout]))) {
     stop(paste('Covariate columns of `data` and `holdout`',
-               'must have identical names.'))
+               'must have have the same names and be in the same order.'))
   }
 
   # if (!outcome_in_data) {
@@ -111,8 +110,30 @@ check_args <-
   }
 
   if (!(PE_method %in% c('ridge', 'xgb'))) {
-    stop("PE_method must be one of 'ridge' or 'xgb'.
-         To supply your own model to fit, use user_PE_fit.")
+    stop("PE_method must be one of 'ridge' or 'xgb'. ",
+         "To supply your own model to fit, use user_PE_fit.")
+  }
+
+  if (!is.null(user_PE_fit_params) & is.null(user_PE_fit)) {
+    stop("May not have `user_PE_fit` be NULL if ",
+         "`user_PE_fit_params` is not NULL.")
+  }
+
+  if (!is.null(user_PE_predict_params) & is.null(user_PE_predict)) {
+    stop("May not have `user_PE_predict` be NULL if ",
+         "`user_PE_predict_params` is not NULL.")
+  }
+
+  if (!is.null(user_PE_fit_params)) {
+    if (!is.list(user_PE_fit_params)) {
+      stop("`user_PE_fit_params` must be a list")
+    }
+  }
+
+  if (!is.null(user_PE_predict_params)) {
+    if (!is.list(user_PE_predict_params)) {
+      stop("`user_PE_predict_params` must be a list")
+    }
   }
 
   if (!is.logical(replace)) {
