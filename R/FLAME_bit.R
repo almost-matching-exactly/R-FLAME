@@ -42,7 +42,7 @@ bit_match <- function(data, covs) {
 }
 
 make_MGs <-
-  function(data, outcome_in_data, index, matched_units, covs, cov_names) {
+  function(data, index, matched_units, covs, cov_names) {
   # Takes all the units that were matched on these p covariates and separates
   # them into matched groups based off their unique values of those covariates
   # Returns a list with three items
@@ -91,8 +91,7 @@ make_MGs <-
 #   function(data, outcome_in_data, replace, covs, MGs,
 #            matched_on, matching_covs, CATE, cov_names) {
 process_matches <-
-  function(data, outcome_in_data, replace, covs, MGs,
-           matching_covs, cov_names) {
+  function(data, replace, covs, MGs, matching_covs, cov_names) {
   # Make matches implied by covs in data
     # Store any relevant information
 
@@ -119,7 +118,7 @@ process_matches <-
 
   if (made_matches) {
     new_MGs <-
-      make_MGs(data, outcome_in_data, index, units_matched, covs, cov_names)
+      make_MGs(data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
     # CATE <- c(CATE, new_MGs$CATEs)
     # matched_on <- c(matched_on, new_MGs$matched_on)
@@ -460,16 +459,10 @@ FLAME <-
   holdout <- read_data_out[[2]]
 
   # Was outcome supplied by user (in matching data)?
-  # If so, CATEs will be computed as FLAME runs
-  if (!(outcome_column_name %in% colnames(data))) {
-    outcome_in_data <- FALSE
-  }
-  else {
-    outcome_in_data <- TRUE
-  }
+  # outcome_in_data <- !is.null(data[[outcome_column_name]])
 
   # Make sure the user didn't do anything funny
-  check_args(data, holdout, outcome_in_data, C,
+  check_args(data, holdout, C,
              treated_column_name, outcome_column_name,
              PE_method, user_PE_fit, user_PE_fit_params,
              user_PE_predict, user_PE_predict_params,
@@ -516,7 +509,7 @@ FLAME <-
   #   as specified by missing_data
   #   Returns a LIST of data frames (see definition of n_iters)
   missing_out <-
-    handle_missing_data(data, holdout, outcome_in_data,
+    handle_missing_data(data, holdout,
                         treated_column_name, outcome_column_name,
                         missing_data, missing_holdout,
                         missing_data_imputations, missing_holdout_imputations,
@@ -526,10 +519,10 @@ FLAME <-
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
 
-  # Put the columns in increasing order of number of levels so that bit-matching
-  #  works. Should maybe (probably?) be combined with factor_remap
+  # Move treatment and outcome columns to end.
+  # Should maybe (probably?) be combined with factor_remap
   sort_cols_out <-
-    sort_cols(data, outcome_in_data, treated_column_name, outcome_column_name,
+    sort_cols(data, treated_column_name, outcome_column_name,
               type = 'data', is_missing)
 
   data <- sort_cols_out[[1]]
@@ -539,8 +532,7 @@ FLAME <-
 
   # Also sort holdout so that data and holdout columns correspond to one another
   holdout <-
-    sort_cols(holdout, outcome_in_data = TRUE,
-              treated_column_name, outcome_column_name,
+    sort_cols(holdout, treated_column_name, outcome_column_name,
               type = 'holdout')[[1]]
 
   # data is now a list of data frames so as to accomodate multiple imputations
@@ -555,7 +547,7 @@ FLAME <-
       flush.console()
     }
     FLAME_out[[i]] <-
-      FLAME_internal(data[[i]], outcome_in_data,
+      FLAME_internal(data[[i]],
                      holdout, covs, n_covs,
                      cov_names, C,
                      PE_method, user_PE_fit, user_PE_fit_params,
@@ -574,7 +566,7 @@ FLAME <-
 }
 
 FLAME_internal <-
-  function(data, outcome_in_data, holdout, covs, n_covs,
+  function(data, holdout, covs, n_covs,
            cov_names, C,
            PE_method, user_PE_fit, user_PE_fit_params ,
            user_PE_predict, user_PE_predict_params,
@@ -601,8 +593,7 @@ FLAME_internal <-
   #   process_matches(data, outcome_in_data, replace, covs, MGs,
   #                   matched_on, matching_covs, CATE, cov_names)
   processed_matches <-
-    process_matches(data, outcome_in_data, replace, covs, MGs,
-                    matching_covs, cov_names)
+    process_matches(data, replace, covs, MGs, matching_covs, cov_names)
 
   # CATE <- processed_matches[[1]]
   MGs <- processed_matches[[1]]
@@ -687,8 +678,7 @@ FLAME_internal <-
     #   process_matches(data, outcome_in_data, replace, covs, MGs,
     #                   matched_on, matching_covs, CATE, cov_names)
     processed_matches <-
-      process_matches(data, outcome_in_data, replace, covs, MGs,
-                      matching_covs, cov_names)
+      process_matches(data, replace, covs, MGs, matching_covs, cov_names)
     # CATE <- processed_matches[[1]]
     MGs <- processed_matches[[1]]
     # matched_on <- processed_matches[[3]]

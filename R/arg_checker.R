@@ -1,5 +1,5 @@
 check_args <-
-  function(data, holdout, outcome_in_data, C,
+  function(data, holdout, C,
            treated_column_name, outcome_column_name,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
@@ -20,6 +20,8 @@ check_args <-
          'file in the working directory, or a numeric proportion of ',
          '`data` to use as a holdout set.')
   }
+
+  outcome_in_data <- !is.null(data[[outcome_column_name]])
 
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)

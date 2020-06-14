@@ -2,8 +2,10 @@
 
 # NULL default for holdout set
 sort_cols <-
-  function(df, outcome_in_data, treated_column_name, outcome_column_name,
+  function(df, treated_column_name, outcome_column_name,
            type, is_missing = NULL) {
+
+  outcome_in_data <- !is.null(df[[1]][[outcome_column_name]])
 
   n_covs <- ncol(df[[1]]) - 1 - outcome_in_data # Ignore treatment, outcome
   n_df <- length(df) # Always pass in a list of data frames
@@ -44,6 +46,7 @@ sort_cols <-
       colnames(tmp_df) <- c(cov_names, 'treated')
     }
 
+    # Don't I do this twice?
     if (type == 'data') {
       for (j in 1:n_covs) {
         levels(tmp_df[, j]) <- c(levels(tmp_df[, j]), '*')
