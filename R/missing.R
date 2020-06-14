@@ -56,12 +56,12 @@ handle_missing_data <-
     outcome_ind_data <- which(colnames(data) == outcome_column_name)
     outcome_data <- data[[outcome_ind_data]]
     if (all(is.na(outcome_data))) {
-      stop(paste('Outcome in data is entirely missing.',
-                 'If you do not have an outcome,',
-                 'do not supply a corresponding column.'))
+      stop('Outcome in `data` is entirely missing. ',
+           'If you do not have an outcome, ',
+           'do not supply a corresponding column.')
     }
     if (all(is.na(outcome_holdout))) {
-      stop('Outcome in holdout is entirely missing.')
+      stop('Outcome in `holdout` is entirely missing.')
     }
     if (any(is.na(outcome_data)) | any(is.na(outcome_holdout))) {
       message('Found missingness in the outcome.',
@@ -93,17 +93,17 @@ handle_missing_data <-
   if (missing_data == 0) {
     is_missing <- FALSE
     if (sum(is.na(data)) > 0) {
-      stop(paste('Found missingness in `data` but was told to assume there',
-                 'was none. Please either change `missing_data` to 1, 2, or',
-                 '3, or supply `data` without missingness.'))
+      stop('Found missingness in `data` but was told to assume there ',
+           'was none. Please either change `missing_data` to 1, 2, or ',
+                 '3, or supply `data` without missingness.')
     }
   }
   else if (missing_data == 1) {
     is_missing <- apply(data, 1, function(row) any(is.na(row)))
     if (all(is_missing)) {
-      stop(paste('All rows in data contain missingness.',
-                 'In this case, matches may only be made if missing_data = 2',
-                 'or missing_data = 3'))
+      stop('All rows in `data` contain missingness. ',
+           'In this case, matches may only be made if `missing_data` ',
+           ' = 2 or `missing_data` = 3.')
     }
   }
   else if (missing_data == 2) {
@@ -152,16 +152,16 @@ handle_missing_data <-
       data <- tmp_data
     }
     else {
-      warning(paste('Was directed to skip matches on missing values,',
-                    'but no missing values found.'))
+      warning('Was directed to skip matches on missing values, ',
+              'but no missing values found.')
     }
   }
 
   if (missing_holdout == 0) {
     if (sum(is.na(holdout)) > 0) {
-      stop(paste('Found missingness in `holdout` but was told to assume',
-                 'there was none. Please either change `missing_holdout` to 1',
-                 'or 2, or supply `holdout` without missingness.'))
+      stop('Found missingness in `holdout` but was told to assume ',
+           'there was none. Please either change `missing_holdout` to 1 ',
+           'or 2, or supply `holdout` without missingness.')
     }
   }
   else if (missing_holdout == 1) {

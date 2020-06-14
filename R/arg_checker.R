@@ -12,13 +12,13 @@ check_args <-
            impute_with_outcome, impute_with_treatment) {
 
   if (!is.data.frame(data)) {
-    stop(paste('data must be a data frame or a character denoting a .csv file',
-                'in the working directory.'))
+    stop('`data` must be a data frame or a character denoting a .csv file ',
+         'in the working directory.')
   }
   if (!is.data.frame(holdout)) {
-    stop(paste('holdout must be a data frame, a character denoting a .csv',
-                'file in the working directory, or a numeric proportion of',
-                'data to use as a holdout set.'))
+    stop('`holdout` must be a data frame, a character denoting a .csv ' ,
+         'file in the working directory, or a numeric proportion of ',
+         '`data` to use as a holdout set.')
   }
 
   data_cols <- colnames(data)
@@ -26,7 +26,7 @@ check_args <-
 
   # Seems like I can remove but maybe there's a reason I put it up here...?
   if (!(outcome_column_name %in% holdout_cols)) {
-    stop('Holdout must contain outcome column with name outcome_column_name')
+    stop('`holdout` must contain outcome column with name `outcome_column_name`')
   }
 
   cov_inds_data <- which(!(colnames(data) %in%
@@ -36,8 +36,8 @@ check_args <-
 
   if (!identical(colnames(data)[cov_inds_data],
                  colnames(holdout[cov_inds_holdout]))) {
-    stop(paste('Covariate columns of `data` and `holdout`',
-               'must have have the same names and be in the same order.'))
+    stop('Covariate columns of `data` and `holdout` ',
+         'must have have the same names and be in the same order.')
   }
 
   # if (!outcome_in_data) {
@@ -78,39 +78,40 @@ check_args <-
   }
 
   if (!is.character(treated_column_name)) {
-    stop('treated_column_name must be a character.')
+    stop('`treated_column_name` must be a character.')
   }
 
   if (!(treated_column_name %in% data_cols)) {
-    stop('treated_column_name must be the name of a column in data.')
+    stop('`treated_column_name` must be the name of a column in `data.`')
   }
 
   if (!(treated_column_name %in% holdout_cols)) {
-    stop('treated_column_name must be the name of a column in holdout.')
+    stop('`treated_column_name` must be the name of a column in `holdout.`')
   }
 
   if (is.factor(data[[treated_column_name]])) {
-    stop('Treated variable in data must be numeric binary or logical.')
+    stop('Treated variable in `data` must be numeric binary or logical.')
   }
 
   if (is.factor(holdout[[treated_column_name]])) {
-    stop('Treated variable in holdout must be numeric binary or logical.')
+    stop('Treated variable in `holdout` must be numeric binary or logical.')
   }
 
   if (!is.character(outcome_column_name)) {
-    stop('Outcome_column_name must be a character.')
+    stop('`outcome_column_name` must be a character.')
   }
 
   if (outcome_in_data & !(outcome_column_name %in% data_cols)) {
-    stop('outcome_column_name must be the name of a column in data.')
+    stop('`outcome_column_name` must be the name of a column in `data.` ',
+         'if outcome is supplied.')
   }
 
   if (!(outcome_column_name %in% holdout_cols)) {
-    stop('outcome_column_name must be the name of a column in holdout.')
+    stop('`outcome_column_name` must be the name of a column in `holdout.`')
   }
 
   if (!(PE_method %in% c('ridge', 'xgb'))) {
-    stop("PE_method must be one of 'ridge' or 'xgb'. ",
+    stop("`PE_method` must be one of 'ridge' or 'xgb'. ",
          "To supply your own model to fit, use user_PE_fit.")
   }
 
@@ -137,78 +138,78 @@ check_args <-
   }
 
   if (!is.logical(replace)) {
-    stop('replace must be a logical scalar')
+    stop('`replace` must be a logical scalar')
   }
 
   if (!(verbose %in% c(0, 1, 2, 3))) {
-    stop('Verbose must be one of: 0, 1, 2, 3')
+    stop('`verbose` must be one of: 0, 1, 2, 3')
   }
 
   if (!is.logical(want_pe)) {
-    stop('want_pe must be a logical scalar')
+    stop('`want_pe` must be a logical scalar')
   }
 
   if (!is.logical(want_bf)) {
-    stop('want_bf must be a logical scalar')
+    stop('`want_bf` must be a logical scalar')
   }
 
   ## Early stop parameters
   if (!is.numeric(early_stop_iterations) | early_stop_iterations < 0) {
-    stop('early_stop_iterations must be a nonnegative scalar')
+    stop('`early_stop_iterations` must be a nonnegative scalar')
   }
 
   if (!is.numeric(early_stop_epsilon) | early_stop_iterations <= 0) {
-    stop('early_stop_epsilon must be a positive scalar')
+    stop('`early_stop_epsilon` must be a positive scalar')
   }
 
   if (!is.numeric(early_stop_control) |
       early_stop_control < 0 |
       early_stop_control > 1) {
-    stop('early_stop_control must be a fraction between 0 and 1 (inclusive)')
+    stop('`early_stop_control` must be a fraction between 0 and 1 (inclusive)')
   }
 
   if (!is.numeric(early_stop_treated) |
       early_stop_treated < 0 |
       early_stop_treated > 1) {
-    stop('early_stop_treated must be a fraction between 0 and 1 (inclusive).')
+    stop('`early_stop_treated` must be a fraction between 0 and 1 (inclusive).')
   }
 
   if (!is.numeric(early_stop_pe) | early_stop_pe < 0) {
-    stop('early_stop_pe must be a nonnegative scalar')
+    stop('`early_stop_pe` must be a nonnegative scalar')
   }
 
   if (!is.numeric(early_stop_bf) | early_stop_bf < 0 | early_stop_bf > 2) {
-    stop('early_stop_bf must be a scalar between 0 and 2 (inclusive)')
+    stop('`early_stop_bf` must be a scalar between 0 and 2 (inclusive)')
   }
 
   ## Missing data parameters
   if (!is.numeric(missing_data) | !(missing_data %in% c(0, 1, 2, 3))) {
-    stop('missing_data must be one of: 0, 1, 2, 3')
+    stop('`missing_data` must be one of: 0, 1, 2, 3')
   }
 
   if (!is.numeric(missing_holdout) | !(missing_holdout %in% c(0, 1, 2))) {
-    stop('missing_data must be one of: 0, 1, 2')
+    stop('`missing_data` must be one of: 0, 1, 2')
   }
 
   if (!is.numeric(missing_data_imputations) | missing_data_imputations < 1) {
-    stop('missing_data_imputations must be an integer greater than 1')
+    stop('`missing_data_imputations` must be an integer greater than 1')
   }
 
   if (!is.numeric(missing_holdout_imputations) |
       missing_holdout_imputations < 1) {
-    stop('missing_holdout_imputations must be an integer greater than 1')
+    stop('`missing_holdout_imputations` must be an integer greater than 1')
   }
 
   if (impute_with_outcome & !outcome_in_data) {
-    stop(paste('Outcome not present in data;',
-               'cannot request to use it to impute missingness.'))
+    stop('Outcome not present in `data`; ',
+         'cannot request to use it to impute missingness.')
   }
 
   if (!is.logical(impute_with_outcome)) {
-    stop('impute_with_outcome must be a logical scalar')
+    stop('`impute_with_outcome` must be a logical scalar')
   }
 
   if (!is.logical(impute_with_treatment)) {
-    stop('impute_with_outcome must be a logical scalar')
+    stop('`impute_with_outcome` must be a logical scalar')
   }
 }

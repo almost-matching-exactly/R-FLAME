@@ -14,7 +14,7 @@ iterate <- function(fun, units, FLAME_out, multiple) {
   }
 
   if (!all(units %in% as.numeric(rownames(FLAME_out[[1]]$data)))) {
-    stop('Supplied a unit not originally passed to FLAME.')
+    stop('Supplied a unit not originally passed to `FLAME.`')
   }
 
   out <- vector('list', length = n_df)
@@ -54,9 +54,9 @@ iterate <- function(fun, units, FLAME_out, multiple) {
 }
 
 CATE_internal <- function(FLAME_out, MG, which_MG = NULL) {
-  if (!('outcome' %in% colnames(FLAME_out$data))) {
-    stop(paste0('Outcome not supplied in original call to `FLAME`;',
-                'cannot compute CATE'))
+  if (!('`outcome`' %in% colnames(FLAME_out$data))) {
+    stop('Outcome not supplied in original call to `FLAME`; ',
+         'cannot compute CATE')
   }
   if (is.factor(FLAME_out$data)) {
     stop("Cannot estimate treatment effects with a categorical outcome.")
@@ -228,7 +228,7 @@ ATE <- function(FLAME_out) {
   }
 
   if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
-    stop('Outcome was not supplied with data; cannot estimate ATE.')
+    stop('Outcome was not supplied with `data`; cannot estimate ATE.')
   }
 
   if (is.factor(FLAME_out[[1]]$data)) {
@@ -277,7 +277,7 @@ ATT <- function(FLAME_out) {
   }
 
   if (!('outcome' %in% colnames(FLAME_out[[1]]$data))) {
-    stop('Outcome was not supplied with data; cannot estimate ATT.')
+    stop('Outcome was not supplied with `data`; cannot estimate ATT.')
   }
 
   if (is.factor(FLAME_out[[1]]$data)) {

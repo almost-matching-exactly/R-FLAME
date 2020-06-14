@@ -492,7 +492,7 @@ FLAME <-
                   colnames(data)[cov_inds_data][n_levels > nrow(data) / 10],
                   "} might be continuous; you probably won't make many matches on them.",
                   "If this is the case, please either bin variables prior to",
-                  "calling FLAME or do not include them at all."))
+                  "calling `FLAME` or do not include them at all."))
   }
 
   cov_inds_holdout <- which(!(colnames(holdout) %in% c(treated_column_name, outcome_column_name)))
@@ -728,6 +728,8 @@ FLAME_internal <-
 
   data <-
     factor_remap(data, mapping = rev_mapping)$df
+
+
 
   # Undoes rownames conflicting with functions in post_matching.R
   # when holdout is taken from data

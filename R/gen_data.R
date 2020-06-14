@@ -29,7 +29,7 @@
 gen_data <- function(n = 250, p = 5,
                      write = FALSE, path = getwd(), filename = 'FLAME.csv') {
   if (p <= 2) {
-    stop('p must be greater than 2')
+    stop('`p` must be greater than 2')
   }
   TE <- 5
 
