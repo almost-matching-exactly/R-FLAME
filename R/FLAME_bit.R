@@ -736,7 +736,10 @@ FLAME_internal <-
 
   # Undoes rownames conflicting with functions in post_matching.R
   # when holdout is taken from data
-  rownames(data) <- 1:nrow(data)
+  if (!all(rownames(data) == 1:nrow(data))) {
+    data[['original_ind']] <- rownames(data)
+    rownames(data) <- 1:nrow(data)
+  }
 
   # matched_on <- lapply(MGs, function(x) {
   #   cols_matched_on <- sapply(data[x, 1:n_covs, drop = FALSE], function(y) length(unique(y)) == 1)
@@ -755,7 +758,8 @@ FLAME_internal <-
            character(1),
            USE.NAMES = FALSE)
 
-  cov_inds <- which(!(colnames(data) %in% c('treated', 'outcome', 'matched', 'weight')))
+  cov_inds <- which(!(colnames(data) %in%
+                      c('treated', 'outcome', 'matched', 'weight', 'original_ind')))
 
   data[, cov_inds] <-
     lapply(data[, cov_inds, drop = FALSE], function(x) {
