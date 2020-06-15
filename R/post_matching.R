@@ -77,10 +77,10 @@ MG_internal <- function(FLAME_out, MG, which_MG) {
 
   cov_names <-
     col_names[which(!(col_names %in%
-                        c('treated', 'outcome', 'weight', 'matched')))]
+                        c('treated', 'outcome', 'weight', 'matched', 'original_ind')))]
 
   keep_inds <-
-    which(!(colnames(FLAME_out$data[MG, ]) %in% c('matched', 'weight')))
+    which(!(colnames(FLAME_out$data[MG, ]) %in% c('matched', 'weight', 'original_ind')))
   tmp <- FLAME_out$data[MG, keep_inds]
 
   # Keep outcome and treatment

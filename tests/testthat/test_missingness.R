@@ -95,6 +95,7 @@ test_that("missing option 3 works", {
   }
   else {
     if (all(flout$dropped == flout3$dropped)) {
+      flout3$data[which(flout3$data == '* (m)', arr.ind = T)] <- '*'
       expect_identical(flout$data, flout3$data)
     }
     else {
