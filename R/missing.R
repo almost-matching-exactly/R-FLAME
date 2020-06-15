@@ -70,6 +70,8 @@ handle_missing_data <-
     data <- data[!to_drop_data, ]
     holdout <- holdout[!to_drop_holdout, ]
 
+    orig_missing <- which(is.na(data), arr.ind = TRUE)
+
     if (missing_data == 0) {
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
@@ -170,5 +172,6 @@ handle_missing_data <-
 
     return(list(data = data,
                 holdout = holdout,
-                is_missing = is_missing))
+                is_missing = is_missing,
+                orig_missing = orig_missing))
   }

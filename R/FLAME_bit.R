@@ -57,16 +57,17 @@ make_MGs <-
   unique_MGs <- unique(index)
   n_MGs <- length(unique_MGs)
 
-  # MGs <- vector('list', length = n_MGs)
-  MGs <- list()
+  MGs <- vector('list', length = n_MGs)
+  # MGs <- list()
   # CATEs <- vector('numeric', length = n_MGs)
-  # matched_on <- vector('list', length = n_MGs)
+  matched_on <- vector('list', length = n_MGs)
 
   for (i in 1:n_MGs) {
     members <- matched_units[which(index == unique_MGs[i])]
-    if (any(data$weight[members] == 0)) { # Only store new MGs if replace = TRUE
-      MGs <- c(MGs, list(members))
-    }
+    # if (any(data$weight[members] == 0)) { # Only store new MGs if replace = TRUE
+    #   MGs <- c(MGs, list(members))
+    # }
+    MGs[[i]] <- members
     # treated <- intersect(members, which(data$treated == 1))
     # control <- intersect(members, which(data$treated == 0))
     # if (outcome_in_data) {
@@ -76,12 +77,13 @@ make_MGs <-
     #   CATEs[i] <- NA
     # }
 
-    # matched_on[[i]] <- data[members[1], covs, drop = FALSE]
-    # rownames(matched_on[[i]]) <- NULL
+    matched_on[[i]] <- data[members[1], covs, drop = FALSE]
+    rownames(matched_on[[i]]) <- NULL
     #
-    # names(matched_on[[i]]) <- cov_names[covs]
+    names(matched_on[[i]]) <- cov_names[covs]
   }
-  return(list(MGs = MGs))
+  return(list(MGs = MGs,
+              matched_on = matched_on))
   # return(list(MGs = MGs,
   #             CATEs = CATEs,
   #             matched_on = matched_on))
@@ -91,7 +93,7 @@ make_MGs <-
 #   function(data, outcome_in_data, replace, covs, MGs,
 #            matched_on, matching_covs, CATE, cov_names) {
 process_matches <-
-  function(data, replace, covs, MGs, matching_covs, cov_names) {
+  function(data, replace, covs, MGs, matched_on, matching_covs, cov_names) {
   # Make matches implied by covs in data
     # Store any relevant information
 
@@ -121,10 +123,11 @@ process_matches <-
       make_MGs(data, index, units_matched, covs, cov_names)
     MGs <- c(MGs, new_MGs$MGs)
     # CATE <- c(CATE, new_MGs$CATEs)
-    # matched_on <- c(matched_on, new_MGs$matched_on)
+    matched_on <- c(matched_on, new_MGs$matched_on)
   }
   # matching_covs[[length(matching_covs) + 1]] <- cov_names[covs]
   return(list(MGs = MGs,
+              matched_on = matched_on,
               units_matched = units_matched,
               made_matches = made_matches))
   # return(list(CATE = CATE,
@@ -477,6 +480,10 @@ FLAME <-
   # Map everything to factor
   cov_inds_data <- which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
   data[, cov_inds_data] <- lapply(data[, cov_inds_data, drop = FALSE], as.factor)
+  # browser()
+  ord <- c(cov_inds_data,
+           which(colnames(data) == outcome_column_name),
+           which(colnames(data) == treated_column_name))
 
   # Number of levels of each covariate
   n_levels <- sapply(data[, cov_inds_data, drop = FALSE], nlevels)
@@ -518,6 +525,9 @@ FLAME <-
   data <- missing_out[[1]]
   holdout <- missing_out[[2]]
   is_missing <- missing_out[[3]]
+  orig_missing <- missing_out[[4]]
+
+  orig_missing[, 'col'] <- match(orig_missing[, 'col'], ord)
 
   # Move treatment and outcome columns to end.
   # Should maybe (probably?) be combined with factor_remap
@@ -555,7 +565,8 @@ FLAME <-
                      replace, verbose, return_pe, return_bf,
                      early_stop_iterations, early_stop_epsilon,
                      early_stop_control, early_stop_treated,
-                     early_stop_pe, early_stop_bf, mapping)
+                     early_stop_pe, early_stop_bf, mapping,
+                     orig_missing)
   }
 
   # If 0 or 1 imputations, don't return a list
@@ -573,7 +584,7 @@ FLAME_internal <-
            replace, verbose, return_pe, return_bf,
            early_stop_iterations, early_stop_epsilon,
            early_stop_control, early_stop_treated,
-           early_stop_pe, early_stop_bf, mapping) {
+           early_stop_pe, early_stop_bf, mapping, orig_missing) {
 
   # The lines after processed_matches suggest these several lines should be removed.
   #   To do.
@@ -582,7 +593,7 @@ FLAME_internal <-
   # List of CATEs, each entry contains the corresponding MG's CATE
   # CATE <- vector('numeric')
   # List of covariates and their values matched on for each corresponding MG
-  # matched_on <- list()
+  matched_on <- list()
 
   # List of covariates used to match at each level
   matching_covs <- list()
@@ -593,15 +604,15 @@ FLAME_internal <-
   #   process_matches(data, outcome_in_data, replace, covs, MGs,
   #                   matched_on, matching_covs, CATE, cov_names)
   processed_matches <-
-    process_matches(data, replace, covs, MGs, matching_covs, cov_names)
+    process_matches(data, replace, covs, MGs, matched_on, matching_covs, cov_names)
 
   # CATE <- processed_matches[[1]]
   MGs <- processed_matches[[1]]
-  # matched_on <- processed_matches[[3]]
+  matched_on <- processed_matches[[2]]
   # units_matched <- processed_matches[[4]]
-  units_matched <- processed_matches[[2]]
+  units_matched <- processed_matches[[3]]
   # made_matches <- processed_matches[[5]]
-  made_matches <- processed_matches[[3]]
+  made_matches <- processed_matches[[4]]
 
   if (made_matches) {
     data$matched[units_matched] <- TRUE
@@ -676,17 +687,17 @@ FLAME_internal <-
     ## Ideally should just return this from MQ so you don't have to redo it
     # processed_matches <-
     #   process_matches(data, outcome_in_data, replace, covs, MGs,
-    #                   matched_on, matching_covs, CATE, cov_names)
+    #                    <- , matching_covs, CATE, cov_names)
     processed_matches <-
-      process_matches(data, replace, covs, MGs, matching_covs, cov_names)
+      process_matches(data, replace, covs, MGs, matched_on, matching_covs, cov_names)
     # CATE <- processed_matches[[1]]
     MGs <- processed_matches[[1]]
-    # matched_on <- processed_matches[[3]]
-    units_matched <- processed_matches[[2]]
-    made_matches <- processed_matches[[3]]
+    matched_on <- processed_matches[[2]]
+    units_matched <- processed_matches[[3]]
+    made_matches <- processed_matches[[4]]
 
     if (made_matches) {
-      if (replace) { # Note for VittoriO: shouldn't need the if-else bc data$weight equivalent with unmatched for !replace
+      if (replace) { # Note for Vittorio: shouldn't need the if-else bc data$weight equivalent with unmatched for !replace
         # Only use * to refer to main matched group
         # weight == 0 implies never matched before so this match is their MMG
         data[intersect(units_matched, which(data$weight == 0)),
@@ -709,7 +720,7 @@ FLAME_internal <-
 
   data[, ncol(data)] <- NULL
 
-  # Swap back the original factor levels
+  ## Swap back the original factor levels
   rev_mapping <- lapply(mapping, function(x) {
     tmp <- c(names(x), '*')
     names(tmp) <- c(x, '*')
@@ -719,21 +730,46 @@ FLAME_internal <-
   data <-
     factor_remap(data, mapping = rev_mapping)$df
 
-
+  matched_on <- lapply(matched_on, function(x) {
+    factor_remap(x, mapping = rev_mapping)$df
+    })
 
   # Undoes rownames conflicting with functions in post_matching.R
   # when holdout is taken from data
   rownames(data) <- 1:nrow(data)
 
-  matched_on <- lapply(MGs, function(x) {
-    cols_matched_on <- sapply(data[x, 1:n_covs, drop = FALSE], function(y) all(y != '*'))
-    tmp <- data[x[1], 1:n_covs, drop = FALSE][1, cols_matched_on, drop = FALSE]
-    # if (n_covs == 1) { # weird behavior where column is renamed if drop == F and n_covs == 1
-    #   colnames(tmp) <- colnames(data)[1]
-    # }
-    rownames(tmp) <- NULL
-    return(tmp)
-  })
+  # matched_on <- lapply(MGs, function(x) {
+  #   cols_matched_on <- sapply(data[x, 1:n_covs, drop = FALSE], function(y) length(unique(y)) == 1)
+  #
+  #   tmp <- data[x[1], 1:n_covs, drop = FALSE][1, cols_matched_on, drop = FALSE]
+  #   # if (n_covs == 1) { # weird behavior where column is renamed if drop == F and n_covs == 1
+  #   #   colnames(tmp) <- colnames(data)[1]
+  #   # }
+  #   rownames(tmp) <- NULL
+  #   return(tmp)
+  # })
+
+  missing_levels <-
+    vapply(unique(data[orig_missing]),
+           function(x) paste(x, '(m)'),
+           character(1),
+           USE.NAMES = FALSE)
+
+  cov_inds <- which(!(colnames(data) %in% c('treated', 'outcome', 'matched', 'weight')))
+
+  data[, cov_inds] <-
+    lapply(data[, cov_inds, drop = FALSE], function(x) {
+      levels(x) <- c(levels(x), missing_levels)
+      return(x)})
+
+  if (nrow(orig_missing) > 0) {
+    for (i in 1:nrow(orig_missing)) {
+      data[orig_missing[i, , drop = FALSE]] <-
+        paste(data[orig_missing[i, , drop = FALSE]], '(m)')
+    }
+  }
+
+  data[, cov_inds] <- lapply(data[, cov_inds, drop = FALSE], droplevels)
 
   ret_list <-
     list(data = data,

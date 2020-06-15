@@ -1,3 +1,16 @@
+strip_missing <- function(vals) {
+  # Gets rid of all " (m)" substrings at the end of values,
+  # then removes all "*"
+  tmp <- strsplit(as.character(vals), ' ')
+  tmp <- lapply(tmp, function(x) {
+    if (x[length(x)] == '(m)') {
+      x <- x[length(x) - 1]
+    }
+    return(x)
+  })
+  return(unique(setdiff(sapply(tmp, paste, collapse = ' ', sep = ''), '*')))
+}
+
 n <- 250
 p <- 5
 data <- gen_data(n = n, p = p)
@@ -59,9 +72,11 @@ test_that("missing data 3 doesn't leave new levels", {
   }
   flout <- FLAME(data_non_num, holdout_non_num, missing_data = 3)
   levels_out <- lapply(flout$data[, 1:p], levels)
-  for (j in 1:p) {
-    expect_equivalent(sort(levels_out[[j]]), sort(c(levels_in[[j]], '*')))
-  }
+  no_extra_vals <-
+    sapply(1:p, function(cov) {
+      length(setdiff(strip_missing(flout$data[[cov]]), unique(data_non_num[[cov]]))) == 0
+    })
+  expect_true(all(no_extra_vals))
 })
 
 

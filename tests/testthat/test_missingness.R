@@ -1,3 +1,15 @@
+strip_missing <- function(vals) {
+  # Gets rid of all " (m)" substrings at the end of values,
+  # then removes all "*"
+  tmp <- strsplit(as.character(vals), ' ')
+  tmp <- lapply(tmp, function(x) {
+    if (x[length(x)] == '(m)') {
+      x <- x[length(x) - 1]
+    }
+    return(x)
+  })
+  return(setdiff(sapply(tmp, paste, collapse = ' ', sep = ''), '*'))
+}
 
 test_that("replaced values don't show", {
   p <- 3
@@ -6,7 +18,7 @@ test_that("replaced values don't show", {
   flout <- FLAME(data = data, holdout = holdout, missing_data = 3)
   no_extra_vals <-
     sapply(1:p, function(cov) {
-      length(setdiff(setdiff(unique(flout$data[[cov]]), '*'), unique(data[[cov]]))) == 0
+      length(setdiff(unique(strip_missing(flout$data[[cov]])), unique(data[[cov]]))) == 0
     })
   expect_true(all(no_extra_vals))
 })
@@ -33,8 +45,9 @@ test_that("missing option 1 works", {
                   missing_data = 1, missing_holdout = 1)
 
   # Avoid case in which the unit made missing was the only match for another unit
+  # equivalent, not identical, to ignore discrepancies in factor levels due to ' (m)'
   if (length(MG_of_missing) > 2) {
-    expect_identical(flout$data[-replace_inds_data[1], ],
+    expect_equivalent(flout$data[-replace_inds_data[1], ],
                      flout1$data[-replace_inds_data[1], ])
   }
   else {
@@ -74,7 +87,7 @@ test_that("missing option 3 works", {
     if (length(MG_of_missing) > 2 &
         length(MG(replace_inds_data[1], flout3, index_only = TRUE)) > 2) {
       expect_identical(flout$data[-replace_inds_data[1], ],
-                       flout3[[i]]$data[-replace_inds_data[1], ])
+                       flout3$data[-replace_inds_data[1], ])
     }
     else {
       expect_true(TRUE)
