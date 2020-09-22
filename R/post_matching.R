@@ -321,8 +321,10 @@ ATE <- function(FLAME_out) {
 #' matched dataset.
 #'
 #' The counterfactual outcome of each treated unit is estimated via the mean
-#' outcome of control units in its matched group. This value is then averaged
-#' across all treated units to compute the ATT.
+#' outcome of control units in its matched group. The difference between
+#' observed treated outcome and estimated counterfactual outcome is then
+#' averaged -- with weights given by the number of control units in that treated
+#' unit's matched group -- across all treated units to compute the ATT.
 #' @param FLAME_out An object returned by running \code{\link{FLAME}}
 #' @export
 ATT <- function(FLAME_out) {
@@ -363,7 +365,7 @@ ATT <- function(FLAME_out) {
       MG_treated <- MGs[[j]][MGs[[j]] %in% treated]
 
       MG_weight <- sum(weight[MG_controls])
-      weight_sum <- weight_sum + MG_weight
+      weight_sum <- weight_sum + MG_weight * length(MG_treated)
 
       mean_control_outcome <- mean(outcomes[MG_controls])
 
