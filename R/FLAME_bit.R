@@ -463,7 +463,6 @@ FLAME <-
 
   # Was outcome supplied by user (in matching data)?
   # outcome_in_data <- !is.null(data[[outcome_column_name]])
-
   # Make sure the user didn't do anything funny
   check_args(data, holdout, C,
              treated_column_name, outcome_column_name,
@@ -480,7 +479,7 @@ FLAME <-
   # Map everything to factor
   cov_inds_data <- which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
   data[, cov_inds_data] <- lapply(data[, cov_inds_data, drop = FALSE], as.factor)
-  # browser()
+
   ord <- c(cov_inds_data,
            which(colnames(data) == outcome_column_name),
            which(colnames(data) == treated_column_name))
@@ -545,7 +544,7 @@ FLAME <-
     sort_cols(holdout, treated_column_name, outcome_column_name,
               type = 'holdout')[[1]]
 
-  # data is now a list of data frames so as to accomodate multiple imputations
+  # data is now a list of data frames so as to accommodate multiple imputations
   n_iters <- length(data)
 
   # For each imputed data set (just 1 if no missingness), run FLAME
