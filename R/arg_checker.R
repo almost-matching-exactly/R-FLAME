@@ -1,12 +1,10 @@
 check_args <-
   function(data, holdout, C,
-           treated_column_name, outcome_column_name,
+           treated_column_name, outcome_column_name, n_flame_iters,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
            replace, verbose, want_pe, want_bf,
-           early_stop_iterations, early_stop_epsilon,
-           early_stop_control, early_stop_treated,
-           early_stop_pe, early_stop_bf,
+           early_stop_params,
            missing_data, missing_holdout,
            missing_data_imputations, missing_holdout_imputations,
            impute_with_outcome, impute_with_treatment) {
@@ -74,6 +72,10 @@ check_args <-
   #     }
   #     })
   # }
+
+  if (!is.numeric(n_flame_iters) | n_flame_iters < 0) {
+    stop('`n_flame_iters` must be a nonnegative scalar')
+  }
 
   if (!is.numeric(C) | C < 0 | is.infinite(C)) {
     stop('C must be a finite, nonnegative scalar.')
@@ -156,31 +158,33 @@ check_args <-
   }
 
   ## Early stop parameters
-  if (!is.numeric(early_stop_iterations) | early_stop_iterations < 0) {
+  if (!is.numeric(early_stop_params$iterations) | early_stop_params$iterations < 0) {
     stop('`early_stop_iterations` must be a nonnegative scalar')
   }
 
-  if (!is.numeric(early_stop_epsilon) | early_stop_iterations <= 0) {
+  if (!is.numeric(early_stop_params$epsilon) | early_stop_params$epsilon <= 0) {
     stop('`early_stop_epsilon` must be a positive scalar')
   }
 
-  if (!is.numeric(early_stop_control) |
-      early_stop_control < 0 |
-      early_stop_control > 1) {
+  if (!is.numeric(early_stop_params$control) |
+      early_stop_params$control < 0 |
+      early_stop_params$control > 1) {
     stop('`early_stop_control` must be a fraction between 0 and 1 (inclusive)')
   }
 
-  if (!is.numeric(early_stop_treated) |
-      early_stop_treated < 0 |
-      early_stop_treated > 1) {
+  if (!is.numeric(early_stop_params$treated) |
+      early_stop_params$treated < 0 |
+      early_stop_params$treated > 1) {
     stop('`early_stop_treated` must be a fraction between 0 and 1 (inclusive).')
   }
 
-  if (!is.numeric(early_stop_pe) | early_stop_pe < 0) {
+  if (!is.numeric(early_stop_params$PE) | early_stop_params$PE < 0) {
     stop('`early_stop_pe` must be a nonnegative scalar')
   }
 
-  if (!is.numeric(early_stop_bf) | early_stop_bf < 0 | early_stop_bf > 2) {
+  if (!is.numeric(early_stop_params$BF) |
+      early_stop_params$BF < 0 |
+      early_stop_params$BF > 2) {
     stop('`early_stop_bf` must be a scalar between 0 and 2 (inclusive)')
   }
 

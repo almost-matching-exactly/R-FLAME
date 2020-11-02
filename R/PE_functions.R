@@ -49,20 +49,22 @@ cv_xgboost <- function(X, Y, obj) {
   return(fit)
 }
 
-setup_preds <- function(holdout, covs, cov_to_drop) {
+setup_preds <- function(holdout, covs, covs_to_drop) {
+
+  cov_set <- setdiff(covs, covs_to_drop)
+
   # Split the data into treat, control
   # The model.matrix function binarizes categorical covariates
   n_cols <- ncol(holdout)
-  covs_to_test <- setdiff(covs, cov_to_drop)
 
   Y_treat <- holdout$outcome[holdout$treated == 1]
   Y_control <- holdout$outcome[holdout$treated == 0]
 
-  covs_treat <- holdout[holdout$treated == 1, c(covs_to_test, n_cols - 1)]
+  covs_treat <- holdout[holdout$treated == 1, c(cov_set, n_cols - 1)]
 
   X_treat <- model.matrix(outcome ~ ., covs_treat)
 
-  covs_control <- holdout[holdout$treated == 0, c(covs_to_test, n_cols - 1)]
+  covs_control <- holdout[holdout$treated == 0, c(cov_set, n_cols - 1)]
 
   X_control <- model.matrix(outcome ~ ., covs_control)
 
@@ -110,7 +112,7 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
 }
 
 predict_master <-
-  function(holdout, covs, cov_to_drop,
+  function(holdout, covs, covs_to_drop,
            PE_fit, PE_predict, PE_fit_params, PE_predict_params) {
 
   n_imputations <- length(holdout) # List of dataframes
@@ -118,7 +120,7 @@ predict_master <-
   PE <- vector(mode = 'numeric', length = n_imputations)
 
   for (i in 1:n_imputations) {
-    setup_out <- setup_preds(holdout[[i]], covs, cov_to_drop)
+    setup_out <- setup_preds(holdout[[i]], covs, covs_to_drop)
     X_treat <- setup_out[[1]]
     X_control <- setup_out[[2]]
     Y_treat <- setup_out[[3]]
@@ -135,4 +137,62 @@ predict_master <-
     PE[i] <- error_treat + error_control
   }
   return(mean(PE))
+  }
+
+get_PE <- function(covs_to_drop, covs, holdout, PE_method,
+                   user_PE_fit, user_PE_fit_params,
+                   user_PE_predict, user_PE_predict_params) {
+
+  PE_predict_params <- list()
+
+  if (!is.null(user_PE_fit)) {
+    PE_fit <- user_PE_fit
+    PE_fit_params <- user_PE_fit_params
+  }
+  else {
+    if (PE_method == 'ridge') {
+      PE_fit <- glmnet::cv.glmnet
+      if (length(unique(holdout[[1]]$outcome)) == 2) {
+        family <- 'binomial'
+        PE_predict_params <- list(type = 'class')
+      }
+      else if (is.factor(holdout[[1]]$outcome)) {
+        family <- 'multinomial'
+        PE_predict_params <- list(type = 'class')
+      }
+      else {
+        family <- 'gaussian'
+      }
+      PE_fit_params <- list(family = family, nfolds = 5)
+    }
+    else if (PE_method == 'xgb') {
+      PE_fit <- cv_xgboost
+      if (length(unique(holdout[[1]]$outcome)) == 2) {
+        obj <- 'binary:logistic'
+      }
+      else if (is.factor(holdout[[1]]$outcome)) {
+        obj <- 'multi:softmax'
+      }
+      else {
+        obj <- 'reg:squarederror'
+      }
+      PE_fit_params <- list(obj = obj)
+    }
+    else {
+      stop('PE_method not recognized.
+           To supply your own function, use user_PE_fit and user_PE_predict')
+    }
+  }
+
+  if (!is.null(user_PE_predict)) {
+    PE_predict <- user_PE_predict
+    PE_predict_params <- user_PE_predict_params
+  }
+  else {
+    PE_predict <- predict
+  }
+
+  PE <- predict_master(holdout, covs, covs_to_drop,
+                       PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+  return(PE)
 }
