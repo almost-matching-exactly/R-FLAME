@@ -1,0 +1,50 @@
+{"0": {
+    "doc": "Code to generate documentation for dame-flame",
+    "title": "Code to generate documentation for dame-flame",
+    "content": "# Code to generate documentation for `dame-flame` This directory contains the code for the web site as displayed at https://almost-matching-exactly.github.io/DAME-FLAME-Python-Package/ Please go to that site to view the documentation. ",
+    "url": "http://localhost:4000/R-FLAME/",
+    "relUrl": "/"
+  },"1": {
+    "doc": "Getting Started",
+    "title": "Getting Started",
+    "content": ". | Dependencies | Installation | Quickstart Example | . ",
+    "url": "http://localhost:4000/R-FLAME/getting-started",
+    "relUrl": "/getting-started"
+  },"2": {
+    "doc": "Getting Started",
+    "title": "Dependencies",
+    "content": "This package requires prior installation of . | R (&gt;= 3.3) | Python (&gt;= 2.7) | . ",
+    "url": "http://localhost:4000/R-FLAME/getting-started#dependencies",
+    "relUrl": "/getting-started#dependencies"
+  },"3": {
+    "doc": "Getting Started",
+    "title": "Installation",
+    "content": "The FLAME R Package can be installed directly from CRAN: . install.packages('FLAME') . Alternatively, this package can be downloaded from the author’s Github: . devtools::install_github('https://github.com/vittorioorlandi/FLAME') . ",
+    "url": "http://localhost:4000/R-FLAME/getting-started#installation",
+    "relUrl": "/getting-started#installation"
+  },"4": {
+    "doc": "Getting Started",
+    "title": "Quickstart Example",
+    "content": "To generate sample data for exploring FLAMEs functionality, use the function gen_data as shown below. Remember to load the FLAME package a shown in line 1 before calling any of the functions discussed in this section. This example generates a data frame with n = 250 units and p = 5 covariates: . library('FLAME') data &lt;- gen_data(n = 250, p = 5) . Note that you can also write the generated dataset to a file by adjusting parameters detailed in the next section. To run the algorithm, use the FLAME function as shown in line 3. The required data parameter can either be a path to a .csv file or a dataframe. In this example, a .csv file path is used: . library('FLAME') FLAME_out &lt;- FLAME(data = \"data.csv\", treated_column_name=\"treated\", outcome_column_name=\"outcome\") print(FLAME_out$data) . The object FLAME_out is a list of six entries: . | FLAME_out$data: | a data frame containing the original data with an extra logical column denoting whether a unit was matched and an extra numeric column denoting how many times a unit was matched. The covariates that each unit was not matched on are denoted with asterisks. | . | FLAME_out$MGs: | a list of every matched group formed by the algorithm. | . | FLAME_out$CATE: | a vector containing the conditional average treatment effect (CATE) for every matched group formed. | . | FLAME_out$matched_on: | a list corresponding to MGs that gives the covariates, and their values, on which units in each matched group were matched. | . | FLAME_out$matching_covs: | a list containing the covariates that were used for matched on each iteration of the algorithm. | . | FLAME_out$dropped: | a vector of the covariate dropped at each iteration. | . To find the matched groups of particular units after running FLAME, use the function MG as shown below. In this example, the function would return the matched groups of units 1 and 2: . MG(c(1,2),FLAME_out) . To find the CATEs of particular units, use the function CATE as shown below. In this example, the function would return the matched groups of units 1 and 2: . CATE(c(1,2),FLAME_out) . To find the average treatment effect (ATE) or average treatment effect on the treated (ATT), use the functions ATE and ATT, respectively, as shown below: . ATE(FLAME_out = FLAME_out) ATT(FLAME_out = FLAME_out) . ",
+    "url": "http://localhost:4000/R-FLAME/getting-started#quickstart-example",
+    "relUrl": "/getting-started#quickstart-example"
+  },"5": {
+    "doc": "Home",
+    "title": "Welcome to the FLAME R Package Documentation!",
+    "content": "View us on GitHub . R-FLAME is an R package for performing matching for observational causal inference on datasets containing discrete covariates. It implements the Fast, Large-Scale Almost Matching Exactly (FLAME) algorithm, which matches treatment and control units on subsets of the covariates. The resulting matched groups are interpretable, because the matches are made on covariates, and high-quality, because machine learning is used to determine which covariates are important to match on. ",
+    "url": "http://localhost:4000/R-FLAME/#welcome-to-the-flame-r-package-documentation",
+    "relUrl": "/#welcome-to-the-flame-r-package-documentation"
+  },"6": {
+    "doc": "Home",
+    "title": "Contact",
+    "content": "Please reach out to let our team know if you’re using this, or if you have any questions! Email us at almost-matching-exactly@duke.edu. ",
+    "url": "http://localhost:4000/R-FLAME/#contact",
+    "relUrl": "/#contact"
+  },"7": {
+    "doc": "Home",
+    "title": "Home",
+    "content": " ",
+    "url": "http://localhost:4000/R-FLAME/",
+    "relUrl": "/"
+  }
+}
