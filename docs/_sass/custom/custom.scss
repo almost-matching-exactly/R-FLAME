@@ -1,0 +1,22 @@
+.code-example {
+    padding: 0rem;
+    div.highlighter-rouge {
+        margin-bottom: 0rem;
+    }
+}
+
+#references {
+    a {
+        white-space: normal;
+    }
+    h4 {
+        padding-bottom: 0.5rem;
+    }
+    .number {
+        color: #27262b;
+        font-weight: 400;
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
