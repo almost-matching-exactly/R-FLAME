@@ -67,3 +67,43 @@ test_that('matches propagate down if replace = TRUE', {
 #   expect_equal(flout$dropped[n_dropped - 1], 'X3')
 #   expect_equal(flout$dropped[n_dropped], 'X2')
 # })
+
+test_that('FLAME MGs contain self', {
+  dat <- gen_data()
+  holdout <- gen_data()
+  flout <- FLAME(dat, holdout)
+  for (i in 1:seq_along(flout$MGs)) {
+    if (is.null(flout$MGs[[i]])) {
+      next
+    }
+    expect_true(i %in% flout$MGs[[i]])
+  }
+
+  flout <- FLAME(dat, holdout, replace = TRUE)
+  for (i in 1:seq_along(flout$MGs)) {
+    if (is.null(flout$MGs[[i]])) {
+      next
+    }
+    expect_true(i %in% flout$MGs[[i]])
+  }
+})
+
+test_that('DAME MGs contain self', {
+  dat <- gen_data()
+  holdout <- gen_data()
+  dout <- DAME(dat, holdout)
+  for (i in 1:seq_along(dout$MGs)) {
+    if (is.null(dout$MGs[[i]])) {
+      next
+    }
+    expect_true(i %in% dout$MGs[[i]])
+  }
+
+  dout <- DAME(dat, holdout, replace = TRUE)
+  for (i in 1:seq_along(dout$MGs)) {
+    if (is.null(dout$MGs[[i]])) {
+      next
+    }
+    expect_true(i %in% dout$MGs[[i]])
+  }
+})

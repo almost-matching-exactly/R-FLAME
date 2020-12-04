@@ -24,6 +24,7 @@ aggregate_table <- function(vals) {
 # list of indices for the matched units (the second return value)
 
 exact_match_bit <- function(data, covs, replace) {
+  # covs are the indices of the covariates we are attempting to match on
   # gmp::as.bigz is for handling lots and lots of covariates so we don't
   # have trouble with overflow issues
 
@@ -47,9 +48,10 @@ exact_match_bit <- function(data, covs, replace) {
   b_u <-
     as.vector(gmp::`%*%`(data_wo_t, multiplier))
 
-  # Compute b_u+
+  multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels))
+
   b_u_plus <-
-    as.vector(gmp::add.bigz(data$treated, gmp::mul.bigz(b_u, gmp::as.bigz(n_levels))))
+    as.vector(gmp::add.bigz(gmp::`%*%`(data_wo_t, multiplier), data$treated))
 
   # Compute c_u
   c_u <- aggregate_table(b_u)
@@ -67,10 +69,12 @@ exact_match_bit <- function(data, covs, replace) {
   #  we threw out data$matched and so !data$matched is who matched on this cov_set
   #  out of those not previously matched
   newly_matched <- valid_matches[matched_on_covs & !data$matched]
-
   # Those units matched on this cov_set (same as newly_matched if !replace)
   matched <- valid_matches[matched_on_covs]
-  return(list(match_vals = b_u[matched_on_covs],
+
+  # browser()
+
+  return(list(match_vals = b_u,
               newly_matched = newly_matched,
               matched = matched))
 }
@@ -78,12 +82,13 @@ exact_match_bit <- function(data, covs, replace) {
 make_MGs <- function(MGs, match_vals, matched, newly_matched) {
   n <- length(MGs)
   for (i in seq_along(newly_matched)) {
-    MGs[[newly_matched[i]]] <- matched[match_vals == match_vals[i]]
+    MGs[[newly_matched[i]]] <- which(match_vals == match_vals[newly_matched[i]])
   }
   return(MGs)
 }
 
 process_matches <- function(data, replace, covs, MGs) {
+  # browser()
   match_out <- exact_match_bit(data[!data$missing, ], covs, replace)
   match_vals <- match_out$match_vals
   newly_matched <- match_out$newly_matched
@@ -94,6 +99,7 @@ process_matches <- function(data, replace, covs, MGs) {
   if (made_new_matches) {
     MGs <- make_MGs(MGs, match_vals, matched, newly_matched)
   }
+  # browser()
   return(list(MGs = MGs,
               newly_matched = newly_matched,
               matched = matched))
