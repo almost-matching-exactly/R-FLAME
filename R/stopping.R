@@ -59,7 +59,7 @@ early_stop_PE <- function(PE, early_stop_params, verbose) {
   if (PE > early_stop_params$PE) {
     if (verbose != 0) {
       message('FLAME stopping: predictive error would have risen above ',
-              early_stop_pe)
+              early_stop_params$PE)
     }
     return(TRUE)
   }
