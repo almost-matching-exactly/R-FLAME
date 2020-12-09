@@ -119,10 +119,10 @@
 #' @param early_stop_treated A numeric value between 0 and 1. If
 #'   the proportion of treatment units that are unmatched falls below this
 #'   value, FLAME stops. Defaults to 0.
-#' @param early_stop_pe A numeric value between 0 and 1. If FLAME
+#' @param early_stop_pe Deprecated. A positive numeric. If FLAME
 #'   attempts to drop a covariate that would lead to a PE above this value,
 #'   FLAME stops. Defaults to \code{Inf}.
-#' @param early_stop_bf A numeric value between 0 and 1. If FLAME
+#' @param early_stop_bf Deprecated. A numeric value between 0 and 2. If FLAME
 #'   attempts to drop a covariate that would lead to a BF below this value,
 #'   FLAME stops. Defaults to 0.
 #' @param missing_data If 0, assumes no missingness in \code{data}. If 1, does
@@ -206,7 +206,19 @@ FLAME <-
            missing_data_imputations = 5, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
 
+    if (early_stop_pe < Inf) {
+      warning('Argument `early_stop_pe` is deprecated and will ',
+              'be removed in a future release. Please use `early_stop_epsilon`',
+              ' to early stop based off predictive error.', call. = FALSE)
+    }
+
+    if (early_stop_bf > 0) {
+      warning('Argument `early_stop_bf` is deprecated and will ',
+              'be removed in a future release. Please use `early_stop_epsilon`',
+              ' to early stop based off predictive error.', call. = FALSE)
+    }
     input_args <- as.list(environment())
+
     return(do.call(AME, c(list(algo = 'FLAME'), input_args)))
 }
 
@@ -224,6 +236,18 @@ DAME <-
            missing_data = 0, missing_holdout = 0,
            missing_data_imputations = 5, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+
+    if (early_stop_pe < Inf) {
+      warning('Argument `early_stop_pe` is deprecated and will ',
+              'be removed in a future release. Please use `early_stop_epsilon`',
+              ' to early stop based off predictive error.', call. = FALSE)
+    }
+
+    if (early_stop_bf > 0) {
+      warning('Argument `early_stop_bf` is deprecated and will ',
+              'be removed in a future release. Please use `early_stop_epsilon`',
+              ' to early stop based off predictive error.', call. = FALSE)
+    }
 
     input_args <- as.list(environment())
     return(do.call(AME, c(list(algo = 'DAME'), input_args)))
