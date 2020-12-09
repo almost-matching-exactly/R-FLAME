@@ -26,8 +26,8 @@ FLAME(
   early_stop_treated = 0,
   early_stop_pe = Inf,
   early_stop_bf = 0,
-  missing_data = 0,
-  missing_holdout = 0,
+  missing_data = c("none", "drop", "ignore", "impute"),
+  missing_holdout = c("none", "drop", "impute"),
   missing_data_imputations = 1,
   missing_holdout_imputations = 5,
   impute_with_treatment = TRUE,
@@ -141,28 +141,24 @@ FLAME stops. Defaults to \code{Inf}.}
 attempts to drop a covariate that would lead to a BF below this value,
 FLAME stops. Defaults to 0.}
 
-\item{missing_data}{If 0, assumes no missingness in \code{data}. If 1, does
-not match units with missingness in \code{data}. In this case, the
-balancing factor is computed ignoring units with missingness. If 2,
-generates \code{missing_data_imputations} imputed datasets via
-\code{mice::mice}. In this case, the results of running \code{FLAME} on
-each imputed dataset will be returned in a list. Within each of these list
-entries, the \code{data} entry will contain the imputed, not missing,
-values. If 3, will not match a unit on a covariate that it is missing.
-Defaults to 0.}
+\item{missing_data}{Specifies how to handle missingness in \code{data}. If
+'none' (default), assumes no missing data; if 'drop', effectively drops
+units with missingness from the data and does not match them; if 'ignore',
+ignores matches on missing covariates; and if 'impute', imputes the missing
+data via \code{mice::mice}.}
 
-\item{missing_holdout}{If 0, assumes no missing data in \code{holdout}. If 1,
-eliminates units with missingness from \code{holdout}. If 2, generates
-\code{missing_holdout_imputations} imputed datasets via \code{mice::mice}.
-In this latter case, all imputations will be used to compute PE, and the PE
-at an iteration will be the average across all imputations. Defaults to 0.}
+\item{missing_holdout}{Specifies how to handle missingness in \code{holdout}.
+If 'none' (default), assumes no missing data; if 'drop', effectively drops
+units with missingness and does not use them to compute PE; and if 'impute',
+imputes the missing data via \code{mice::mice}. In this last case, the PE
+at an iteration will be given by the average PE across all imputations.}
 
-\item{missing_data_imputations}{Defunct. If \code{missing_data} = 2, one
+\item{missing_data_imputations}{Defunct. If \code{missing_data} = 'impute', one
 round of imputation will be performed on \code{data} via \code{mice::mice}.
 To view results for multiple imputations, please wrap calls to \code{FLAME}
 in a loop. This argument will be removed in a future release.}
 
-\item{missing_holdout_imputations}{If \code{missing_holdout} = 2, performs
+\item{missing_holdout_imputations}{If \code{missing_holdout} = 'impute', performs
 this many imputations of the missing data in \code{holdout} via
 \code{mice::mice}. Defaults to 5.}
 

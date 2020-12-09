@@ -4,69 +4,48 @@
 \alias{MG}
 \title{Matched Groups}
 \usage{
-MG(units, FLAME_out, multiple = FALSE, index_only = FALSE)
+MG(units, AME_out, multiple = FALSE, index_only = FALSE)
 }
 \arguments{
 \item{units}{A vector of indices for the units whose matched groups
 are desired.}
 
-\item{FLAME_out}{The output of a call to \code{\link{FLAME}}.}
+\item{AME_out}{An object of class \code{AME}.}
 
 \item{multiple}{A logical scalar. If \code{FALSE} (default), then \code{MG}
-will only return a main matched group for each unit (the first matched
-group that unit was a part of). See below for details.}
+will only return the main matched group for each unit. See below for
+details. Should not be set to \code{TRUE} if \code{AME_out} was generated
+without replacement.}
 
 \item{index_only}{A logical scalar. If \code{TRUE} then only the indices of
 units in each matched group are returned.}
 }
 \value{
-\strong{If passing a single set of matched data}
-
-  A list of length \code{length(units)}. Each entry is a data frame (if
-  \code{multiple = FALSE}) or a list of data frames (if \code{multiple =
-  TRUE}). For a given entry, these data frames are subsets of \code{data}
-  passed to \code{\link{FLAME}} to generate \code{FLAME_out}, whose rows
-  correspond to the units in the matched group(s) of that entry. If a unit
-  is not matched, the corresponding CATE will be \code{NULL}.
-
-  The starred entries (*) in the returned data frames have the same meaning
-  as in \code{FLAME_out$data}, except for if both \code{multiple = TRUE} and
-  \code{replace = TRUE}. In this case, if \emph{all} units do not match on a
-  given covariate, all entries of that covariate will be starred, even though
-  a subset of the units may have matched on them. This is done so that it is
-  clear on which covariates these units match.
-
-  Note that this is the return format also if passing a single set of
-  imputed data.
-
-  \strong{If passing multiple sets of matched, imputed data}
-
-  A list of length \code{length(FLAME_out)}, where each entry has the
-  structure described above, corresponding to that imputed data set.
+A list of length \code{length(units)}. For matched units, each entry is a
+  data frame (if \code{multiple = FALSE}) or a list of data frames (if
+  \code{multiple = TRUE}). For a given entry, these data frames are subsets
+  of \code{data} passed to \code{\link{FLAME}} to generate \code{FLAME_out},
+  whose rows correspond to the units in the matched group(s) of that entry
+  and whose columns are the respective values of treatment, outcome, and
+  covariates matched on. For unmatched units, the relevant list entries are
+  \code{NULL}.
 }
 \description{
 \code{MG} returns the matched groups of the supplied units.
 }
 \details{
-By default, \code{MG} returns the covariate, treatment, and outcome
-information for all the units in the relevant matched groups. If only the
-indices of units in the matched groups are desired, \code{index_only} can be
-set to \code{TRUE}.
+\code{MG} returns the treatment, outcome, and covariates matched on for all
+units in the relevant matched groups. If only the indices of units in the
+matched groups are desired, \code{index_only} can be set to \code{TRUE}.
 
-Setting \code{multiple = TRUE} will request that all matched groups be
-returned for each unit -- if \code{\link{FLAME}} was run with \code{replace =
-TRUE} to generate \code{FLAME_out} in the first place. Otherwise, if
-\code{\link{FLAME}} was run with \code{replace = TRUE}, but \code{multiple =
-FALSE}, only main matched groups will be returned. The main matched group of
-a unit contains the first units it matches with (and therefore those with
-which it matches on the largest number of covariates). If \code{\link{FLAME}}
-was run with \code{replace = FALSE}, then the user should only supply
-\code{multiple = FALSE}.
-
-Additionally, if \code{\link{FLAME}} was run with \code{missing_data = 2} to
-generate \code{FLAME_out}, then \code{MG} will return matched group
-information for all \code{missing_data_imputations} imputations.
+The \code{multiple} argument toggles whether only a unit's main matched group
+(MMG) or all matched groups a unit is part of should be returned. A unit's
+MMG contains its highest quality matches. Note that if the original call that
+generated \code{AME_out} specified \code{replace = FALSE} then units only are
+part of one matched group (their MMG) and this argument has no effect.
+Otherwise, \code{multiple = TRUE} requests that \code{MG} returns all matched
+groups and \code{multiple = FALSE} that only MMGs are returned.
 }
 \seealso{
-\code{\link{FLAME}}
+\code{\link{FLAME}}, \code{\link{DAME}}
 }

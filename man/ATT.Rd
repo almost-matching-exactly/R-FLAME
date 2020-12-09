@@ -4,17 +4,20 @@
 \alias{ATT}
 \title{ATT of a matched dataset}
 \usage{
-ATT(FLAME_out)
+ATT(AME_out)
 }
 \arguments{
 \item{FLAME_out}{An object returned by running \code{\link{FLAME}}}
 }
 \description{
-\code{ATT} computes the average treatment effect on the treated (ATT) of a
+\code{ATT} estimates the average treatment effect on the treated (ATT) of a
 matched dataset.
 }
 \details{
 The counterfactual outcome of each treated unit is estimated via the mean
-outcome of control units in its matched group. This value is then averaged
-across all treated units to compute the ATT.
+outcome of control units in its matched group. The difference between
+observed treated outcome and estimated counterfactual outcome is then
+averaged -- with weights given by the sum of inverse weights of the control
+units in that treated unit's matched group -- across all matched treated
+units to compute the ATT.
 }

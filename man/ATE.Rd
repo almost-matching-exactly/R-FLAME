@@ -4,16 +4,17 @@
 \alias{ATE}
 \title{ATE of a matched dataset}
 \usage{
-ATE(FLAME_out)
+ATE(AME_out)
 }
 \arguments{
-\item{FLAME_out}{An object returned by running \code{\link{FLAME}}}
+\item{AME_out}{An object of class \code{AME}.}
 }
 \description{
-\code{ATE} computes the average treatment effect (ATE) of a matched dataset.
+\code{ATE} estimates the average treatment effect (ATE) of a matched dataset.
 }
 \details{
-The ATE is computed as the difference between the weighted treated and the
-weighted control outcomes in the dataset. A unit's weight is the number of
-times it was matched.
+The ATE is estimated as the difference between the weighted treated and the
+weighted control outcomes in the dataset. A unit's weight is the reciprocal
+number of times it was matched. Unmatched units are omitted from the
+computation.
 }

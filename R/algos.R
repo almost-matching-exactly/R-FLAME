@@ -131,15 +131,15 @@
 #'   units with missingness from the data and does not match them; if 'ignore',
 #'   ignores matches on missing covariates; and if 'impute', imputes the missing
 #'   data via \code{mice::mice}.
-#' @param missing_holdout If 0, assumes no missing data in \code{holdout}. If 1,
-#'   eliminates units with missingness from \code{holdout}. If 2, generates
-#'   \code{missing_holdout_imputations} imputed datasets via \code{mice::mice}.
-#'   In this latter case, all imputations will be used to compute PE, and the PE
-#'   at an iteration will be the average across all imputations. Defaults to 0.
-#' @param missing_holdout_imputations If \code{missing_holdout} = 2, performs
+#' @param missing_holdout Specifies how to handle missingness in \code{holdout}.
+#'   If 'none' (default), assumes no missing data; if 'drop', effectively drops
+#'   units with missingness and does not use them to compute PE; and if 'impute',
+#'   imputes the missing data via \code{mice::mice}. In this last case, the PE
+#'   at an iteration will be given by the average PE across all imputations.
+#' @param missing_holdout_imputations If \code{missing_holdout} = 'impute', performs
 #'   this many imputations of the missing data in \code{holdout} via
 #'   \code{mice::mice}. Defaults to 5.
-#' @param missing_data_imputations Defunct. If \code{missing_data} = 2, one
+#' @param missing_data_imputations Defunct. If \code{missing_data} = 'impute', one
 #'   round of imputation will be performed on \code{data} via \code{mice::mice}.
 #'   To view results for multiple imputations, please wrap calls to \code{FLAME}
 #'   in a loop. This argument will be removed in a future release.

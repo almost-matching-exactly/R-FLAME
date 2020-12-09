@@ -70,7 +70,6 @@ exact_match_bit <- function(data, covs, replace) {
   # Those units matched on this cov_set (same as newly_matched if !replace)
   matched <- valid_matches[matched_on_covs]
 
-
   return(list(valid_matches = valid_matches,
               match_vals = b_u,
               newly_matched = newly_matched,
@@ -78,10 +77,12 @@ exact_match_bit <- function(data, covs, replace) {
 }
 
 make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched) {
-  n <- length(MGs)
+  # b_u values for those first matched on this cov set
+  newly_matched_vals <- match_vals[match(newly_matched, valid_matches)]
+
   for (i in seq_along(newly_matched)) {
     MGs[[newly_matched[i]]] <-
-      valid_matches[match_vals == match_vals[newly_matched[i]]]
+      valid_matches[match_vals == newly_matched_vals[i]]
   }
   return(MGs)
 }
@@ -92,6 +93,8 @@ process_matches <- function(data, replace, covs, MGs) {
   match_vals <- match_out$match_vals
   newly_matched <- match_out$newly_matched
   matched <- match_out$matched
+
+  # browser()
 
   made_new_matches <- length(newly_matched) > 0
 
