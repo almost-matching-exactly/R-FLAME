@@ -30,7 +30,7 @@ handle_missing_data <-
   function(data, holdout,
            treated_column_name, outcome_column_name,
            missing_data, missing_holdout,
-           missing_data_imputations, missing_holdout_imputations,
+           missing_holdout_imputations,
            impute_with_treatment, impute_with_outcome) {
 
     outcome_in_data <- !is.null(data[[outcome_column_name]])
@@ -92,7 +92,7 @@ handle_missing_data <-
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
         message('Starting imputation of `data`\r', appendLF = FALSE)
-        data <- impute_missing(data, outcome_in_data, missing_data_imputations,
+        data <- impute_missing(data, outcome_in_data, 1,
                                treated_column_name, outcome_column_name,
                                impute_with_treatment, impute_with_outcome)
         message('Finished imputation of `data`\r', appendLF = FALSE)
@@ -153,22 +153,16 @@ handle_missing_data <-
       }
     }
 
-    # Change levels to allow for 'unmatched on this covariate' indicator: '*'
-    if (is.data.frame(data)) {
-      data <- list(data)
-    }
-
     if (is.data.frame(holdout)) {
       holdout <- list(holdout)
     }
 
-    n_imputations <- length(data)
-
-    for (i in 1:n_imputations) {
-      for (j in cov_inds) {
-        levels(data[[i]][, j]) <- c(levels(data[[i]][, j]), '*')
-      }
+    # Change levels to allow for 'unmatched on this covariate' indicator: '*'
+    # Data is length 1 list
+    for (j in cov_inds) {
+      levels(data[[1]][, j]) <- c(levels(data[[1]][, j]), '*')
     }
+
 
     return(list(data = data,
                 holdout = holdout,

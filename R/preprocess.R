@@ -5,7 +5,7 @@ preprocess <- function(data, holdout, C,
                        replace, verbose, return_pe, return_bf,
                        early_stop_params,
                        missing_data, missing_holdout,
-                       missing_data_imputations, missing_holdout_imputations,
+                       missing_holdout_imputations,
                        impute_with_outcome, impute_with_treatment) {
   # Get matching and holdout data, from input .csv files, if necessary
   read_data_out <-
@@ -24,12 +24,14 @@ preprocess <- function(data, holdout, C,
              replace, verbose, return_pe, return_bf,
              early_stop_params,
              missing_data, missing_holdout,
-             missing_data_imputations, missing_holdout_imputations,
+             missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 
   # Map everything to factor
-  cov_inds_data <- which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
-  data[, cov_inds_data] <- lapply(data[, cov_inds_data, drop = FALSE], as.factor)
+  cov_inds_data <-
+    which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  data[, cov_inds_data] <-
+    lapply(data[, cov_inds_data, drop = FALSE], as.factor)
 
   ord <- c(cov_inds_data,
            which(colnames(data) == outcome_column_name),
@@ -45,8 +47,10 @@ preprocess <- function(data, holdout, C,
                   "calling `FLAME` or do not include them at all."))
   }
 
-  cov_inds_holdout <- which(!(colnames(holdout) %in% c(treated_column_name, outcome_column_name)))
-  holdout[, cov_inds_holdout] <- lapply(holdout[, cov_inds_holdout, drop = FALSE], as.factor)
+  cov_inds_holdout <-
+    which(!(colnames(holdout) %in% c(treated_column_name, outcome_column_name)))
+  holdout[, cov_inds_holdout] <-
+    lapply(holdout[, cov_inds_holdout, drop = FALSE], as.factor)
 
   # Map the factor levels of the covariates as supplied by the user to 0:k
   #   so that bit matching works properly.
@@ -58,12 +62,11 @@ preprocess <- function(data, holdout, C,
 
   # Impute missing data, if requested, else, prepare to deal with missingness
   #   as specified by missing_data
-  #   Returns a LIST of data frames (see definition of n_iters)
   missing_out <-
     handle_missing_data(data, holdout,
                         treated_column_name, outcome_column_name,
                         missing_data, missing_holdout,
-                        missing_data_imputations, missing_holdout_imputations,
+                        missing_holdout_imputations,
                         impute_with_treatment, impute_with_outcome)
 
   data <- missing_out[[1]]

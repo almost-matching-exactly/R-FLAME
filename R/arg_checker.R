@@ -6,7 +6,7 @@ check_args <-
            replace, verbose, want_pe, want_bf,
            early_stop_params,
            missing_data, missing_holdout,
-           missing_data_imputations, missing_holdout_imputations,
+           missing_holdout_imputations,
            impute_with_outcome, impute_with_treatment) {
 
   if (!is.data.frame(data)) {
@@ -195,10 +195,6 @@ check_args <-
 
   if (!is.numeric(missing_holdout) | !(missing_holdout %in% c(0, 1, 2))) {
     stop('`missing_data` must be one of: 0, 1, 2')
-  }
-
-  if (!is.numeric(missing_data_imputations) | missing_data_imputations < 1) {
-    stop('`missing_data_imputations` must be an integer greater than 1')
   }
 
   if (!is.numeric(missing_holdout_imputations) |

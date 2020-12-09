@@ -30,8 +30,9 @@ postprocess <- function(data, MGs, n_covs, mapping, orig_missing, return_pe, ret
            character(1),
            USE.NAMES = FALSE)
 
-  cov_inds <- which(!(colnames(data) %in%
-                        c('treated', 'outcome', 'matched', 'weight', 'original_ind')))
+  cov_inds <-
+    which(!(colnames(data) %in%
+              c('treated', 'outcome', 'matched', 'weight', 'original_ind')))
 
   data[, cov_inds] <-
     lapply(data[, cov_inds, drop = FALSE], function(x) {

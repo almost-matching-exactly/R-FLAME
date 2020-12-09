@@ -29,15 +29,15 @@
 #' quality is associated with a balancing factor of 0.1, FLAME stops
 #' \emph{without} dropping this covariate.
 #'
-#' @section Missing Data:
-#' \code{FLAME} offers functionality for handling missing data in the
-#' covariates, for both the \code{data} and \code{holdout} sets. This
-#' functionality can be specified via the arguments whose prefix is "missing" or
-#' "impute". It allows for ignoring missing data, imputing it, or (for
-#' \code{data}) not matching on missing values. If \code{data} is imputed, the
-#' FLAME algorithm will be run on all imputations. If \code{holdout} is imputed,
-#' the predictive error at an iteration will be the average of predictive errors
-#' across all imputed \code{holdout} datasets.
+#' @section Missing Data: \code{FLAME} offers functionality for handling missing
+#'   data in the covariates, for both the \code{data} and \code{holdout} sets.
+#'   This functionality can be specified via the arguments whose prefix is
+#'   "missing" or "impute". It allows for ignoring missing data, imputing it, or
+#'   (for \code{data}) not matching on missing values. If \code{data} is
+#'   imputed, imputation will be done once and the FLAME algorithm will be run
+#'   on all imputations. If \code{holdout} is imputed, the predictive error at
+#'   an iteration will be the average of predictive errors across all imputed
+#'   \code{holdout} datasets.
 #'
 #'
 #' @param data Data to be matched. Either a data frame or a path to a .csv file
@@ -50,17 +50,17 @@
 #'   will be performed but treatment effect estimation will not be possible. All
 #'   columns not containing outcome or treatment will be treated as covariates
 #'   for matching. Covariates are assumed to be categorical and will be coerced
-#'   to factors, though they may be passed as either factors or numeric. If you wish
-#'   to use continuous covariates for matching, they should be binned prior to being
-#'   passed to \code{FLAME}. There is no default for \code{data}.
+#'   to factors, though they may be passed as either factors or numeric. If you
+#'   wish to use continuous covariates for matching, they should be binned prior
+#'   to being passed to \code{FLAME}. There is no default for \code{data}.
 #' @param holdout Holdout data to be used to compute predictive error. If a
 #'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
 #'   into a holdout set and only the remaining proportion of \code{data} will be
-#'   matched. Otherwise, a data frame or a path to a .csv file. The holdout data must contain
-#'   an outcome column with name \code{outcome_column_name}; other restrictions on
-#'   column types are as for \code{data}. Covariate columns must have the same column
-#'   names and order as \code{data}. This data will \emph{not} be matched.
-#'   Defaults to 0.1.
+#'   matched. Otherwise, a data frame or a path to a .csv file. The holdout data
+#'   must contain an outcome column with name \code{outcome_column_name}; other
+#'   restrictions on column types are as for \code{data}. Covariate columns must
+#'   have the same column names and order as \code{data}. This data will
+#'   \emph{not} be matched. Defaults to 0.1.
 #' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
 #'   the FLAME algorithm. Higher C prioritizes more matches and lower C
 #'   prioritizes not dropping important covariates. Defaults to 0.1.
@@ -74,8 +74,9 @@
 #'   parameters and then the default predict method to estimate the outcome. If
 #'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
 #'   cross-validate and find the best with respect to RMSE (for continuous
-#'   outcomes) or misclassification rate (for binary/multi-class outcomes). Then uses
-#'   the default \code{predict} method to estimate the outcome. Defaults to "ridge".
+#'   outcomes) or misclassification rate (for binary/multi-class outcomes). Then
+#'   uses the default \code{predict} method to estimate the outcome. Defaults to
+#'   "ridge".
 #' @param user_PE_fit An optional function supplied by the user that can be used
 #'   instead of those allowed for by \code{PE_method} to fit a model for the
 #'   outcome from the covariates. Must take in a matrix of covariates as its
@@ -142,9 +143,10 @@
 #' @param missing_holdout_imputations If \code{missing_holdout} = 2, performs
 #'   this many imputations of the missing data in \code{holdout} via
 #'   \code{mice::mice}. Defaults to 5.
-#' @param missing_data_imputations If \code{missing_data} = 2, performs this
-#'   many imputations of the missing data in \code{data} via \code{mice::mice}.
-#'   Defaults to 5.
+#' @param missing_data_imputations Defunct. If \code{missing_data} = 2, one
+#'   round of imputation will be performed on \code{data} via \code{mice::mice}.
+#'   To view results for multiple imputations, please wrap calls to \code{FLAME}
+#'   in a loop. This argument will be removed in a future release.
 #' @param impute_with_treatment A logical scalar. If \code{TRUE}, uses treatment
 #'   assignment to impute covariates when \code{missing_data = 2} or
 #'   \code{missing_holdout = 2}. Defaults to \code{TRUE}.
@@ -203,8 +205,16 @@ FLAME <-
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0,
-           missing_data_imputations = 5, missing_holdout_imputations = 5,
+           missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+
+    if (missing_data_imputations != 1) {
+      missing_data_imputations <- 1
+      warning('Argument `missing_data_imputations` is defunct and will be ',
+              'removed in a future release. One round of imputation will be ',
+              'performed for `data`. To perform multiple rounds of imputation',
+              ', please wrap calls to `FLAME` in a loop.', call. = FALSE)
+    }
 
     if (early_stop_pe < Inf) {
       warning('Argument `early_stop_pe` is deprecated and will ',
@@ -234,8 +244,16 @@ DAME <-
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
            missing_data = 0, missing_holdout = 0,
-           missing_data_imputations = 5, missing_holdout_imputations = 5,
+           missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+
+    if (missing_data_imputations != 1) {
+      missing_data_imputations <- 1
+      warning('Argument `missing_data_imputations` is defunct and will be ',
+              'removed in a future release. One round of imputation will be ',
+              'performed for `data`. To perform multiple rounds of imputation',
+              ', please wrap calls to `DAME` in a loop.', call. = FALSE)
+    }
 
     if (early_stop_pe < Inf) {
       warning('Argument `early_stop_pe` is deprecated and will ',
@@ -265,7 +283,7 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
             early_stop_control = 0, early_stop_treated = 0,
             early_stop_pe = Inf, early_stop_bf = 0,
             missing_data = 0, missing_holdout = 0,
-            missing_data_imputations = 5, missing_holdout_imputations = 5,
+            missing_data_imputations = 1, missing_holdout_imputations = 5,
             impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
 
   early_stop_params <-
@@ -284,48 +302,15 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
                replace, verbose, return_pe, return_bf,
                early_stop_params,
                missing_data, missing_holdout,
-               missing_data_imputations, missing_holdout_imputations,
+               missing_holdout_imputations,
                impute_with_outcome, impute_with_treatment)
 
-  data <- out$data
+  data <- out$data[[1]]
   holdout <- out$holdout
   covs <- out$covs
   mapping <- out$mapping
   orig_missing <- out$orig_missing
   cov_names <- out$cov_names
-
-  # data is now a list of data frames so as to accommodate multiple imputations
-  n_iters <- length(data)
-
-  # For each imputed data set (1 if no missingness), run AME
-  AME_out <- vector(mode = 'list', length = n_iters)
-  for (i in 1:n_iters) {
-    if (missing_data == 2) {
-      message('Running ', algo, ' on imputed dataset ', i, ' of ', n_iters, '\r',
-              appendLF = FALSE)
-      flush.console()
-    }
-    AME_out[[i]] <-
-      AME_internal(data[[i]], holdout, C, algo, weights, n_flame_iters,
-                   PE_method, user_PE_fit, user_PE_fit_params,
-                   user_PE_predict, user_PE_predict_params,
-                   replace, verbose, return_pe, return_bf,
-                   early_stop_params, mapping, orig_missing)
-  }
-
-  # If 0 or 1 imputations, don't return a list
-  if (n_iters == 1) {
-    return(AME_out[[1]])
-  }
-  return(AME_out)
-}
-
-AME_internal <-
-  function(data, holdout, C, algo, weights, n_flame_iters,
-           PE_method, user_PE_fit, user_PE_fit_params,
-           user_PE_predict, user_PE_predict_params,
-           replace, verbose, return_pe, return_bf,
-           early_stop_params, mapping, orig_missing) {
 
   n_covs <- ncol(data) - 4 - !is.null(data$outcome)
 
@@ -336,7 +321,7 @@ AME_internal <-
   matches_out <- update_matches(data, replace, c(), n_covs, MGs)
   data <- matches_out$data
   MGs <- matches_out$MGs
-###### DO SMM FOR PE STOPPING IF WEIGHTS NOT NULL
+  ###### DO SMM FOR PE STOPPING IF WEIGHTS NOT NULL
 
   active_cov_sets <- as.list(1:n_covs)
   processed_cov_sets <- list()
@@ -350,8 +335,8 @@ AME_internal <-
   }
 
   AME_out <- run_AME(data, active_cov_sets, processed_cov_sets, early_stop_params,
-                      verbose, C, algo, weights, MGs, replace, n_flame_iters,
-                      return_pe, return_bf, n_covs,
+                     verbose, C, algo, weights, MGs, replace, n_flame_iters,
+                     return_pe, return_bf, n_covs,
                      holdout,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params)
@@ -366,4 +351,5 @@ AME_internal <-
                 store_pe, store_bf)
 
   return(AME_out)
+
 }
