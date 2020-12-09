@@ -21,17 +21,9 @@ permalink: /getting-started
 ## Dependencies
 This package requires prior installation of
 - R (>= 3.3)
-- Python (>= 2.7)
 
 ## Installation
-The FLAME R Package can be installed directly from CRAN:
-<div class="code-example" markdown="1">
-```r
-install.packages('FLAME')
-```
-</div>
-
-Alternatively, this package can be downloaded from [the author's Github](https://github.com/vittorioorlandi/FLAME):
+The FLAME R Package can be downloaded from [the author's Github](https://github.com/vittorioorlandi/FLAME), via:
 <div class="code-example" markdown="1">
 ```r
 devtools::install_github('https://github.com/vittorioorlandi/FLAME')
@@ -39,61 +31,64 @@ devtools::install_github('https://github.com/vittorioorlandi/FLAME')
 </div>
 
 ## Quickstart Example
-To generate sample data for exploring FLAMEs functionality, use the function `gen_data` as shown below. 
-Remember to load the `FLAME` package a shown in line 1 before calling any of the functions discussed 
-in this section. This example generates a data frame with n = 250 units and p = 5 covariates:
+To generate sample data for exploring the functionality of FLAME and DAME, we can use the `gen_data` function included in the package, as shown below. 
+Remember to load the `FLAME` package, as shown in line 1, before calling any of the functions discussed in this section. This example generates a data frame with n = 250 units and p = 5 categorical covariates, whose outcome is a linear function of treatment and 
+covariate values:
 <div class="code-example" markdown="1">
 ```r
-library('FLAME')
+library(FLAME)
 
 data <- gen_data(n = 250, p = 5)
 ```
 </div>
 
-Note that you can also write the generated dataset to a file by adjusting parameters detailed in the 
-next section.
-
-To run the algorithm, use the `FLAME` function as shown in line 3. The required data parameter can 
-either be a path to a .csv file or a dataframe. In this example, a .csv file path is used:
+To run either the FLAME or DAME algorithm, use the `FLAME` or `DAME` functions, respectively. Here, we will focus on `FLAME`, but the syntax and output for `DAME` is typically identical. The data to match on can be supplied either as a data frame or
+as a .csv file to be read into memory. Here, we'll use the `data` data frame we created above.
 <div class="code-example" markdown="1">
 ```r
-library('FLAME')
-
-FLAME_out <- FLAME(data = "data.csv", treated_column_name="treated", outcome_column_name="outcome")
-print(FLAME_out$data)
+FLAME_out <- FLAME(data = data)
 ```
+The names of the columns denoting treatment and outcome have default values of '
+treated' and 'outcome', respectively, although you can supply whatever values you
+have in your data using the `treated_column_name` and `outcome_column_name` arguments. 
 </div>
-The object FLAME_out is a list of six entries:
+The object output by `FLAME` is an object of class `ame`. By default, this consists of 
+three entries:
 
 | FLAME_out$data:          | a data frame containing the original data with an extra logical column denoting whether a unit was matched and an extra numeric column denoting how many times a unit was matched. The covariates that each unit was not matched on are denoted with asterisks. |
-| FLAME_out$MGs:           | a list of every matched group formed by the algorithm.                                                                                                                                                                                                          |
-| FLAME_out$CATE:          | a vector containing the conditional average treatment effect (CATE) for every matched group formed.                                                                                                                                                             |
-| FLAME_out$matched_on:    | a list corresponding to MGs that gives the covariates, and their values, on which units in each matched group were matched.                                                                                                                                     |
-| FLAME_out$matching_covs: | a list containing the covariates that were used for matched on each iteration of the algorithm.                                                                                                                                                                 |
-| FLAME_out$dropped:       | a vector of the covariate dropped at each iteration. 
+| FLAME_out$MGs:           | a list whose i'th entry contains the main matched group for unit i.                                                                                                                                                                   |
+| FLAME_out$CATE:          | a vector whose i'th entry contains the conditional average treatment effect (CATE) estimate for the i'th unit.                                         
 
-To find the matched groups of particular units after running `FLAME`, use the function `MG` as 
-shown below. In this example, the function would return the matched groups of units 1 and 2:
+To find the units contained in a given matched group, we can simply look at the relevant entry of the `MG` list in the output of `FLAME`. In this example, we retrieve the units in the main matched group of unit 1:
 
 <div class="code-example" markdown="1">
 ```r
-MG(c(1,2),FLAME_out)
+FLAME_out$MG[[1]]
 ```
 </div>
 
-To find the CATEs of particular units, use the function `CATE` as shown below. In this example, the 
-function would return the matched groups of units 1 and 2:
+If we are interested in the covariate values that these units matched on, we can 
+use the `MG` function as follows:
+
 <div class="code-example" markdown="1">
 ```r
-CATE(c(1,2),FLAME_out)
+MG(1, FLAME_out)
 ```
 </div>
 
-To find the average treatment effect (ATE) or average treatment effect on the treated (ATT), use 
+
+To find the CATE estimates of particular units, we can simply look at the relevant entry of the `CATE` vector in the output of `FLAME`. For example, the code below extracts all the CATE estimates of the units in the main matched group of unit 1. Note that these not all be the same in case some subset of those units first matched on more covariates than they share with unit 1.
+<div class="code-example" markdown="1">
+```r
+FLAME_out$CATE[FLAME_out$MGs[[1]]]
+```
+</div>
+
+To estimate the average treatment effect (ATE) or average treatment effect on the treated (ATT), use 
 the functions `ATE` and `ATT`, respectively, as shown below:
 <div class="code-example" markdown="1">
 ```r
-ATE(FLAME_out = FLAME_out)
-ATT(FLAME_out = FLAME_out)
+ATE(FLAME_out)
+ATT(FLAME_out)
 ```
 </div>
