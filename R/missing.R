@@ -72,23 +72,23 @@ handle_missing_data <-
 
     orig_missing <- which(is.na(data), arr.ind = TRUE)
 
-    if (missing_data == 0) {
+    if (missing_data == 'none') {
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
         stop('Found missingness in `data` but was told to assume there ',
-             'was none. Please either change `missing_data` to 1, 2, or ',
-             '3, or supply `data` without missingness.')
+             'was none. Please either change `missing_data` or ',
+             'supply `data` without missingness.')
       }
     }
-    else if (missing_data == 1) {
+    else if (missing_data == 'drop') {
       is_missing <- apply(data, 1, function(row) any(is.na(row)))
       if (all(is_missing)) {
         stop('All rows in `data` contain missingness. ',
              'In this case, matches may only be made if `missing_data` ',
-             ' = 2 or `missing_data` = 3.')
+             " = 'ignore' or `missing_data` = 'impute'.")
       }
     }
-    else if (missing_data == 2) {
+    else if (missing_data == 'impute') {
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
         message('Starting imputation of `data`\r', appendLF = FALSE)
@@ -101,7 +101,7 @@ handle_missing_data <-
         message('No missing data found; skipping imputation.')
       }
     }
-    else if (missing_data == 3) {
+    else if (missing_data == 'ignore') {
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
 
@@ -132,17 +132,17 @@ handle_missing_data <-
       }
     }
 
-    if (missing_holdout == 0) {
+    if (missing_holdout == 'none') {
       if (sum(is.na(holdout)) > 0) {
         stop('Found missingness in `holdout` but was told to assume ',
-             'there was none. Please either change `missing_holdout` to 1 ',
-             'or 2, or supply `holdout` without missingness.')
+             'there was none. Please either change `missing_holdout` or ',
+             'supply `holdout` without missingness.')
       }
     }
-    else if (missing_holdout == 1) {
+    else if (missing_holdout == 'ignore') {
       holdout <- holdout[complete.cases(holdout), ]
     }
-    else if (missing_holdout == 2) {
+    else if (missing_holdout == 'impute') {
       if (sum(is.na(holdout)) > 0) {
         message('Starting imputation of `holdout`\r', appendLF = FALSE)
         holdout <-
@@ -153,6 +153,9 @@ handle_missing_data <-
       }
     }
 
+    if (is.data.frame(data)) {
+      data <- list(data)
+    }
     if (is.data.frame(holdout)) {
       holdout <- list(holdout)
     }

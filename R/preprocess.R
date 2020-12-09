@@ -23,7 +23,6 @@ preprocess <- function(data, holdout, C,
              user_PE_predict, user_PE_predict_params,
              replace, verbose, return_pe, return_bf,
              early_stop_params,
-             missing_data, missing_holdout,
              missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment)
 

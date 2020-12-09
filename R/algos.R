@@ -126,15 +126,11 @@
 #' @param early_stop_bf Deprecated. A numeric value between 0 and 2. If FLAME
 #'   attempts to drop a covariate that would lead to a BF below this value,
 #'   FLAME stops. Defaults to 0.
-#' @param missing_data If 0, assumes no missingness in \code{data}. If 1, does
-#'   not match units with missingness in \code{data}. In this case, the
-#'   balancing factor is computed ignoring units with missingness. If 2,
-#'   generates \code{missing_data_imputations} imputed datasets via
-#'   \code{mice::mice}. In this case, the results of running \code{FLAME} on
-#'   each imputed dataset will be returned in a list. Within each of these list
-#'   entries, the \code{data} entry will contain the imputed, not missing,
-#'   values. If 3, will not match a unit on a covariate that it is missing.
-#'   Defaults to 0.
+#' @param missing_data Specifies how to handle missingness in \code{data}. If
+#'   'none' (default), assumes no missing data; if 'drop', effectively drops
+#'   units with missingness from the data and does not match them; if 'ignore',
+#'   ignores matches on missing covariates; and if 'impute', imputes the missing
+#'   data via \code{mice::mice}.
 #' @param missing_holdout If 0, assumes no missing data in \code{holdout}. If 1,
 #'   eliminates units with missingness from \code{holdout}. If 2, generates
 #'   \code{missing_holdout_imputations} imputed datasets via \code{mice::mice}.
@@ -204,9 +200,13 @@ FLAME <-
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
-           missing_data = 0, missing_holdout = 0,
+           missing_data = c('none', 'drop', 'ignore', 'impute'),
+           missing_holdout = c('none', 'drop', 'impute'),
            missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+
+    missing_data <- match.arg(missing_data)
+    missing_holdout <- match.arg(missing_holdout)
 
     if (missing_data_imputations != 1) {
       missing_data_imputations <- 1
@@ -243,9 +243,13 @@ DAME <-
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
-           missing_data = 0, missing_holdout = 0,
+           missing_data = c('none', 'drop', 'ignore', 'impute'),
+           missing_holdout = c('none', 'drop', 'impute'),
            missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+
+    missing_data <- match.arg(missing_data)
+    missing_holdout <- match.arg(missing_holdout)
 
     if (missing_data_imputations != 1) {
       missing_data_imputations <- 1

@@ -30,13 +30,11 @@ exact_match_bit <- function(data, covs, replace) {
 
   if (!replace) {
     valid_matches <- which(!data$matched & !data$missing)
-    data <- data[!data$matched, ]
   }
   else {
     valid_matches <- which(!data$missing)
   }
-
-  data <- data[!data$missing, ]
+  data <- data[valid_matches, ]
 
   n_levels <- sapply(data[, covs, drop = FALSE], nlevels)
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs[order(n_levels)]]))
@@ -72,24 +70,25 @@ exact_match_bit <- function(data, covs, replace) {
   # Those units matched on this cov_set (same as newly_matched if !replace)
   matched <- valid_matches[matched_on_covs]
 
-  # browser()
 
-  return(list(match_vals = b_u,
+  return(list(valid_matches = valid_matches,
+              match_vals = b_u,
               newly_matched = newly_matched,
               matched = matched))
 }
 
-make_MGs <- function(MGs, match_vals, matched, newly_matched) {
+make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched) {
   n <- length(MGs)
   for (i in seq_along(newly_matched)) {
-    MGs[[newly_matched[i]]] <- which(match_vals == match_vals[newly_matched[i]])
+    MGs[[newly_matched[i]]] <-
+      valid_matches[match_vals == match_vals[newly_matched[i]]]
   }
   return(MGs)
 }
 
 process_matches <- function(data, replace, covs, MGs) {
-  # browser()
   match_out <- exact_match_bit(data[!data$missing, ], covs, replace)
+  valid_matches <- match_out$valid_matches
   match_vals <- match_out$match_vals
   newly_matched <- match_out$newly_matched
   matched <- match_out$matched
@@ -97,9 +96,8 @@ process_matches <- function(data, replace, covs, MGs) {
   made_new_matches <- length(newly_matched) > 0
 
   if (made_new_matches) {
-    MGs <- make_MGs(MGs, match_vals, matched, newly_matched)
+    MGs <- make_MGs(MGs, valid_matches, match_vals, matched, newly_matched)
   }
-  # browser()
   return(list(MGs = MGs,
               newly_matched = newly_matched,
               matched = matched))
