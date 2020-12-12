@@ -74,7 +74,8 @@ setup_preds <- function(holdout, covs, covs_to_drop) {
               Y_control = Y_control))
 }
 
-get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
+get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params,
+                      user_fit_predict) {
 
   if (length(unique(Y)) == 2) {
     outcome_type <- 'binary'
@@ -92,10 +93,15 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
   if (is.factor(Y)) {
     Y <- as.numeric(Y) - 1
   }
+  if (is.null(user_fit_predict)) {
+    # browser()
+    fit <- do.call(fit_fun, c(list(X, Y), fit_params))
 
-  fit <- do.call(fit_fun, c(list(X, Y), fit_params))
-
-  preds <- as.numeric(do.call(predict_fun, c(list(fit, X), predict_params)))
+    preds <- as.numeric(do.call(predict_fun, c(list(fit, X), predict_params)))
+  }
+  else {
+    preds <- user_fit_predict(X, Y)
+  }
 
   if (outcome_type == 'binary') {
     preds <- preds > 0.5 # to take care of xgboost
@@ -113,11 +119,12 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params) {
 
 predict_master <-
   function(holdout, covs, covs_to_drop,
-           PE_fit, PE_predict, PE_fit_params, PE_predict_params) {
+           PE_fit, PE_predict, PE_fit_params, PE_predict_params,
+           user_fit_predict) {
 
-  n_imputations <- length(holdout) # List of dataframes
+  n_imputations <- length(holdout) # List of data frames
 
-  PE <- vector(mode = 'numeric', length = n_imputations)
+  PE <- vector('numeric', length = n_imputations)
 
   for (i in 1:n_imputations) {
     setup_out <- setup_preds(holdout[[i]], covs, covs_to_drop)
@@ -128,11 +135,13 @@ predict_master <-
 
     error_treat <-
       get_error(X_treat, Y_treat,
-              PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+               PE_fit, PE_predict, PE_fit_params, PE_predict_params,
+               user_fit_predict)
 
     error_control <-
       get_error(X_control, Y_control,
-              PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+                PE_fit, PE_predict, PE_fit_params, PE_predict_params,
+                user_fit_predict)
 
     PE[i] <- error_treat + error_control
   }
@@ -143,6 +152,14 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
                    user_PE_fit, user_PE_fit_params,
                    user_PE_predict, user_PE_predict_params) {
 
+  # If the user supplies a PE method the "new" way
+  user_fit_predict <- NULL
+
+  # Four options:
+  # 1. OK: PE_method is ridge/xgb and user_PE* is NULL
+  # 2. PE_method is a function and user_PE* is NULL
+  # 3. OK: PE_method is a function and user_PE* is not NULL (should catch this)
+  # 4. OK: PE_method is ridge / xgb and user_PE* is not NULL
   PE_predict_params <- list()
 
   if (!is.null(user_PE_fit)) {
@@ -150,37 +167,39 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
     PE_fit_params <- user_PE_fit_params
   }
   else {
-    if (PE_method == 'ridge') {
-      PE_fit <- glmnet::cv.glmnet
-      if (length(unique(holdout[[1]]$outcome)) == 2) {
-        family <- 'binomial'
-        PE_predict_params <- list(type = 'class')
-      }
-      else if (is.factor(holdout[[1]]$outcome)) {
-        family <- 'multinomial'
-        PE_predict_params <- list(type = 'class')
-      }
-      else {
-        family <- 'gaussian'
-      }
-      PE_fit_params <- list(family = family, nfolds = 5)
-    }
-    else if (PE_method == 'xgb') {
-      PE_fit <- cv_xgboost
-      if (length(unique(holdout[[1]]$outcome)) == 2) {
-        obj <- 'binary:logistic'
-      }
-      else if (is.factor(holdout[[1]]$outcome)) {
-        obj <- 'multi:softmax'
-      }
-      else {
-        obj <- 'reg:squarederror'
-      }
-      PE_fit_params <- list(obj = obj)
+    if (is.function(PE_method)) {
+      user_fit_predict <- PE_method
     }
     else {
-      stop('PE_method not recognized.
-           To supply your own function, use user_PE_fit and user_PE_predict')
+      if (PE_method == 'ridge') {
+        PE_fit <- glmnet::cv.glmnet
+        if (length(unique(holdout[[1]]$outcome)) == 2) {
+          family <- 'binomial'
+          PE_predict_params <- list(type = 'class')
+        }
+        else if (is.factor(holdout[[1]]$outcome)) {
+          family <- 'multinomial'
+          PE_predict_params <- list(type = 'class')
+        }
+        else {
+          family <- 'gaussian'
+        }
+        PE_fit_params <- list(family = family, nfolds = 5)
+      }
+      else if (PE_method == 'xgb') {
+        PE_fit <- cv_xgboost
+        if (length(unique(holdout[[1]]$outcome)) == 2) {
+          obj <- 'binary:logistic'
+        }
+        else if (is.factor(holdout[[1]]$outcome)) {
+          obj <- 'multi:softmax'
+        }
+        else {
+          obj <- 'reg:squarederror'
+        }
+        PE_fit_params <- list(obj = obj)
+      }
+      # Else caught by arg_checker
     }
   }
 
@@ -193,6 +212,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
   }
 
   PE <- predict_master(holdout, covs, covs_to_drop,
-                       PE_fit, PE_predict, PE_fit_params, PE_predict_params)
+                       PE_fit, PE_predict, PE_fit_params, PE_predict_params,
+                       user_fit_predict)
   return(PE)
 }

@@ -113,8 +113,15 @@ check_args <-
     stop('`outcome_column_name` must be the name of a column in `holdout.`')
   }
 
-  if (!(PE_method %in% c('ridge', 'xgb')) & !is.function(PE_method)) {
-    stop("`PE_method` must be one of 'ridge' or 'xgb', or a user-supplied function.")
+  if (is.function(PE_method) & !is.null(user_PE_fit)) {
+    stop("Please do not use both `PE_method` and `user_PE_fit` to supply a ",
+         "PE function to be used.", call. = FALSE)
+  }
+
+  if (!is.function(PE_method)) {
+    if (!(PE_method %in% c('ridge', 'xgb'))) {
+      stop("`PE_method` must be one of 'ridge' or 'xgb', or a user-supplied function.")
+    }
   }
 
   if (!is.null(user_PE_fit_params) & is.null(user_PE_fit)) {

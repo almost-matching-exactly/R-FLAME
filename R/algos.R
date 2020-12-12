@@ -218,7 +218,7 @@ FLAME <-
 
     # Check the !identical clause
     if (!is.null(user_PE_fit) | !is.null(user_PE_fit_params) |
-        !identical(user_PE_predict, predict)|!is.null(user_PE_predict_params)) {
+        !is.null(user_PE_predict) | !is.null(user_PE_predict_params)) {
       warning('Arguments `user_PE_fit`, `user_PE_fit_params` ',
               '`user_PE_predict`, and `user_PE_predict_params` are ',
               'deprecated and will be removed in a future release. Please use ',
