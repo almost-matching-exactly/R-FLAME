@@ -69,30 +69,38 @@
 #' @param outcome_column_name A character with the name of the outcome column in
 #'   \code{holdout} and also in \code{data}, if supplied in the latter.
 #'   Defaults to 'outcome'.
-#' @param PE_method Either "ridge" or "xgb". Denotes the method to be used to
-#'   compute PE. If "ridge", uses \code{glmnet::cv.glmnet} with default
-#'   parameters and then the default predict method to estimate the outcome. If
-#'   "xgb", uses \code{xgboost::xgb.cv} on a wide range of parameter values to
-#'   cross-validate and find the best with respect to RMSE (for continuous
-#'   outcomes) or misclassification rate (for binary/multi-class outcomes). Then
-#'   uses the default \code{predict} method to estimate the outcome. Defaults to
-#'   "ridge".
-#' @param user_PE_fit An optional function supplied by the user that can be used
-#'   instead of those allowed for by \code{PE_method} to fit a model for the
-#'   outcome from the covariates. Must take in a matrix of covariates as its
-#'   first argument and a vector outcome as its second argument. Defaults to
-#'   \code{NULL}.
-#' @param user_PE_fit_params A named list of optional parameters to be used by
-#'   \code{user_PE_fit}. Defaults to \code{NULL}.
-#' @param user_PE_predict An optional function supplied by the user that can be
-#'   used to generate predictions from the output of \code{user_PE_fit}. As its
-#'   first argument, must take an object of the type returned by
-#'  \code{user_PE_fit} and as its second, a matrix of values for which to
-#'  generate predictions. When the outcome is binary or multi-class, must
-#'  return the maximum probability class label. If not supplied,
-#'  defaults to \code{predict}.
-#' @param user_PE_predict_params A named list of optional parameters to be used
-#'   by \code{user_PE_predict}. Defaults to \code{NULL}.
+#' @param PE_method Denotes how predictive error (PE) is to be computed. Either
+#'   a string -- one of "ridge" (default) or "xgb" -- or a function. If "ridge",
+#'   ridge regression is used to fit a an outcome regression model via
+#'   \code{glmnet::cv.glmnet} with default parameters. If "xgb", gradient
+#'   boosting with a wide range of parameter values to cross-validate is used
+#'   via \code{xgboost::xgb.cv} and the best parameters with respect to RMSE
+#'   (for continuous outcomes) or misclassification rate (for binary/multi-class
+#'   outcomes) are chosen. In both cases, the default \code{predict} method is
+#'   used to generate in-sample predictions. If a function, denotes a
+#'   user-supplied function that should be used for computing PE. Must take in a
+#'   matrix of covariates as its first argument (model matrix?) and a vector
+#'   outcome as its second argument. Must return a vector of in-sample
+#'   predictions, which, if the outcome is binary or multi-class, must be
+#'   maximum probability class labels.
+#' @param user_PE_fit Deprecated; use argument `PE_method` instead. An optional
+#'   function supplied by the user that can be used instead of those allowed for
+#'   by \code{PE_method} to fit a model for the outcome from the covariates.
+#'   Must take in a matrix of covariates as its first argument and a vector
+#'   outcome as its second argument. Defaults to \code{NULL}.
+#' @param user_PE_fit_params Deprecated; use argument `PE_method` instead. A
+#'   named list of optional parameters to be used by \code{user_PE_fit}.
+#'   Defaults to \code{NULL}.
+#' @param user_PE_predict Deprecated; use argument `PE_method` instead. An
+#'   optional function supplied by the user that can be used to generate
+#'   predictions from the output of \code{user_PE_fit}. As its first argument,
+#'   must take an object of the type returned by \code{user_PE_fit} and as its
+#'   second, a matrix of values for which to generate predictions. When the
+#'   outcome is binary or multi-class, must return the maximum probability class
+#'   label. If not supplied, defaults to \code{predict}.
+#' @param user_PE_predict_params Deprecated; use argument `PE_method` instead. A
+#'   named list of optional parameters to be used by \code{user_PE_predict}.
+#'   Defaults to \code{NULL}.
 #' @param replace A logical scalar. If \code{TRUE}, allows the same unit to be
 #'   matched multiple times, on different sets of covariates. In this case,
 #'   balancing factor is computing by dividing by the total number of treatment
@@ -207,6 +215,15 @@ FLAME <-
 
     missing_data <- match.arg(missing_data)
     missing_holdout <- match.arg(missing_holdout)
+
+    # Check the !identical clause
+    if (!is.null(user_PE_fit) | !is.null(user_PE_fit_params) |
+        !identical(user_PE_predict, predict)|!is.null(user_PE_predict_params)) {
+      warning('Arguments `user_PE_fit`, `user_PE_fit_params` ',
+              '`user_PE_predict`, and `user_PE_predict_params` are ',
+              'deprecated and will be removed in a future release. Please use ',
+              '`PE_method` instead.', call. = FALSE)
+    }
 
     if (missing_data_imputations != 1) {
       missing_data_imputations <- 1
