@@ -78,16 +78,17 @@
 #'   (for continuous outcomes) or misclassification rate (for binary/multi-class
 #'   outcomes) are chosen. In both cases, the default \code{predict} method is
 #'   used to generate in-sample predictions. If a function, denotes a
-#'   user-supplied function that should be used for computing PE. Must take in a
-#'   matrix of covariates as its first argument (model matrix?) and a vector
-#'   outcome as its second argument. Must return a vector of in-sample
-#'   predictions, which, if the outcome is binary or multi-class, must be
-#'   maximum probability class labels.
+#'   user-supplied function that should be used for computing PE. This function
+#'   will be passed a data frame of covariates as its first argument and a
+#'   vector of outcome values as its second argument. It must return a vector of
+#'   in-sample predictions, which, if the outcome is binary or multi-class, must
+#'   be maximum probability class labels. See below for examples.
 #' @param user_PE_fit Deprecated; use argument `PE_method` instead. An optional
 #'   function supplied by the user that can be used instead of those allowed for
 #'   by \code{PE_method} to fit a model for the outcome from the covariates.
-#'   Must take in a matrix of covariates as its first argument and a vector
-#'   outcome as its second argument. Defaults to \code{NULL}.
+#'   This function will be passed a data frame of covariates
+#'   as its first argument and a vector of outcome values as its
+#'   second argument. See below for examples. Defaults to \code{NULL}.
 #' @param user_PE_fit_params Deprecated; use argument `PE_method` instead. A
 #'   named list of optional parameters to be used by \code{user_PE_fit}.
 #'   Defaults to \code{NULL}.
@@ -193,6 +194,10 @@
 #' data <- gen_data()
 #' holdout <- gen_data()
 #' FLAME_out <- FLAME(data = data, holdout = holdout)
+#' ## Use a linear model to compute predictive error
+#' my_PE <- function(X, Y) {
+#'   return(lm(Y ~ ., as.data.frame(cbind(X, Y = Y)))$fitted.values)
+#' }
 #' @importFrom stats model.matrix predict rbinom rnorm var
 #' @importFrom utils flush.console read.csv write.csv
 #' @importFrom devtools load_all

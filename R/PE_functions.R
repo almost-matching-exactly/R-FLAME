@@ -8,6 +8,10 @@ cv_xgboost <- function(X, Y, obj) {
   nrounds <- c(5, 10, 50, 200, 500)
   subsample <- c(0.1, 0.3, 0.5, 0.75, 1)
 
+  if (is.factor(Y)) {
+    Y <- as.numeric(Y) - 1
+  }
+
   param_combs <-
     expand.grid(eta, max_depth, alpha, nrounds, subsample)
 
@@ -52,21 +56,15 @@ cv_xgboost <- function(X, Y, obj) {
 setup_preds <- function(holdout, covs, covs_to_drop) {
 
   cov_set <- setdiff(covs, covs_to_drop)
+  n_cols <- ncol(holdout)
 
   # Split the data into treat, control
-  # The model.matrix function binarizes categorical covariates
-  n_cols <- ncol(holdout)
 
   Y_treat <- holdout$outcome[holdout$treated == 1]
   Y_control <- holdout$outcome[holdout$treated == 0]
 
-  covs_treat <- holdout[holdout$treated == 1, c(cov_set, n_cols - 1)]
-
-  X_treat <- model.matrix(outcome ~ ., covs_treat)
-
-  covs_control <- holdout[holdout$treated == 0, c(cov_set, n_cols - 1)]
-
-  X_control <- model.matrix(outcome ~ ., covs_control)
+  X_treat <- holdout[holdout$treated == 1, c(cov_set, n_cols - 1)]
+  X_control <- holdout[holdout$treated == 0, c(cov_set, n_cols - 1)]
 
   return(list(X_treat = X_treat,
               X_control = X_control,
@@ -90,13 +88,11 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params,
   # actually don't think you can because the arg names are dif. for xgboost
   # could get around this by introducing nfolds argument in xgboost and calling
   # obj family, but will think / leave for later
-  if (is.factor(Y)) {
-    Y <- as.numeric(Y) - 1
-  }
-  if (is.null(user_fit_predict)) {
-    # browser()
-    fit <- do.call(fit_fun, c(list(X, Y), fit_params))
 
+  # Only in the case that the user specifies nothing
+  if (is.null(user_fit_predict)) {
+    X <- model.matrix(outcome ~ ., data = X)
+    fit <- do.call(fit_fun, c(list(X, Y), fit_params))
     preds <- as.numeric(do.call(predict_fun, c(list(fit, X), predict_params)))
   }
   else {
@@ -152,19 +148,16 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
                    user_PE_fit, user_PE_fit_params,
                    user_PE_predict, user_PE_predict_params) {
 
-  # If the user supplies a PE method the "new" way
   user_fit_predict <- NULL
+  user_passed <- FALSE # Purely for back-compatibility
 
-  # Four options:
-  # 1. OK: PE_method is ridge/xgb and user_PE* is NULL
-  # 2. PE_method is a function and user_PE* is NULL
-  # 3. OK: PE_method is a function and user_PE* is not NULL (should catch this)
-  # 4. OK: PE_method is ridge / xgb and user_PE* is not NULL
   PE_predict_params <- list()
 
   if (!is.null(user_PE_fit)) {
     PE_fit <- user_PE_fit
     PE_fit_params <- user_PE_fit_params
+
+    user_passed <- TRUE
   }
   else {
     if (is.function(PE_method)) {
@@ -209,6 +202,16 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
   }
   else {
     PE_predict <- predict
+    PE_predict_params <- list()
+  }
+
+  # Purely for back-compatibility
+  if (user_passed) {
+    user_fit_predict <- function(X, Y) {
+      fit <- do.call(PE_fit, c(list(X, Y), PE_fit_params))
+      preds <- as.numeric(do.call(PE_predict,
+                                  c(list(fit, X), PE_predict_params)))
+    }
   }
 
   PE <- predict_master(holdout, covs, covs_to_drop,
