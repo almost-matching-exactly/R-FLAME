@@ -29,6 +29,7 @@ cv_xgboost <- function(X, Y, obj) {
     if (obj == 'multi:softmax') {
       params <- c(params, list(num_class = length(unique(Y))))
     }
+
     cv <-
       xgboost::xgb.cv(data = X,
                       label = Y,
@@ -44,10 +45,11 @@ cv_xgboost <- function(X, Y, obj) {
   if (obj == 'multi:softmax') {
     params <- c(params, list(num_class = length(unique(Y))))
   }
+  params$nrounds <- NULL
   fit <- xgboost::xgboost(data = X,
                   label = Y,
                   params = params,
-                  nround = best_params$nrounds,
+                  nrounds = best_params$nrounds,
                   verbose = 0)
 
   return(fit)
@@ -63,8 +65,8 @@ setup_preds <- function(holdout, covs, covs_to_drop) {
   Y_treat <- holdout$outcome[holdout$treated == 1]
   Y_control <- holdout$outcome[holdout$treated == 0]
 
-  X_treat <- holdout[holdout$treated == 1, c(cov_set, n_cols - 1)]
-  X_control <- holdout[holdout$treated == 0, c(cov_set, n_cols - 1)]
+  X_treat <- holdout[holdout$treated == 1, cov_set, drop = F]
+  X_control <- holdout[holdout$treated == 0, cov_set, drop = F]
 
   return(list(X_treat = X_treat,
               X_control = X_control,
@@ -72,18 +74,17 @@ setup_preds <- function(holdout, covs, covs_to_drop) {
               Y_control = Y_control))
 }
 
-get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params,
+get_error <- function(X, Y, PE_method,
+                      fit_fun, predict_fun, fit_params, predict_params,
                       user_fit_predict) {
 
-  if (length(unique(Y)) == 2) {
-    outcome_type <- 'binary'
-  }
-  else if (is.factor(Y)) {
-    outcome_type <- 'multiclass'
-  }
-  else {
+  if (!is.factor(Y) & length(unique(Y)) > 2) {
     outcome_type <- 'continuous'
   }
+  else {
+    outcome_type <- 'discrete'
+  }
+
 #####  should compute obj and family here so as not to do it in get_PE
   # actually don't think you can because the arg names are dif. for xgboost
   # could get around this by introducing nfolds argument in xgboost and calling
@@ -91,19 +92,49 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params,
 
   # Only in the case that the user specifies nothing
   if (is.null(user_fit_predict)) {
-    X <- model.matrix(outcome ~ ., data = X)
+    X <- model.matrix(~ ., data = X)
     fit <- do.call(fit_fun, c(list(X, Y), fit_params))
-    preds <- as.numeric(do.call(predict_fun, c(list(fit, X), predict_params)))
+    if (PE_method == 'ridge') {
+      if (outcome_type == 'continuous') {
+        preds <- predict(fit, X)
+      }
+      else {
+        preds <- predict(fit, X, type = 'class')
+      }
+    }
+    else if (PE_method == 'xgb') {
+      if (is.factor(Y)) {
+        if (length(unique(Y)) == 2) {
+          preds <- levels(Y)[(predict(fit, X) > 0.5) + 1]
+        }
+        else {
+          preds <- levels(Y)[predict(fit, X) + 1]
+        }
+      }
+      else {
+        if (length(unique(Y)) == 2) {
+          preds <- predict(fit, X) > 0.5
+        }
+        else {
+          preds <- predict(fit, X)
+        }
+      }
+    }
+    else {
+      stop('Unimplemented PE_method')
+    }
   }
   else {
     preds <- user_fit_predict(X, Y)
   }
 
-  if (outcome_type == 'binary') {
-    preds <- preds > 0.5 # to take care of xgboost
-  }
+  browser()
 
   if (outcome_type != 'continuous') {
+    if (length(unique(preds)) > length(unique(Y))) {
+      warning('It looks like your function for computing PE ',
+              'does not return predicted class labels.', call. = FALSE)
+    }
     error <- mean(preds != Y)
   }
   else {
@@ -114,7 +145,7 @@ get_error <- function(X, Y, fit_fun, predict_fun, fit_params, predict_params,
 }
 
 predict_master <-
-  function(holdout, covs, covs_to_drop,
+  function(holdout, covs, covs_to_drop, PE_method,
            PE_fit, PE_predict, PE_fit_params, PE_predict_params,
            user_fit_predict) {
 
@@ -130,12 +161,12 @@ predict_master <-
     Y_control <- setup_out[[4]]
 
     error_treat <-
-      get_error(X_treat, Y_treat,
+      get_error(X_treat, Y_treat, PE_method,
                PE_fit, PE_predict, PE_fit_params, PE_predict_params,
                user_fit_predict)
 
     error_control <-
-      get_error(X_control, Y_control,
+      get_error(X_control, Y_control, PE_method,
                 PE_fit, PE_predict, PE_fit_params, PE_predict_params,
                 user_fit_predict)
 
@@ -214,7 +245,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
     }
   }
 
-  PE <- predict_master(holdout, covs, covs_to_drop,
+  PE <- predict_master(holdout, covs, covs_to_drop, PE_method,
                        PE_fit, PE_predict, PE_fit_params, PE_predict_params,
                        user_fit_predict)
   return(PE)
