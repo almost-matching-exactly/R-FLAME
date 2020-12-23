@@ -128,8 +128,6 @@ get_error <- function(X, Y, PE_method,
     preds <- user_fit_predict(X, Y)
   }
 
-  browser()
-
   if (outcome_type != 'continuous') {
     if (length(unique(preds)) > length(unique(Y))) {
       warning('It looks like your function for computing PE ',

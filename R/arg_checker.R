@@ -20,6 +20,16 @@ check_args <-
 
   outcome_in_data <- !is.null(data[[outcome_column_name]])
 
+  if (outcome_in_data) {
+    outcome <- data[[outcome_column_name]]
+    if (is.numeric(outcome) && length(unique(outcome)) == 2) {
+      if (!all(sort(unique(outcome)) == c(0, 1))) {
+        stop('If the outcome column is binary and numeric, it must be coded ',
+             'with values 0 and 1.', call. = FALSE)
+      }
+    }
+  }
+
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
 

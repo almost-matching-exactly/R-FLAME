@@ -44,15 +44,16 @@
 #'   to be read into a data frame. Treatment must be described by a logical or
 #'   binary numeric column with name \code{treated_column_name}. Outcome must be
 #'   described by a column with name \code{outcome_column_name}. The outcome
-#'   will be treated as continuous if numeric, as binary if a two-level factor
-#'   or numeric with two unique values, and as multi-class if a factor with more
-#'   than two levels. The outcome column may be omitted, in which case matching
-#'   will be performed but treatment effect estimation will not be possible. All
-#'   columns not containing outcome or treatment will be treated as covariates
-#'   for matching. Covariates are assumed to be categorical and will be coerced
-#'   to factors, though they may be passed as either factors or numeric. If you
-#'   wish to use continuous covariates for matching, they should be binned prior
-#'   to being passed to \code{FLAME}. There is no default for \code{data}.
+#'   will be treated as continuous if numeric with more than two values, as
+#'   binary if a two-level factor or numeric with values 0 and 1 exclusively,
+#'   and as multi-class if a factor with more than two levels. The outcome
+#'   column may be omitted, in which case matching will be performed but
+#'   treatment effect estimation will not be possible. All columns not
+#'   containing outcome or treatment will be treated as covariates for matching.
+#'   Covariates are assumed to be categorical and will be coerced to factors,
+#'   though they may be passed as either factors or numeric. If you wish to use
+#'   continuous covariates for matching, they should be binned prior to being
+#'   passed to \code{FLAME}.
 #' @param holdout Holdout data to be used to compute predictive error. If a
 #'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
 #'   into a holdout set and only the remaining proportion of \code{data} will be
