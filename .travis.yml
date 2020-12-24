@@ -12,3 +12,8 @@ r_packages:
 
 after_success:
   - Rscript -e 'library(covr); codecov()'
+
+addons:
+  apt:
+    packages:
+      - libgit2-dev
