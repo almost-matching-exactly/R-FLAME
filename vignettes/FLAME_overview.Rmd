@@ -161,22 +161,62 @@ These are arguments that deal with features of the underlying FLAME algorithm.
 * `C`: The hyperparameter governing the relative weights of the balancing factor and predictive error in determining match quality. 
 * `replace`: If `TRUE`, allows the same unit to be matched multiple times, on different sets of covariates. For example, if `TRUE` and two units match exactly on all covariates, they will also match on every subsequent iteration of FLAME. 
 * `verbose`: Controls how FLAME displays progress while running. If 0, no output. If 1, only outputs the stopping condition. If 2, outputs the iteration and number of unmatched units every 5 iterations, and the stopping condition. If 3, outputs the iteration and number of unmatched units every iteration, and the stopping condition. 
-* `PE_method`: One of 'ridge' or 'xgb', respectively denoting whether ridge regression or xgboost is used to compute the predictive error on the holdout set. The former relies on `glmnet::cv.glmnet` and cross validates over $\lambda$, with `alpha = 0`, `nfolds = 5`, and all other parameters at their defaults. The latter relies on `xgboost::xgb.cv` and cross validates over a grid of `eta`, `max_depth`, `alpha`, `nrounds`, and `subsample`, leaving all other parameters at their defaults. Ignored if `user_PE_fit` is supplied.
-* `user_PE_fit` and `user_PE_fit_params`: `user_PE_fit`, is an optional, user supplied function that fits a model for an outcome from covariates. Must take in a matrix of covariates as its first argument and a vector outcome as its second argument. If supplied, `PE_method` will be ignored. `user_PE_fit_params`, is a named list of optional parameters to be used by `user_PE_fit`. 
-* `user_PE_predict` and `user_PE_predict_params`: `user_PE_predict` is an optional, user supplied function to generate predictions from the output of `user_PE_fit`. It must take the output of `user_PE_fit` as its first argument and a matrix of values for which to make predictions as its second argument. If not supplied, defaults to `predict`. `user_PE_predict_params` is a named list of optional parameters to be used by `user_PE_predict`.
+* `PE_method`: Either a string -- one of "ridge" (default) or "xgb" -- or a function. If "ridge", ridge regression is used to fit a an outcome regression model. If "xgb", gradient
+boosting with a wide range of parameter values to cross-validate is used. A function can also be supplied for computing PE. We provide examples of this usage below. 
 
-To illustrate the usage of these last four parameters, we can have `FLAME` compute PE via Bayesian Additive Regression Trees (BART) with 100 trees as follows:
+## User Supplied Functions for Computing Predictive Error
+We can supply our own methods for computing PE by passing a function to the 
+`PE_method` argument. This function must accept two arguments -- a 
+data frame of covariates and a vector of outcome values, in that order -- and 
+return a vector of in-sample predictions which, if the outcome is binary or multi-class, must be maximum probability class labels.
+
+For example, we can have `FLAME` compute PE using linear models as follows:
 ```{r, eval=F}
-my_fit <- dbarts::bart
-my_fit_params <- list(ntree = 100, verbose = FALSE, keeptrees = TRUE)
-my_predict <- function(bart_fit, new_data) {
-  return(colMeans(predict(bart_fit, new_data)))
+my_PE_linear <- function(X, Y) {
+  fit <- lm(Y ~ ., data = as.data.frame(cbind(X, Y = Y)))
+  return(fit$fitted.values)
 }
-FLAME_out <- 
-  FLAME(data = data, holdout = holdout, 
-        user_PE_fit = my_fit, user_PE_fit_params = my_fit_params,
-        user_PE_predict = my_predict)
+FLAME_out <- FLAME(data = data, holdout = holdout, PE_method = my_PE_linear)
 ```
+
+We emphasize that these functions must take in a _data frame_ of covariates as
+their first argument. Many implementations of machine learning algorithms require
+that covariates be passed in matrix form, with factor variables binarized. In 
+such cases, the function passed to `PE_method` should convert the data frame
+appropriately, as with `model.matrix`. Such an example, in which LASSO is used
+to compute PE, is shown below:
+```{r, eval=F}
+my_PE_lasso <- function(X, Y) {
+  df <- as.data.frame(cbind(X, Y = Y))
+  X <- model.matrix(Y ~ ., data = df)
+  fit <- glmnet::cv.glmnet(X, Y, alpha = 1, nfolds = 5)
+  return(predict(fit, X))
+}
+
+FLAME_out <- FLAME(data = data, holdout = holdout, PE_method = my_PE_lasso)
+```
+
+If the outcome is binary or multiclass, the supplied function must return the maximum 
+probability class instead of, for example, class probabilities. As an example,
+we use LASSO-penalized logistic regression with the outcome coded as binary 0-1
+and ensure the `predict` method is called with argument `type = 'class'`. 
+```{r, eval=F}
+# Recode the outcome to numeric 0 1
+data$outcome <- ifelse(data$outcome > median(data$outcome), 1, 0)
+holdout$outcome <- ifelse(holdout$outcome > median(holdout$outcome), 1, 0)
+
+my_PE_lr <- function(X, Y) {
+  df <- as.data.frame(cbind(X, Y = Y))
+  X <- model.matrix(Y ~ ., data = df)
+  fit <- glmnet::cv.glmnet(X, Y, alpha = 1, nfolds = 5, family = 'binomial')
+  return(predict(fit, X, type = 'class'))
+}
+
+FLAME_out <- FLAME(data = data, holdout = holdout, PE_method = my_PE_lr)
+```
+
+The same should be done if the outcome is coded as a factor or if the outcome
+has more than 2 classes. 
 
 ## Early Stopping Arguments
 By default, FLAME terminates when all covariates have been dropped or all control / treatment units have been matched. There are various early stopping arguments that can be supplied to alter this behavior. In all cases, however, FLAME still terminates if all covariates have been dropped or all control / treatment units have been matched, even if the user-specified stopping condition has not yet been met. 

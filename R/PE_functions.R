@@ -76,7 +76,7 @@ setup_preds <- function(holdout, covs, covs_to_drop) {
 
 get_error <- function(X, Y, PE_method,
                       fit_fun, predict_fun, fit_params, predict_params,
-                      user_fit_predict) {
+                      user_fit_predict, user_backpassed) {
 
   if (!is.factor(Y) & length(unique(Y)) > 2) {
     outcome_type <- 'continuous'
@@ -84,11 +84,6 @@ get_error <- function(X, Y, PE_method,
   else {
     outcome_type <- 'discrete'
   }
-
-#####  should compute obj and family here so as not to do it in get_PE
-  # actually don't think you can because the arg names are dif. for xgboost
-  # could get around this by introducing nfolds argument in xgboost and calling
-  # obj family, but will think / leave for later
 
   # Only in the case that the user specifies nothing
   if (is.null(user_fit_predict)) {
@@ -125,6 +120,10 @@ get_error <- function(X, Y, PE_method,
     }
   }
   else {
+    if (user_backpassed) {
+      X <- model.matrix(~ ., data = X)
+    }
+
     preds <- user_fit_predict(X, Y)
   }
 
@@ -145,7 +144,7 @@ get_error <- function(X, Y, PE_method,
 predict_master <-
   function(holdout, covs, covs_to_drop, PE_method,
            PE_fit, PE_predict, PE_fit_params, PE_predict_params,
-           user_fit_predict) {
+           user_fit_predict, user_backpassed) {
 
   n_imputations <- length(holdout) # List of data frames
 
@@ -161,12 +160,12 @@ predict_master <-
     error_treat <-
       get_error(X_treat, Y_treat, PE_method,
                PE_fit, PE_predict, PE_fit_params, PE_predict_params,
-               user_fit_predict)
+               user_fit_predict, user_backpassed)
 
     error_control <-
       get_error(X_control, Y_control, PE_method,
                 PE_fit, PE_predict, PE_fit_params, PE_predict_params,
-                user_fit_predict)
+                user_fit_predict, user_backpassed)
 
     PE[i] <- error_treat + error_control
   }
@@ -178,7 +177,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
                    user_PE_predict, user_PE_predict_params) {
 
   user_fit_predict <- NULL
-  user_passed <- FALSE # Purely for back-compatibility
+  user_backpassed <- FALSE # For back-compatibility; to be removed in future
 
   PE_predict_params <- list()
 
@@ -186,7 +185,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
     PE_fit <- user_PE_fit
     PE_fit_params <- user_PE_fit_params
 
-    user_passed <- TRUE
+    user_backpassed <- TRUE
   }
   else {
     if (is.function(PE_method)) {
@@ -226,6 +225,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
   }
 
   if (!is.null(user_PE_predict)) {
+    user_backpassed <- TRUE
     PE_predict <- user_PE_predict
     PE_predict_params <- user_PE_predict_params
   }
@@ -235,16 +235,15 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
   }
 
   # Purely for back-compatibility
-  if (user_passed) {
+  if (user_backpassed) {
     user_fit_predict <- function(X, Y) {
       fit <- do.call(PE_fit, c(list(X, Y), PE_fit_params))
-      preds <- as.numeric(do.call(PE_predict,
-                                  c(list(fit, X), PE_predict_params)))
+      preds <- do.call(PE_predict, c(list(fit, X), PE_predict_params))
     }
   }
 
   PE <- predict_master(holdout, covs, covs_to_drop, PE_method,
                        PE_fit, PE_predict, PE_fit_params, PE_predict_params,
-                       user_fit_predict)
+                       user_fit_predict, user_backpassed)
   return(PE)
 }

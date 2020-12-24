@@ -23,6 +23,7 @@ run_AME <- function(data, active_cov_sets, processed_cov_sets, early_stop_params
     }
     iter <- iter + 1
     show_progress(verbose, iter, data, algo)
+
     cov_sets <- update_cov_sets(active_cov_sets, processed_cov_sets, covs, weights, C, algo,
                                 data, holdout,
                                 PE_method, user_PE_fit, user_PE_fit_params,

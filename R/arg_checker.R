@@ -124,8 +124,9 @@ check_args <-
   }
 
   if (is.function(PE_method) & !is.null(user_PE_fit)) {
-    stop("Please do not use both `PE_method` and `user_PE_fit` to supply a ",
-         "PE function to be used.", call. = FALSE)
+    stop('`PE_method` and `user_PE_fit` should not both be supplied. ',
+         'We recommend the former as the latter will soon be deprecated.',
+         call. = FALSE)
   }
 
   if (!is.function(PE_method)) {
