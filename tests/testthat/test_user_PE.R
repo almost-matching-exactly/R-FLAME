@@ -40,8 +40,8 @@ test_that("user continuous PE methods works", {
 test_that("user binary factor PE methods works", {
   data <- gen_data(500, 4)
   holdout <- gen_data(500, 4)
-  data$outcome %<>% cut(breaks = 2, labels = c('A', 'B'))
-  holdout$outcome %<>% cut(breaks = 2, labels = c('A', 'B'))
+  data$outcome <- cut(data$outcome, breaks = 2, labels = c('A', 'B'))
+  holdout$outcome <- cut(holdout$outcome, breaks = 2, labels = c('A', 'B'))
   flout <- FLAME(data, holdout, PE_method = my_PE_bin)
   expect_true(TRUE)
 })
@@ -58,8 +58,8 @@ test_that("user binary numeric PE methods works", {
 test_that("user multiclass PE methods works", {
   data <- gen_data(500, 4)
   holdout <- gen_data(500, 4)
-  data$outcome %<>% cut(breaks = 3, labels = c('A', 'B', 'C'))
-  holdout$outcome %<>% cut(breaks = 3, labels = c('A', 'B', 'C'))
+  data$outcome <- cut(data$outcome, breaks = 3, labels = c('A', 'B', 'C'))
+  holdout$outcome <- cut(holdout$outcome, breaks = 3, labels = c('A', 'B', 'C'))
   flout <- FLAME(data, holdout, PE_method = my_PE_multiclass)
   expect_true(TRUE)
 })
@@ -104,8 +104,8 @@ test_that("old user binary numeric PE methods work", {
 test_that("old user binary factor PE methods work", {
   data <- gen_data(500, 4)
   holdout <- gen_data(500, 4)
-  data$outcome %<>% cut(breaks = 2, labels = c('A', 'B'))
-  holdout$outcome %<>% cut(breaks = 2, labels = c('A', 'B'))
+  data$outcome <- cut(data$outcome, breaks = 2, labels = c('A', 'B'))
+  holdout$outcome <- cut(holdout$outcome, breaks = 2, labels = c('A', 'B'))
   my_fit <- glmnet::cv.glmnet
   my_fit_params <- list(nfolds = 5, family = 'binomial')
   my_predict <- predict
@@ -123,8 +123,8 @@ test_that("old user binary factor PE methods work", {
 test_that("old user multiclass PE methods work", {
   data <- gen_data(500, 4)
   holdout <- gen_data(500, 4)
-  data$outcome %<>% cut(breaks = 3, labels = c('A', 'B', 'C'))
-  holdout$outcome %<>% cut(breaks = 3, labels = c('A', 'B', 'C'))
+  data$outcome <- cut(data$outcome, breaks = 3, labels = c('A', 'B', 'C'))
+  holdout$outcome <- cut(holdout$outcome, breaks = 3, labels = c('A', 'B', 'C'))
   my_fit <- glmnet::cv.glmnet
   my_fit_params <- list(nfolds = 5, family = 'multinomial')
   my_predict <- predict

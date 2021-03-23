@@ -13,9 +13,10 @@ strip_missing <- function(vals) {
 
 test_that("replaced values don't show", {
   p <- 3
+  weights <- runif(p)
   data <- gen_missing_data(n = 250, p = p)
   holdout <- gen_data(n = 250, p = p)
-  flout <- FLAME(data = data, holdout = holdout, missing_data = 3)
+  flout <- FLAME(data = data, holdout = holdout, missing_data = 'impute', weights = weights)
   no_extra_vals <-
     sapply(1:p, function(cov) {
       length(setdiff(unique(strip_missing(flout$data[[cov]])), unique(data[[cov]]))) == 0
@@ -24,10 +25,11 @@ test_that("replaced values don't show", {
 })
 
 p <- 4
+weights <- runif(p)
 n <- 250
 data <- gen_data(n = n, p = p)
 holdout <- gen_data(n = n, p = p)
-flout <- FLAME(data = data, holdout = holdout)
+flout <- FLAME(data = data, holdout = holdout, weights = weights)
 replace_inds_data <- c(sample(1:n, 1), sample(1:p, 1))
 replace_inds_holdout <- c(sample(1:n, 1), sample(1:p, 1))
 data[replace_inds_data[1], replace_inds_data[2]] <- NA
@@ -40,9 +42,9 @@ MG_of_missing <- MG(replace_inds_data[1], flout, index_only = TRUE)
 matched_on_missing <-
   flout$data[replace_inds_data[1], replace_inds_data[2]] != '*'
 
-test_that("missing option 1 works", {
+test_that("dropping missing data works", {
   flout1 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 1, missing_holdout = 1)
+                  missing_data = 'drop', missing_holdout = 'drop', weights = weights)
 
   # Avoid case in which the unit made missing was the only match for another unit
   # equivalent, not identical, to ignore discrepancies in factor levels due to ' (m)'
@@ -55,11 +57,11 @@ test_that("missing option 1 works", {
   }
 })
 
-test_that("missing option 2 works", {
+test_that("not matching on missing data works", {
   n_imps <- 2
   flout2 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 2, missing_holdout = 2,
-                  missing_data_imputations = n_imps)
+                  missing_data = 'ignore', missing_holdout = 'drop',
+                  missing_data_imputations = n_imps, weights = weights)
 
   for (i in 1:n_imps) {
     # the missingness may have made me eligible
@@ -75,9 +77,10 @@ test_that("missing option 2 works", {
   }
 })
 
+# Check if we changed the output format here
 test_that("missing option 3 works", {
   flout3 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 3, missing_holdout = 1)
+                  missing_data = 'impute', missing_holdout = 'drop', weights = weights)
 
   flout$data[[replace_inds_data[[2]]]] <-
     factor(flout$data[[replace_inds_data[[2]]]],
@@ -94,18 +97,13 @@ test_that("missing option 3 works", {
     }
   }
   else {
-    if (all(flout$dropped == flout3$dropped)) {
-      flout3$data[which(flout3$data == '* (m)', arr.ind = T)] <- '*'
-      expect_identical(flout$data, flout3$data)
-    }
-    else {
-      expect_true(TRUE)
-    }
+    flout3$data[which(flout3$data == '* (m)', arr.ind = T)] <- '*'
+    expect_identical(flout$data, flout3$data)
   }
 })
 
 test_that("imputation works with no outcome", {
   data$outcome <- NULL
-  flout <- FLAME(data, holdout, missing_data = 2, missing_holdout = 1)
+  flout <- FLAME(data, holdout, missing_data = 'ignore', missing_holdout = 'drop', weights = weights)
   expect_true(TRUE)
 })

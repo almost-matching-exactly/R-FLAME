@@ -139,7 +139,7 @@ handle_missing_data <-
              'supply `holdout` without missingness.')
       }
     }
-    else if (missing_holdout == 'ignore') {
+    else if (missing_holdout == 'drop') {
       holdout <- holdout[complete.cases(holdout), ]
     }
     else if (missing_holdout == 'impute') {

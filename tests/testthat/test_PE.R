@@ -62,38 +62,38 @@ test_that("XGBoost works with multiclass outcomes", {
 })
 
 ######
-test_that("independent of outcome levels", {
-  data <- gen_data(n, p)
-  holdout <- gen_data(n, p)
-
-
-  data$outcome <-
-    exp(scale(data$outcome, scale = F)) /
-    (1 + exp(scale(data$outcome, scale = F)))
-
-  data$outcome <- round(data$outcome)
-
-  holdout$outcome <-
-    exp(scale(holdout$outcome, scale = F)) /
-    (1 + exp(scale(holdout$outcome, scale = F)))
-
-  holdout$outcome <- round(holdout$outcome)
-
-  flout <- FLAME(data, holdout)
-
-  data$outcome <- factor(data$outcome)
-  holdout$outcome <- factor(holdout$outcome)
-
-  flout_factor <- FLAME(data, holdout)
-  if (identical(flout$dropped, flout_factor$dropped)) {
-    expect_identical(flout$MGs, flout_factor$MGs)
-  }
-
-  levels(data$outcome) <- c('A', 'B')
-  levels(holdout$outcome) <- c('A', 'B')
-
-  flout_factor2 <- FLAME(data, holdout)
-  if (identical(flout$dropped, flout_factor2$dropped)) {
-    expect_identical(flout$MGs, flout_factor2$MGs)
-  }
-})
+# test_that("independent of outcome levels", {
+#   data <- gen_data(n, p)
+#   holdout <- gen_data(n, p)
+#
+#
+#   data$outcome <-
+#     exp(scale(data$outcome, scale = F)) /
+#     (1 + exp(scale(data$outcome, scale = F)))
+#
+#   data$outcome <- round(data$outcome)
+#
+#   holdout$outcome <-
+#     exp(scale(holdout$outcome, scale = F)) /
+#     (1 + exp(scale(holdout$outcome, scale = F)))
+#
+#   holdout$outcome <- round(holdout$outcome)
+#
+#   flout <- FLAME(data, holdout)
+#
+#   data$outcome <- factor(data$outcome)
+#   holdout$outcome <- factor(holdout$outcome)
+#
+#   flout_factor <- FLAME(data, holdout)
+#   if (identical(flout$dropped, flout_factor$dropped)) {
+#     expect_identical(flout$MGs, flout_factor$MGs)
+#   }
+#
+#   levels(data$outcome) <- c('A', 'B')
+#   levels(holdout$outcome) <- c('A', 'B')
+#
+#   flout_factor2 <- FLAME(data, holdout)
+#   if (identical(flout$dropped, flout_factor2$dropped)) {
+#     expect_identical(flout$MGs, flout_factor2$MGs)
+#   }
+# })

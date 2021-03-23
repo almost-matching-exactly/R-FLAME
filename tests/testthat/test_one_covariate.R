@@ -45,18 +45,18 @@ test_that("column order doesn't matter", {
 df$X[sample(1:n, 10)] <- NA
 holdout$X[sample(1:n, 10)] <- NA
 
-test_that("runs with missingness 1", {
-  flout <- FLAME(df, holdout, missing_data = 1, missing_holdout = 1)
+test_that("runs with 'drop' missingness", {
+  flout <- FLAME(df, holdout, missing_data = 'drop', missing_holdout = 'drop')
   expect_true(TRUE)
 })
 
-test_that("runs with missingness 2", {
-  flout <- FLAME(df, holdout, missing_data = 2, missing_holdout = 2)
+test_that("runs with 'impute' missingness", {
+  flout <- FLAME(df, holdout, missing_data = 'impute', missing_holdout = 'impute')
   expect_true(TRUE)
 })
 
-test_that("runs with missingness 3", {
-  flout <- FLAME(df, holdout, missing_data = 3, missing_holdout = 1)
+test_that("runs with 'ignore' missingness", {
+  flout <- FLAME(df, holdout, missing_data = 'ignore', missing_holdout = 'drop')
   expect_true(TRUE)
 })
 

@@ -13,9 +13,10 @@ strip_missing <- function(vals) {
 
 n <- 250
 p <- 5
+weights = runif(p)
 data <- gen_data(n = n, p = p)
 holdout <- gen_data(n = n, p = p)
-flout_not_0_ind <- FLAME(data, holdout, C = 1e5)
+flout_not_0_ind <- FLAME(data, holdout, weights = weights)
 
 ## Careful because these tests depend on the covariates generated
 ## in gen_data.
@@ -27,7 +28,7 @@ mapping <- rep(list(mapping), p)
 data_0_ind <- factor_remap(data, mapping = mapping)$df
 holdout_0_ind <- factor_remap(holdout, mapping = mapping)$df
 
-flout_0_ind <- FLAME(data_0_ind, holdout_0_ind, C = 1e5)
+flout_0_ind <- FLAME(data_0_ind, holdout_0_ind, weights = weights)
 
 test_that("non 0 indexed factors work", {
   expect_identical(flout_not_0_ind$MGs, flout_0_ind$MGs)
@@ -41,7 +42,7 @@ test_that("non consecutive-level factors work", {
   data_non_consec <- factor_remap(data, mapping = mapping)$df
   holdout_non_consec <- factor_remap(holdout, mapping = mapping)$df
 
-  flout_non_consec <- FLAME(data_non_consec, holdout_non_consec, C = 1e5)
+  flout_non_consec <- FLAME(data_non_consec, holdout_non_consec, weights = weights)
   expect_identical(flout_non_consec$MGs, flout_0_ind$MGs)
 })
 
@@ -54,11 +55,11 @@ test_that("non numeric factors work", {
   data_non_num <- factor_remap(data, mapping = mapping)$df
   holdout_non_num <- factor_remap(holdout, mapping = mapping)$df
 
-  flout_non_num <- FLAME(data_non_num, holdout_non_num, C = 1e5)
+  flout_non_num <- FLAME(data_non_num, holdout_non_num, weights = weights)
   expect_identical(flout_non_num$MGs, flout_0_ind$MGs)
 })
 
-test_that("missing data 3 doesn't leave new levels", {
+test_that("missing data 'impute' doesn't leave new levels", {
   mapping <- as.character(c(1, 2, 3, 4))
   names(mapping) <- c('white', 'hispanic', 'black', 'asian')
   mapping <- rep(list(mapping), p)
@@ -70,7 +71,7 @@ test_that("missing data 3 doesn't leave new levels", {
   for (i in 1:p) {
     data_non_num[[i]][sample(1:n, 10)] <- NA
   }
-  flout <- FLAME(data_non_num, holdout_non_num, missing_data = 3)
+  flout <- FLAME(data_non_num, holdout_non_num, missing_data = 'impute', weights = weights)
   levels_out <- lapply(flout$data[, 1:p], levels)
   no_extra_vals <-
     sapply(1:p, function(cov) {
