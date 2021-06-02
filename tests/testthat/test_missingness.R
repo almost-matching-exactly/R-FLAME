@@ -11,6 +11,33 @@ strip_missing <- function(vals) {
   return(setdiff(sapply(tmp, paste, collapse = ' ', sep = ''), '*'))
 }
 
+test_that("missing_data `drop` works", {
+  p <- 5
+  n <- 2500
+  weights <- runif(p)
+  data <- gen_missing_data(n, p)
+  holdout <- gen_data(n, p)
+
+  n_miss <- 250
+
+  data[arrayInd(sample(n * p, n_miss), c(n, p))] <- NA
+
+  # Drop missingness before
+  ATE_predrop <- ATE(FLAME(tidyr::drop_na(data), holdout, weights = weights))
+
+  # Drop missingness within algo
+  ATE_algodrop <- ATE(FLAME(data, holdout, missing_data = 'drop', weights = weights))
+
+  expect_equal(ATE_predrop, ATE_algodrop)
+
+  ATE_predrop <- ATE(DAME(tidyr::drop_na(data), holdout, weights = weights))
+
+  # Drop missingness within algo
+  ATE_algodrop <- ATE(DAME(data, holdout, missing_data = 'drop', weights = weights))
+
+  expect_equal(ATE_predrop, ATE_algodrop)
+})
+
 test_that("replaced values don't show", {
   p <- 3
   weights <- runif(p)

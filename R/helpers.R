@@ -88,7 +88,7 @@ make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched) {
 }
 
 process_matches <- function(data, replace, covs, MGs) {
-  match_out <- exact_match_bit(data[!data$missing, ], covs, replace)
+  match_out <- exact_match_bit(data, covs, replace)
   valid_matches <- match_out$valid_matches
   match_vals <- match_out$match_vals
   newly_matched <- match_out$newly_matched
