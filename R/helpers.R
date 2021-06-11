@@ -76,15 +76,20 @@ exact_match_bit <- function(data, covs, replace) {
               matched = matched))
 }
 
-make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched) {
+make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched, data) {
   # b_u values for those first matched on this cov set
   newly_matched_vals <- match_vals[match(newly_matched, valid_matches)]
 
+  MG_ids <- match(as.character(newly_matched_vals), as.character(unique(newly_matched_vals)))
+
+  MG_counter <- max(data$MG)
   for (i in seq_along(newly_matched)) {
-    MGs[[newly_matched[i]]] <-
-      valid_matches[match_vals == newly_matched_vals[i]]
+    new_MG <- valid_matches[match_vals == newly_matched_vals[i]]
+    MGs[[newly_matched[i]]] <- new_MG
+
+    data$MG[new_MG] <- MG_counter + MG_ids[i]
   }
-  return(MGs)
+  return(list(MGs, data))
 }
 
 process_matches <- function(data, replace, covs, MGs) {
@@ -97,29 +102,29 @@ process_matches <- function(data, replace, covs, MGs) {
   made_new_matches <- length(newly_matched) > 0
 
   if (made_new_matches) {
-    MGs <- make_MGs(MGs, valid_matches, match_vals, matched, newly_matched)
+    MG_out <- make_MGs(MGs, valid_matches, match_vals, matched, newly_matched, data)
+    MGs <- MG_out[[1]]
+    data <- MG_out[[2]]
   }
   return(list(MGs = MGs,
               newly_matched = newly_matched,
-              matched = matched))
+              matched = matched,
+              data = data))
 }
 
-update_matches <- function(data, match_data, replace, dropped_cov_set, n_covs, MGs) {
-  processed_matches <- process_matches(match_data, replace, setdiff(1:n_covs, dropped_cov_set), MGs)
+update_matches <- function(data, replace, dropped_cov_set, n_covs, MGs) {
+  processed_matches <- process_matches(data, replace, setdiff(1:n_covs, dropped_cov_set), MGs)
 
   MGs <- processed_matches[[1]]
   newly_matched <- processed_matches[[2]]
   matched <- processed_matches[[3]]
+  data <- processed_matches[[4]]
 
   if (length(newly_matched) > 0) {
-    data[newly_matched, dropped_cov_set] <- '*'
     data$matched[newly_matched] <- TRUE
     data$weight[matched] <- data$weight[matched] + 1
-
-    match_data$matched[newly_matched] <- TRUE
-    match_data$weight[matched] <- match_data$weight[matched] + 1
   }
-  return(list(data = data, match_data = match_data, MGs = MGs))
+  return(list(data = data, MGs = MGs))
 }
 
 # NULL default for holdout set
@@ -182,6 +187,7 @@ sort_cols <-
       tmp_df$matched <- rep(FALSE, n)
       tmp_df$weight <- rep(0, n)
       tmp_df$missing <- is_missing
+      tmp_df$MG <- rep(0, n)
     }
 
     df[[i]] <- tmp_df

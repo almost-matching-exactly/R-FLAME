@@ -1,4 +1,4 @@
-run_AME <- function(data, match_data, active_cov_sets, processed_cov_sets, early_stop_params,
+run_AME <- function(data, active_cov_sets, processed_cov_sets, early_stop_params,
                     verbose, C, algo, weights, MGs, replace, n_flame_iters,
                     return_pe, return_bf, n_covs,
                     holdout,
@@ -13,8 +13,8 @@ run_AME <- function(data, match_data, active_cov_sets, processed_cov_sets, early
   covs <- 1:n_covs
   if (algo == 'FLAME') {
     n_flame_iters <- Inf
-  } # Can pass either data or match_data
-  while (!early_stop(iter, match_data, n_covs, active_cov_sets, early_stop_params, verbose, algo)) {
+  }
+  while (!early_stop(iter, data, n_covs, active_cov_sets, early_stop_params, verbose, algo)) {
     if (iter < n_flame_iters) {
       algo <- 'FLAME'
     }
@@ -22,11 +22,10 @@ run_AME <- function(data, match_data, active_cov_sets, processed_cov_sets, early
       algo <- 'DAME'
     }
     iter <- iter + 1
-    show_progress(verbose, iter, match_data, algo) # Can pass either data or match_data
+    show_progress(verbose, iter, data, algo)
 
-    # Can pass either data or match_data
     cov_sets <- update_cov_sets(active_cov_sets, processed_cov_sets, covs, weights, C, algo,
-                                match_data, holdout,
+                                data, holdout,
                                 PE_method, user_PE_fit, user_PE_fit_params,
                                 user_PE_predict, user_PE_predict_params, replace)
     curr_cov_set <- cov_sets$current
@@ -71,9 +70,9 @@ run_AME <- function(data, match_data, active_cov_sets, processed_cov_sets, early
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
-    matches_out <- update_matches(data, match_data, replace, curr_cov_set, n_covs, MGs)
+
+    matches_out <- update_matches(data, replace, curr_cov_set, n_covs, MGs)
     data <- matches_out$data
-    match_data <- matches_out$match_data
     MGs <- matches_out$MGs
   }
   if (return_pe) {
