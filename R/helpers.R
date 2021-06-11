@@ -94,8 +94,6 @@ process_matches <- function(data, replace, covs, MGs) {
   newly_matched <- match_out$newly_matched
   matched <- match_out$matched
 
-  # browser()
-
   made_new_matches <- length(newly_matched) > 0
 
   if (made_new_matches) {
@@ -106,8 +104,8 @@ process_matches <- function(data, replace, covs, MGs) {
               matched = matched))
 }
 
-update_matches <- function(data, replace, dropped_cov_set, n_covs, MGs) {
-  processed_matches <- process_matches(data, replace, setdiff(1:n_covs, dropped_cov_set), MGs)
+update_matches <- function(data, match_data, replace, dropped_cov_set, n_covs, MGs) {
+  processed_matches <- process_matches(match_data, replace, setdiff(1:n_covs, dropped_cov_set), MGs)
 
   MGs <- processed_matches[[1]]
   newly_matched <- processed_matches[[2]]
@@ -117,8 +115,11 @@ update_matches <- function(data, replace, dropped_cov_set, n_covs, MGs) {
     data[newly_matched, dropped_cov_set] <- '*'
     data$matched[newly_matched] <- TRUE
     data$weight[matched] <- data$weight[matched] + 1
+
+    match_data$matched[newly_matched] <- TRUE
+    match_data$weight[matched] <- match_data$weight[matched] + 1
   }
-  return(list(data = data, MGs = MGs))
+  return(list(data = data, match_data = match_data, MGs = MGs))
 }
 
 # NULL default for holdout set

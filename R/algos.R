@@ -333,6 +333,7 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
                impute_with_outcome, impute_with_treatment)
 
   data <- out$data[[1]]
+  match_data <- data # Data for computing bit-matches
   holdout <- out$holdout
   covs <- out$covs
   mapping <- out$mapping
@@ -345,9 +346,11 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
   MGs <- vector('list', nrow(data))
 
   # Try and make matches on all covariates
-  matches_out <- update_matches(data, replace, c(), n_covs, MGs)
+  matches_out <- update_matches(data, match_data, replace, c(), n_covs, MGs)
   data <- matches_out$data
+  match_data <- matches_out$match_data
   MGs <- matches_out$MGs
+
   ###### DO SMM FOR PE STOPPING IF WEIGHTS NOT NULL
 
   active_cov_sets <- as.list(1:n_covs)
@@ -361,13 +364,15 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
     early_stop_params$baseline_PE <- baseline_PE
   }
 
-  AME_out <- run_AME(data, active_cov_sets, processed_cov_sets, early_stop_params,
+  # Need to pass both match_data and data here
+  AME_out <- run_AME(data, match_data, active_cov_sets, processed_cov_sets, early_stop_params,
                      verbose, C, algo, weights, MGs, replace, n_flame_iters,
                      return_pe, return_bf, n_covs,
                      holdout,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params)
 
+  # Make sure this entry is *NOT* match_data
   data <- AME_out$data
   MGs <- AME_out$MGs
   store_pe <- AME_out$store_pe
