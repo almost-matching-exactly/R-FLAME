@@ -8,12 +8,11 @@ run_AME <- function(data, active_cov_sets, processed_cov_sets, early_stop_params
   store_pe <- NULL
   store_bf <- NULL
 
-  matches_out <- list(data = data, MGs = MGs)
+  all_cov_sets <- list(NULL)
+  matches_out <- list(data = data, MGs = MGs, cov_sets = all_cov_sets)
 
   covs <- 1:n_covs
-  if (algo == 'FLAME') {
-    n_flame_iters <- Inf
-  }
+
   while (!early_stop(iter, data, n_covs, active_cov_sets, early_stop_params, verbose, algo)) {
     if (iter < n_flame_iters) {
       algo <- 'FLAME'
@@ -70,10 +69,10 @@ run_AME <- function(data, active_cov_sets, processed_cov_sets, early_stop_params
 
     # Make new matches having dropped a covariate
     ## Ideally should just return this from MQ so you don't have to redo it
-
-    matches_out <- update_matches(data, replace, curr_cov_set, n_covs, MGs)
+    matches_out <- update_matches(data, replace, curr_cov_set, n_covs, MGs, all_cov_sets)
     data <- matches_out$data
     MGs <- matches_out$MGs
+    all_cov_sets <- matches_out$cov_sets
   }
   if (return_pe) {
     matches_out$PE <- store_pe

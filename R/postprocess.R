@@ -1,5 +1,5 @@
 postprocess <- function(data, MGs, n_covs, mapping, orig_missing, return_pe, return_bf,
-                        store_pe, store_bf) {
+                        store_pe, store_bf, cov_sets) {
 
   data[['missing']] <- NULL
   data[['MG']][data[['MG']] == 0] <- NA
@@ -29,7 +29,8 @@ postprocess <- function(data, MGs, n_covs, mapping, orig_missing, return_pe, ret
 
   ret_list <-
     list(data = data,
-         MGs = MGs)
+         MGs = MGs,
+         cov_sets = cov_sets)
 
   # Implicitly checks that outcome exists in data;
   #  otherwise data$outcome returns NULL
