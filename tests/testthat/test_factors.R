@@ -13,7 +13,7 @@ strip_missing <- function(vals) {
 
 n <- 250
 p <- 5
-weights = runif(p)
+weights <- runif(p)
 data <- gen_data(n = n, p = p)
 holdout <- gen_data(n = n, p = p)
 flout_not_0_ind <- FLAME(data, holdout, weights = weights)

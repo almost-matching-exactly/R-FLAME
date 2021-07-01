@@ -1,7 +1,5 @@
-GenerateNewActiveSets <- function(s, delta) {
-  # 1
+gen_new_active_sets <- function(s, delta) {
   k <- length(s)
-  # 2
   Z <- list()
 
   # 3
@@ -20,7 +18,6 @@ GenerateNewActiveSets <- function(s, delta) {
   delta_k[[counter]] <- s
 
   # 4, 5
-  # Not sure you need unique(delta_k)...
   supp <- table(unlist(delta_k))
 
   # 6
@@ -42,7 +39,5 @@ GenerateNewActiveSets <- function(s, delta) {
       }
     }
   }
-
-  # 12
   return(Z)
 }

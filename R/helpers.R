@@ -1,4 +1,80 @@
+gen_new_active_sets <- function(s, delta) {
+  k <- length(s)
+  Z <- list()
+
+  # 3
+  if (length(delta) == 0) {
+    return (Z)
+  }
+
+  delta_k <- list()
+  counter <- 1
+  for (i in seq_along(delta)) {
+    if (length(delta[[i]]) == k) {
+      delta_k[[counter]] <- delta[[i]]
+      counter <- counter + 1
+    }
+  }
+  delta_k[[counter]] <- s
+
+  # 4, 5
+  supp <- table(unlist(delta_k))
+
+  # 6
+  omega <- setdiff(strtoi(names(supp[supp >= k])), s)
+
+  # 7
+  counter <- 1
+  if (all(supp[match(s, names(supp))] >= k)) {
+    # 8
+    for (a in omega) {
+      # 9
+      # Necessary to sort?
+      r <- sort(c(s, a))
+      # 10
+      if (all(combn(r, k, simplify = FALSE) %in% delta_k)) {
+        # 11
+        Z[[counter]] <- r
+        counter <- counter + 1
+      }
+    }
+  }
+  return(Z)
+}
+
+
+warn_level_drop <- function(data, inds, type) {
+  # Used in `preprocess.R` to drop extraneous levels and warn the user
+  dropped_levels <- list()
+  for (i in inds) {
+    level_count <- table(data[, i])
+    if (any(level_count == 0)) { # this may happen bc we split
+      cov_name <- colnames(data)[i]
+      dropped_levels <-
+        c(dropped_levels, list(names(level_count)[which(level_count == 0)]))
+
+      names(dropped_levels)[length(dropped_levels)] <- cov_name
+
+      data[, i] <- droplevels(data[, i])
+    }
+  }
+
+  if (length(dropped_levels) > 0) {
+    warning_str <-
+      paste0('In `', type, '`: dropping levels ',
+            paste(vapply(seq_along(dropped_levels), function(i) {
+              paste0('{', paste(dropped_levels[[i]], collapse = ', '),
+                     '} from covariate `', names(dropped_levels)[i], '`')},
+              character(1)), collapse = ' and '))
+
+    warning(warning_str, call. = FALSE)
+  }
+
+  return(data)
+}
+
 remove_from_list <- function(lst, elem) {
+  # Used in `update_cov_sets`
   # Assumes vectors, no duplicates
   for (i in seq_along(lst)) {
     if (length(lst[[i]]) != length(elem)) {
@@ -12,21 +88,19 @@ remove_from_list <- function(lst, elem) {
 }
 
 aggregate_table <- function(vals) {
+  # For computing b_u, c_u, b_u+, c_u+ values for bit-matching
   vals <- as.character(vals)
   tab <- table(vals)
   name <- names(tab)
   return(as.vector(tab[match(vals, name)]))
 }
 
-# exact_match_bit takes a data frame, a set of covariates to match on, the
-# treatment indicator column and the matched indicator column. it returns the
-# array indicating whether each unit is matched (the first return value), and a
-# list of indices for the matched units (the second return value)
-
 exact_match_bit <- function(data, covs, replace) {
-  # covs are the indices of the covariates we are attempting to match on
+  # Performs exact matching via bit-vectors of the units in `data` on the
+  #   covariates specificed by `covs`.
+
   # gmp::as.bigz is for handling lots and lots of covariates so we don't
-  # have trouble with overflow issues
+  #   have trouble with overflow issues
 
   if (!replace) {
     valid_matches <- which(!data$matched & !data$missing)
@@ -36,11 +110,10 @@ exact_match_bit <- function(data, covs, replace) {
   }
   data <- data[valid_matches, ]
 
-  n_levels <- sapply(data[, covs, drop = FALSE], nlevels)
+  n_levels <- vapply(data[, covs, drop = FALSE], nlevels, numeric(1))
   data_wo_t <- gmp::as.bigz(as.matrix(data[, covs[order(n_levels)]]))
   n_levels <- sort(n_levels)
 
-  # Compute b_u
   multiplier <- gmp::pow.bigz(n_levels, seq_along(n_levels) - 1)
 
   b_u <-
@@ -51,10 +124,8 @@ exact_match_bit <- function(data, covs, replace) {
   b_u_plus <-
     as.vector(gmp::add.bigz(gmp::`%*%`(data_wo_t, multiplier), data$treated))
 
-  # Compute c_u
   c_u <- aggregate_table(b_u)
 
-  # Compute c_u+
   c_u_plus <- aggregate_table(b_u_plus)
 
   matched_on_covs <- (c_u != c_u_plus) & (c_u >= 2)
@@ -64,7 +135,7 @@ exact_match_bit <- function(data, covs, replace) {
   # If replace:
   #  (1:n)[which units matched on this cov_set AND were not previously matched]
   # If not replace:
-  #  we threw out data$matched and so !data$matched is who matched on this cov_set
+  #  we threw out data$matched so !data$matched is who matched on this cov_set
   #  out of those not previously matched
   newly_matched <- valid_matches[matched_on_covs & !data$matched]
   # Those units matched on this cov_set (same as newly_matched if !replace)
@@ -152,14 +223,15 @@ sort_cols <-
   treatment_col_ind <- which(colnames(df[[1]]) == treated_column_name)
   outcome_col_ind <- which(colnames(df[[1]]) == outcome_column_name)
   covariates <-
-    which(!(1:ncol(df[[1]]) %in% c(treatment_col_ind, outcome_col_ind)))
+    which(!(seq_len(ncol(df[[1]])) %in% c(treatment_col_ind, outcome_col_ind)))
 
   # For all imputed data sets
   for (i in 1:n_df) {
     tmp_df <- df[[i]]
 
     if (type == 'holdout' | (type == 'data' & outcome_in_data)) {
-      tmp_df <- cbind(tmp_df[, covariates, drop = FALSE], outcome_col, treatment_col)
+      tmp_df <-
+        cbind(tmp_df[, covariates, drop = FALSE], outcome_col, treatment_col)
     }
     else {
       tmp_df <- cbind(tmp_df[, covariates, drop = FALSE], treatment_col)

@@ -1,26 +1,27 @@
 # Some hard-coded parameter values to cross-validate XGBoost over
-# If the user cares about this they'll just input their own PE function.
+#   If the user cares about these they'll just input their own PE function.
 cv_xgboost <- function(X, Y, obj) {
-  # Return the best XGBoost fit for Y ~ X across various parameter configurations
+  # Return best 5-fold XGBoost fit for Y ~ X across various parameter
+  #  configurations
   eta <- c(0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
   max_depth <- c(2, 3, 4, 6, 8)
   alpha <- c(0.01, 0.1, 0.5, 1, 5)
   nrounds <- c(5, 10, 50, 200, 500)
   subsample <- c(0.1, 0.3, 0.5, 0.75, 1)
 
+
   if (is.factor(Y)) {
-    Y <- as.numeric(Y) - 1
+    Y <- as.numeric(Y) - 1 # -1 for XGBoost compatibility
   }
 
-  param_combs <-
-    expand.grid(eta, max_depth, alpha, nrounds, subsample)
+  param_combs <- expand.grid(eta, max_depth, alpha, nrounds, subsample)
 
   colnames(param_combs) <-
     c('eta', 'max_depth', 'alpha', 'nrounds', 'subsample')
 
   error <- vector(mode = 'numeric', length = length(param_combs))
 
-  for (i in 1:length(param_combs)) {
+  for (i in seq_along(param_combs)) {
     params <- list(objective = obj,
                    eta = param_combs$eta[i],
                    max_depth = param_combs$max_depth[i],
@@ -57,16 +58,15 @@ cv_xgboost <- function(X, Y, obj) {
 
 setup_preds <- function(holdout, covs, covs_to_drop) {
 
+  # Covariates for prediction
   cov_set <- setdiff(covs, covs_to_drop)
-  n_cols <- ncol(holdout)
 
-  # Split the data into treat, control
-
+  # Fit treated, control separately
   Y_treat <- holdout$outcome[holdout$treated == 1]
   Y_control <- holdout$outcome[holdout$treated == 0]
 
-  X_treat <- holdout[holdout$treated == 1, cov_set, drop = F]
-  X_control <- holdout[holdout$treated == 0, cov_set, drop = F]
+  X_treat <- holdout[holdout$treated == 1, cov_set, drop = FALSE]
+  X_control <- holdout[holdout$treated == 0, cov_set, drop = FALSE]
 
   return(list(X_treat = X_treat,
               X_control = X_control,
@@ -130,7 +130,8 @@ get_error <- function(X, Y, PE_method,
   if (outcome_type != 'continuous') {
     if (length(unique(preds)) > length(unique(Y))) {
       warning('It looks like your function for computing PE ',
-              'does not return predicted class labels.', call. = FALSE)
+              'does not return predicted class labels. If so,
+              the PE computation will not work as expected.', call. = FALSE)
     }
     error <- mean(preds != Y)
   }

@@ -59,7 +59,8 @@ check_args <-
   #   data_cov_inds <-
   #     which(!(colnames(data) %in% c(treated_column_name)))
   #   holdout_cov_inds <-
-  #     which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  #     which(!(colnames(data) %in%
+  #           c(treated_column_name, outcome_column_name)))
   #
   #   sapply(seq_along(data_cov_inds), function(x) {
   #     if (!identical(sort(levels(data[[data_cov_inds[x]]])),
@@ -74,7 +75,8 @@ check_args <-
   #                'identical column names.'))
   #   }
   #   cov_inds <-
-  #     which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+  #     which(!(colnames(data) %in%
+  #           c(treated_column_name, outcome_column_name)))
   #   sapply(cov_inds, function(x) {
   #     if (!identical(sort(levels(data[[x]])), sort(levels(holdout[[x]])))) {
   #       stop('Levels of `data` and `holdout` must be identical')

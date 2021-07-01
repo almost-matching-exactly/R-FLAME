@@ -26,13 +26,15 @@ test_that("covariates needn't be arranged by level", {
   holdout_ordered <- holdout_unordered[, c(2, 1, 3, 4, 5, 6)]
 
   flout_unordered <- FLAME(data_unordered, holdout_unordered, weights = weights)
-  flout_ordered <- FLAME(data_ordered, holdout_ordered, weights = weights[c(2, 1, 3, 4)])
+  flout_ordered <-
+    FLAME(data_ordered, holdout_ordered, weights = weights[c(2, 1, 3, 4)])
   expect_identical(flout_ordered$MGs, flout_unordered$MGs)
 })
 
 test_that("covariate columns must match", {
   scrambled_data <- data[, c(2, 1, 3, 4, 5, 6)]
-  expect_error(scrambled_flout <- FLAME(scrambled_data, holdout, weights = weights))
+  expect_error(scrambled_flout <-
+                 FLAME(scrambled_data, holdout, weights = weights))
 })
 
 test_that("can scramble treatment and outcome", {
@@ -71,8 +73,9 @@ test_that("column order doesn't matter when no outcome", {
 })
 
 p <- 4
-data <- gen_data(n = 250, p = p)
-holdout <- gen_data(n = 250, p = p)
+n <- 250
+data <- gen_data(n = n, p = p)
+holdout <- gen_data(n = n, p = p)
 
 ## Tests relating to column naming
 test_that("outcome/treatment name doesn't matter", {
@@ -91,12 +94,14 @@ test_that("outcome/treatment name doesn't matter", {
   expect_identical(flout$MGs, renamed_flout$MGs)
 })
 
-names_w_spaces <- c('Var 1', 'Var 2', 'Var 3', 'Var 4', 'My Outcome', 'The Treatment')
+names_w_spaces <-
+  c('Var 1', 'Var 2', 'Var 3', 'Var 4', 'My Outcome', 'The Treatment')
 colnames(data) <- names_w_spaces
 colnames(holdout) <- names_w_spaces
 
 test_that("column names with spaces are ok", {
   flout <- FLAME(data, holdout, weights = weights,
-                 treated_column_name = 'The Treatment', outcome_column_name = 'My Outcome')
+                 treated_column_name = 'The Treatment',
+                 outcome_column_name = 'My Outcome')
   expect_true(TRUE)
 })

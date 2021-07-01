@@ -23,17 +23,21 @@ test_that("missing_data `drop` works", {
   data[arrayInd(sample(n * p, n_miss), c(n, p))] <- NA
 
   # Drop missingness before
-  ATE_predrop <- ATE(FLAME(tidyr::drop_na(data), holdout, weights = weights))
+  ATE_predrop <- ATE(FLAME(data[apply(data, 1, function(x) !any(is.na(x))), ],
+                           holdout, weights = weights))
 
   # Drop missingness within algo
-  ATE_algodrop <- ATE(FLAME(data, holdout, missing_data = 'drop', weights = weights))
+  ATE_algodrop <-
+    ATE(FLAME(data, holdout, missing_data = 'drop', weights = weights))
 
   expect_equal(ATE_predrop, ATE_algodrop)
 
-  ATE_predrop <- ATE(DAME(tidyr::drop_na(data), holdout, weights = weights))
+  ATE_predrop <- ATE(DAME(data[apply(data, 1, function(x) !any(is.na(x))), ],
+                          holdout, weights = weights))
 
   # Drop missingness within algo
-  ATE_algodrop <- ATE(DAME(data, holdout, missing_data = 'drop', weights = weights))
+  ATE_algodrop <-
+    ATE(DAME(data, holdout, missing_data = 'drop', weights = weights))
 
   expect_equal(ATE_predrop, ATE_algodrop)
 })
@@ -43,11 +47,13 @@ test_that("replaced values don't show", {
   weights <- runif(p)
   data <- gen_missing_data(n = 250, p = p)
   holdout <- gen_data(n = 250, p = p)
-  flout <- FLAME(data = data, holdout = holdout, missing_data = 'impute', weights = weights)
+  flout <- FLAME(data = data, holdout = holdout,
+                 missing_data = 'impute', weights = weights)
   no_extra_vals <-
-    sapply(1:p, function(cov) {
-      length(setdiff(unique(strip_missing(flout$data[[cov]])), unique(data[[cov]]))) == 0
-    })
+    vapply(1:p, function(cov) {
+      length(setdiff(unique(flout$data[[cov]]),
+                     unique(data[[cov]]))) == 0
+    }, logical(1))
   expect_true(all(no_extra_vals))
 })
 
@@ -70,11 +76,13 @@ matched_on_missing <-
   flout$data[replace_inds_data[1], replace_inds_data[2]] != '*'
 
 test_that("dropping missing data works", {
-  flout1 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 'drop', missing_holdout = 'drop', weights = weights)
+  flout1 <-
+    FLAME(data = data, holdout = holdout,
+          missing_data = 'drop', missing_holdout = 'drop', weights = weights)
 
-  # Avoid case in which the unit made missing was the only match for another unit
-  # equivalent, not identical, to ignore discrepancies in factor levels due to ' (m)'
+  # Avoid case in which the unit made missing was the only match for another
+  # unit equivalent, not identical, to ignore discrepancies in factor levels due
+  # to ' (m)'
   if (length(MG_of_missing) > 2) {
     expect_equivalent(flout$data[-replace_inds_data[1], ],
                      flout1$data[-replace_inds_data[1], ])
@@ -106,8 +114,9 @@ test_that("not matching on missing data works", {
 
 # Check if we changed the output format here
 test_that("missing option 3 works", {
-  flout3 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 'impute', missing_holdout = 'drop', weights = weights)
+  flout3 <-
+    FLAME(data = data, holdout = holdout,
+          missing_data = 'impute', missing_holdout = 'drop', weights = weights)
 
   flout$data[[replace_inds_data[[2]]]] <-
     factor(flout$data[[replace_inds_data[[2]]]],

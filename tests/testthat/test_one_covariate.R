@@ -51,12 +51,13 @@ test_that("runs with 'drop' missingness", {
 })
 
 test_that("runs with 'impute' missingness", {
-  flout <- FLAME(df, holdout, missing_data = 'impute', missing_holdout = 'impute')
+  flout <-
+    FLAME(df, holdout, missing_data = 'impute', missing_holdout = 'impute')
   expect_true(TRUE)
 })
 
-test_that("runs with 'ignore' missingness", {
-  flout <- FLAME(df, holdout, missing_data = 'ignore', missing_holdout = 'drop')
+test_that("runs with 'keep' missingness", {
+  flout <- FLAME(df, holdout, missing_data = 'keep', missing_holdout = 'drop')
   expect_true(TRUE)
 })
 

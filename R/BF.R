@@ -19,7 +19,7 @@ get_BF <- function(cov_to_drop, data, replace, covs) {
 
   # All matched units; for stopping rule purposes
   all_unmatched <-
-    setdiff(1:nrow(data), union(newly_matched, which(data$matched)))
+    setdiff(seq_len(nrow(data)), union(newly_matched, which(data$matched)))
 
   n_control_unmatched <- sum(all_unmatched %in% which(data$treated == 0))
   n_treated_unmatched <- sum(all_unmatched %in% which(data$treated == 1))
