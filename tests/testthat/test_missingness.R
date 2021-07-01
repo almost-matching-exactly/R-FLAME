@@ -95,7 +95,7 @@ test_that("dropping missing data works", {
 test_that("not matching on missing data works", {
   n_imps <- 2
   flout2 <- FLAME(data = data, holdout = holdout,
-                  missing_data = 'ignore', missing_holdout = 'drop',
+                  missing_data = 'keep', missing_holdout = 'drop',
                   missing_data_imputations = n_imps, weights = weights)
 
   for (i in 1:n_imps) {
@@ -132,14 +132,22 @@ test_that("missing option 3 works", {
       expect_true(TRUE)
     }
   }
-  else {
-    flout3$data[which(flout3$data == '* (m)', arr.ind = T)] <- '*'
-    expect_identical(flout$data, flout3$data)
+  else { # Have to make sure it was imputed to the same value
+
+    # The asterisks are remnants of the past output format. They are unnecessary
+    #   and will be changed in the future, but do not break anything.
+    if (substr(flout3$data[replace_inds_data[1], replace_inds_data[2]], 1, 1) ==
+        as.character(original_val)) {
+      flout3$data[which(flout3$data == '* (m)', arr.ind = T)] <- '*'
+      expect_identical(flout$data, flout3$data)
+    }
   }
 })
 
 test_that("imputation works with no outcome", {
   data$outcome <- NULL
-  flout <- FLAME(data, holdout, missing_data = 'ignore', missing_holdout = 'drop', weights = weights)
+  flout <-
+    FLAME(data, holdout,
+          missing_data = 'keep', missing_holdout = 'drop', weights = weights)
   expect_true(TRUE)
 })

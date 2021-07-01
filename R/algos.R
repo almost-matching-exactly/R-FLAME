@@ -137,22 +137,25 @@
 #'   attempts to drop a covariate that would lead to a BF below this value,
 #'   FLAME stops. Defaults to 0.
 #' @param missing_data Specifies how to handle missingness in \code{data}. If
-#'   'none' (default), assumes no missing data; if 'drop', effectively drops
-#'   units with missingness from the data and does not match them; if 'ignore',
-#'   ignores matches on missing covariates; and if 'impute', imputes the missing
-#'   data via \code{mice::mice}.
+#' 'none' (default), assumes no missing data. If 'drop', effectively drops units
+#' with missingness from the data and does not match them (they will still
+#' appear in the matched dataset that is returned, however). If 'keep', keeps
+#' the missing values in the data; in this case, a unit can only match on sets
+#' containing covariates it is not missing. If 'impute', imputes the missing
+#' data via \code{mice::mice}.
 #' @param missing_holdout Specifies how to handle missingness in \code{holdout}.
-#'   If 'none' (default), assumes no missing data; if 'drop', effectively drops
-#'   units with missingness and does not use them to compute PE; and if 'impute',
-#'   imputes the missing data via \code{mice::mice}. In this last case, the PE
-#'   at an iteration will be given by the average PE across all imputations.
-#' @param missing_holdout_imputations If \code{missing_holdout} = 'impute', performs
-#'   this many imputations of the missing data in \code{holdout} via
+#'   If 'none' (default), assumes no missing data; if 'drop', drops units with
+#'   missingness and does not use them to compute PE; and if 'impute', imputes
+#'   the missing data via \code{mice::mice}. In this last case, the PE at an
+#'   iteration will be given by the average PE across all imputations.
+#' @param missing_holdout_imputations If \code{missing_holdout} = 'impute',
+#'   performs this many imputations of the missing data in \code{holdout} via
 #'   \code{mice::mice}. Defaults to 5.
-#' @param missing_data_imputations Defunct. If \code{missing_data} = 'impute', one
-#'   round of imputation will be performed on \code{data} via \code{mice::mice}.
-#'   To view results for multiple imputations, please wrap calls to \code{FLAME}
-#'   in a loop. This argument will be removed in a future release.
+#' @param missing_data_imputations Defunct. If \code{missing_data} = 'impute',
+#'   one round of imputation will be performed on \code{data} via
+#'   \code{mice::mice}. To view results for multiple imputations, please wrap
+#'   calls to \code{FLAME} or \code{DAME} in a loop. This argument will be
+#'   removed in a future release.
 #' @param impute_with_treatment A logical scalar. If \code{TRUE}, uses treatment
 #'   assignment to impute covariates when \code{missing_data = 2} or
 #'   \code{missing_holdout = 2}. Defaults to \code{TRUE}.
@@ -214,7 +217,7 @@ FLAME <-
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
-           missing_data = c('none', 'drop', 'ignore', 'impute'),
+           missing_data = c('none', 'drop', 'keep', 'impute'),
            missing_holdout = c('none', 'drop', 'impute'),
            missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
@@ -266,7 +269,7 @@ DAME <-
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
-           missing_data = c('none', 'drop', 'ignore', 'impute'),
+           missing_data = c('none', 'drop', 'keep', 'impute'),
            missing_holdout = c('none', 'drop', 'impute'),
            missing_data_imputations = 1, missing_holdout_imputations = 5,
            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {

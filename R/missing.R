@@ -85,7 +85,7 @@ handle_missing_data <-
       if (all(is_missing)) {
         stop('All rows in `data` contain missingness. ',
              'In this case, matches may only be made if `missing_data` ',
-             " = 'ignore' or `missing_data` = 'impute'.")
+             " = 'keep' or `missing_data` = 'impute'.")
       }
     }
     else if (missing_data == 'impute') {
@@ -101,10 +101,11 @@ handle_missing_data <-
         message('No missing data found; skipping imputation.')
       }
     }
-    else if (missing_data == 'ignore') {
+    else if (missing_data == 'keep') {
       is_missing <- FALSE
       if (sum(is.na(data)) > 0) {
-
+        # Substitute large, unique values for missing values, preventing
+        # matches from being made on them
         tmp_data <- data
         for (cov in cov_inds) {
           # -1 for conversion from factor to numeric
