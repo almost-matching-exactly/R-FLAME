@@ -1,5 +1,5 @@
 read_data <- function(data, holdout,
-                      treated_column_name, outcome_column_name) {
+                      treated_column_name, outcome_column_name, weights) {
   if (is.character(data)) {
     tryCatch(
       error = function(cnd) {
@@ -29,10 +29,18 @@ read_data <- function(data, holdout,
     }
   }
 
-  if (is.numeric(holdout) & length(holdout) == 1) {
-      holdout_inds <- sample(1:nrow(data), size = round(holdout * nrow(data)))
+  if (is.numeric(holdout) && length(holdout) == 1) {
+    if (is.null(weights)) { # Use holdout to compute PE
+      holdout_inds <-
+        sample(seq_len(nrow(data)), size = round(holdout * nrow(data)))
       holdout <- data[holdout_inds, ]
       data <- data[-holdout_inds, ]
+    }
+    else {
+      # Don't need a holdout; for now, here's a hacky fix to not break things
+      #  downstream
+      holdout <- data
+    }
   }
 
   return(list(data = data,
