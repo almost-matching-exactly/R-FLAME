@@ -19,6 +19,7 @@ Authors@R:
            family = 'Volfovsky',
            role = 'aut', 
            email = 'alexander.volfovsky@duke.edu'))
+URL: https://almost-matching-exactly.github.io,https://vittorioorlandi.github.io/
 BugReports: https://github.com/vittorioorlandi/FLAME/issues
 Description: Efficient implementations of the algorithms in the 
     Almost-Matching-Exactly framework for interpretable matching in causal
@@ -29,14 +30,13 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-  mice,
   glmnet,
-  gmp,
-  xgboost,
-  devtools
-RoxygenNote: 7.0.2
+  gmp
+RoxygenNote: 7.1.1
 Suggests: 
-    testthat,
     knitr,
-    rmarkdown
+    mice,
+    rmarkdown,
+    testthat,
+    xgboost
 VignetteBuilder: knitr

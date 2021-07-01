@@ -133,7 +133,16 @@ check_args <-
 
   if (!is.function(PE_method)) {
     if (!(PE_method %in% c('ridge', 'xgb'))) {
-      stop("`PE_method` must be one of 'ridge' or 'xgb', or a user-supplied function.")
+      stop("`PE_method` must be one of 'ridge' or 'xgb', or a user-supplied ',
+           'function.")
+    }
+    if (PE_method == 'xgb') {
+      if (!requireNamespace("xgboost", quietly = TRUE)) {
+        stop("Package `xgboost` needed to compute PE if `PE_method = 'xgb'`. ",
+             "Please install the package or supply a different option for ",
+             "PE_method.",
+             call. = FALSE)
+      }
     }
   }
 
@@ -207,12 +216,26 @@ check_args <-
   }
 
   ## Missing data parameters
+
+  if (info$missing_data == 'impute' &&
+      !requireNamespace("mice", quietly = TRUE)) {
+    stop("Package `mice` needed to impute missing values. Please install it or",
+           " select different options for `missing_data`.",
+           call. = FALSE)
+  }
+  else if (info$missing_HOLDOUT == 'impute' &&
+           !requireNamespace("mice", quietly = TRUE)) {
+    stop("Package `mice` needed to impute missing values. Please install it or",
+         " select different options for `missing_holdout`.",
+         call. = FALSE)
+  }
+
   if (!is.numeric(missing_holdout_imputations) |
       missing_holdout_imputations < 1) {
     stop('`missing_holdout_imputations` must be an integer greater than 1')
   }
 
-  if (impute_with_outcome & !outcome_in_data) {
+  if (impute_with_outcome & info$outcome_type == 'none') {
     stop('Outcome not present in `data`; ',
          'cannot request to use it to impute missingness.')
   }
