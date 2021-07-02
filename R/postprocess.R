@@ -15,17 +15,24 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
   missing_holdout <- info$missing_holdout
 
   data[['missing']] <- NULL
-  data[['MG']][data[['MG']] == 0] <- NA
 
-  ## Swap back the original factor levels
+  if (!replace) {
+    data[['MG']][data[['MG']] == 0] <- NA
+  }
+  else {
+    data[['MG']] <- NULL
+  }
+
+  # Swap back the original factor levels
   rev_mapping <- lapply(mapping, function(x) {
     tmp <- names(x)
     names(tmp) <- x
     return(tmp)
   })
 
-  data <-
-    factor_remap(data, mapping = rev_mapping)$df
+  data <- factor_remap(data,
+                       treated_column_name, outcome_column_name,
+                       mapping = rev_mapping)$df
 
   cov_inds <- which(!(colnames(data) %in%
                         c('treated', 'outcome', 'matched',
@@ -55,4 +62,5 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
 
   return(ret_list)
 }
+
 
