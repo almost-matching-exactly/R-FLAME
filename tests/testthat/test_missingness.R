@@ -1,16 +1,3 @@
-strip_missing <- function(vals) {
-  # Gets rid of all " (m)" substrings at the end of values,
-  # then removes all "*"
-  tmp <- strsplit(as.character(vals), ' ')
-  tmp <- lapply(tmp, function(x) {
-    if (x[length(x)] == '(m)') {
-      x <- x[length(x) - 1]
-    }
-    return(x)
-  })
-  return(setdiff(sapply(tmp, paste, collapse = ' ', sep = ''), '*'))
-}
-
 test_that("missing_data `drop` works", {
   p <- 5
   n <- 2500
@@ -65,6 +52,7 @@ holdout <- gen_data(n = n, p = p)
 flout <- FLAME(data = data, holdout = holdout, weights = weights)
 replace_inds_data <- c(sample(1:n, 1), sample(1:p, 1))
 replace_inds_holdout <- c(sample(1:n, 1), sample(1:p, 1))
+original_val <- data[replace_inds_data[1], replace_inds_data[2]]
 data[replace_inds_data[1], replace_inds_data[2]] <- NA
 holdout[replace_inds_holdout[1], replace_inds_holdout[2]] <- NA
 
