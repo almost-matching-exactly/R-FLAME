@@ -36,7 +36,7 @@ handle_missing_data <-
     outcome_in_data <- !is.null(data[[outcome_column_name]])
 
     # Corresponds to data only
-    cov_inds <- which(!(colnames(data[[1]]) %in%
+    cov_inds <- which(!(colnames(data) %in%
                         c(treated_column_name, outcome_column_name)))
 
     if (outcome_in_data) {
@@ -46,6 +46,7 @@ handle_missing_data <-
     else {
       to_drop_data <- is.na(data[[treated_column_name]])
     }
+
     to_drop_holdout <- is.na(holdout[[outcome_column_name]]) |
                        is.na(holdout[[treated_column_name]])
 
@@ -157,16 +158,10 @@ handle_missing_data <-
     if (is.data.frame(data)) {
       data <- list(data)
     }
+
     if (is.data.frame(holdout)) {
       holdout <- list(holdout)
     }
-
-    # Change levels to allow for 'unmatched on this covariate' indicator: '*'
-    # Data is length 1 list
-    for (j in cov_inds) {
-      levels(data[[1]][, j]) <- c(levels(data[[1]][, j]), '*')
-    }
-
 
     return(list(data = data,
                 holdout = holdout,
