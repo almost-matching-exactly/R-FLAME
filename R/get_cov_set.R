@@ -66,15 +66,17 @@ get_new_cov_set <- function(active_cov_sets, covs, weights, C, algo,
               BF = BF_out[[drop]]))
 }
 
-update_cov_sets <- function(active_cov_sets, processed_cov_sets, covs, weights, C, algo,
-                            data, holdout,
-                            PE_method, user_PE_fit, user_PE_fit_params,
-                            user_PE_predict, user_PE_predict_params, replace) {
+update_cov_sets <- function(active_cov_sets, processed_cov_sets, covs, weights,
+                            C, algo, data, holdout, PE_method, user_PE_fit,
+                            user_PE_fit_params, user_PE_predict,
+                            user_PE_predict_params, replace, outcome_type) {
 
   tmp <- get_new_cov_set(active_cov_sets, covs, weights, C, algo,
                          data, holdout,
                          PE_method, user_PE_fit, user_PE_fit_params,
-                         user_PE_predict, user_PE_predict_params, replace)
+                         user_PE_predict, user_PE_predict_params,
+                         replace, outcome_type)
+
   curr_cov_set <- tmp$cov_set ## actually this is the thing that is just dropped
   PE <- tmp$PE
   BF <- tmp$BF
@@ -83,7 +85,7 @@ update_cov_sets <- function(active_cov_sets, processed_cov_sets, covs, weights, 
       lapply(setdiff(covs, curr_cov_set), function(x) c(x, curr_cov_set))
   }
   else if (algo == 'DAME') {
-    Z_h <- GenerateNewActiveSets(curr_cov_set, processed_cov_sets)
+    Z_h <- gen_new_active_sets(curr_cov_set, processed_cov_sets)
     active_cov_sets <- remove_from_list(active_cov_sets, curr_cov_set)
     active_cov_sets <- append(active_cov_sets, Z_h)
   }
