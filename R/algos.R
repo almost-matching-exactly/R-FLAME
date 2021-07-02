@@ -1,45 +1,4 @@
-#' Bit Vectors Implementation of FLAME
-#'
-#' \code{FLAME} runs the bit-vectors implementation of the FLAME algorithm.
-#'
-#' @section Introduction:
-#' FLAME is a matching algorithm for causal inference that matches units if they
-#' match exactly on certain covariates. It starts by making any possible matches
-#' on all covariates. It then drops a covariate, makes any possible matches on
-#' the remaining covariates, and repeats this process until stopping. The
-#' covariate dropped at any given iteration is the one yielding the greatest
-#' match quality \eqn{MQ}, defined as \eqn{MQ = C \times BF - PE}. Here,
-#' \eqn{BF} denotes the balancing factor, defined as the proportion of unmatched
-#' control units, plus the proportion of unmatched treated units, that can now
-#' be matched by dropping that covariate. And \eqn{PE} denotes the prediction
-#' error, defined as the training error incurred when predicting the outcome
-#' from covariates on a separate, holdout set. In this way, FLAME encourages
-#' making many matches and also matching on covariates important to the outcome.
-#' The hyperparameter \eqn{C} controls the balance between these two objectives.
-#' For more details, please see the FLAME paper
-#' \href{https://arxiv.org/pdf/1707.06315.pdf}{here}.
-#'
-#' @section Stopping Rules:
-#' By default, \code{FLAME} stops when 1. all covariates have been dropped or 2.
-#' all treatment or control units have been matched. This behavior can be
-#' modified by the arguments whose prefix is "early_stop". With the exception of
-#' \code{early_stop_iterations}, all the rules come into play \emph{before} the
-#' offending covariate is dropped. That is, if \code{early_stop_BF = 0.2} and at
-#' the current iteration, dropping the covariate leading to highest match
-#' quality is associated with a balancing factor of 0.1, FLAME stops
-#' \emph{without} dropping this covariate.
-#'
-#' @section Missing Data: \code{FLAME} offers functionality for handling missing
-#'   data in the covariates, for both the \code{data} and \code{holdout} sets.
-#'   This functionality can be specified via the arguments whose prefix is
-#'   "missing" or "impute". It allows for ignoring missing data, imputing it, or
-#'   (for \code{data}) not matching on missing values. If \code{data} is
-#'   imputed, imputation will be done once and the FLAME algorithm will be run
-#'   on all imputations. If \code{holdout} is imputed, the predictive error at
-#'   an iteration will be the average of predictive errors across all imputed
-#'   \code{holdout} datasets.
-#'
-#'
+#' Almost Matching Exactly (AME) Algorithms for Discrete, Observational Data
 #' @param data Data to be matched. Either a data frame or a path to a .csv file
 #'   to be read into a data frame. Treatment must be described by a logical or
 #'   binary numeric column with name \code{treated_column_name}. Outcome must be
@@ -51,25 +10,28 @@
 #'   treatment effect estimation will not be possible. All columns not
 #'   containing outcome or treatment will be treated as covariates for matching.
 #'   Covariates are assumed to be categorical and will be coerced to factors,
-#'   though they may be passed as either factors or numeric. If you wish to use
-#'   continuous covariates for matching, they should be binned prior to being
-#'   passed to \code{FLAME}.
-#' @param holdout Holdout data to be used to compute predictive error. If a
-#'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
-#'   into a holdout set and only the remaining proportion of \code{data} will be
-#'   matched. Otherwise, a data frame or a path to a .csv file. The holdout data
-#'   must contain an outcome column with name \code{outcome_column_name}; other
-#'   restrictions on column types are as for \code{data}. Covariate columns must
-#'   have the same column names and order as \code{data}. This data will
-#'   \emph{not} be matched. Defaults to 0.1.
-#' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
-#'   the FLAME algorithm. Higher C prioritizes more matches and lower C
-#'   prioritizes not dropping important covariates. Defaults to 0.1.
+#'   though they may be passed as either factors or numeric; if the former,
+#'   unused levels will automatically be dropped. If you wish to use continuous
+#'   covariates for matching, they should be binned prior to matching.
+#' @param holdout Holdout data to be used to compute predictive error, if
+#'   \code{weights} is not supplied. If a numeric scalar between 0 and 1, that
+#'   proportion of \code{data} will be made into a holdout set and only the
+#'   remaining proportion of \code{data} will be matched. Otherwise, a data
+#'   frame or a path to a .csv file. The holdout data must contain an outcome
+#'   column with name \code{outcome_column_name}; other restrictions on column
+#'   types are as for \code{data}. Covariate columns must have the same column
+#'   names and order as \code{data}. This data will \emph{not} be matched.
+#'   Defaults to 0.1.
 #' @param treated_column_name A character with the name of the treatment column
 #'   in \code{data} and \code{holdout}. Defaults to 'treated'.
 #' @param outcome_column_name A character with the name of the outcome column in
 #'   \code{holdout} and also in \code{data}, if supplied in the latter.
 #'   Defaults to 'outcome'.
+#' @param weights A positive numeric vector representing covariate importances.
+#'   Supplying this argument prevents PE from being computed as it determines
+#'   dropping order by forcing covariate subsets with lower weights to be
+#'   dropped first. The weight of a covariate subset is defined to be the sum of
+#'   the weights of the constitutent covariates. Ties are broken at random.
 #' @param PE_method Denotes how predictive error (PE) is to be computed. Either
 #'   a string -- one of "ridge" (default) or "xgb" -- or a function. If "ridge",
 #'   ridge regression is used to fit a an outcome regression model via
@@ -121,22 +83,27 @@
 #'   at each iteration will be returned. Defaults to \code{FALSE}.
 #' @param return_bf A logical scalar. If \code{TRUE}, the balancing factor (BF)
 #'   at each iteration will be returned. Defaults to \code{FALSE}.
-#' @param early_stop_iterations A nonnegative integer, denoting an upper bound
-#'   on the number of iterations of FLAME to be performed. If 0, one round of
+#' @param early_stop_iterations A positive integer, denoting an upper bound
+#'   on the number of matching rounds to be performed. If 1, one round of
 #'   exact matching is performed before stopping. Defaults to \code{Inf}.
-#' @param early_stop_epsilon A nonnegative numeric. If FLAME attemts to drop a
-#'   covariate that would raise the PE above (1 + early_stop_epsilon) times the
-#'   baseline PE (the PE before any covariates have been dropped), FLAME will
-#'   stop. Defaults to 0.25.
+#' @param early_stop_epsilon A nonnegative numeric. If fixed covariate weights
+#'   are passed via \code{weights}, then the algorithm will stop before matching
+#'   on a covariate set whose error is above \code{early_stop_epsilon}, where in
+#'   this case the error is defined as: \eqn{1 - weight(covariate set matched
+#'   on) / weight(all covariates)}. Otherwise, if \code{weights} is \code{NULL},
+#'   if FLAME or DAME attemts to drop a covariate set that would raise the PE
+#'   above (1 + \code{early_stop_epsilon}) times the baseline PE (the PE before
+#'   any covariates have been dropped), the algorithm will stop. Defaults to
+#'   0.25.
 #' @param early_stop_control A numeric value between 0 and 1. If
 #'   the proportion of control units that are unmatched falls below this value,
 #'   FLAME stops. Defaults to 0.
-#' @param early_stop_treated A numeric value between 0 and 1. If
-#'   the proportion of treatment units that are unmatched falls below this
-#'   value, FLAME stops. Defaults to 0.
-#' @param early_stop_pe Deprecated. A positive numeric. If FLAME
-#'   attempts to drop a covariate that would lead to a PE above this value,
-#'   FLAME stops. Defaults to \code{Inf}.
+#' @param early_stop_treated A numeric value between 0 and 1. If the proportion
+#'   of treatment units that are unmatched falls below this value, FLAME stops.
+#'   Defaults to 0.
+#' @param early_stop_pe Deprecated. A positive numeric. If FLAME attempts to
+#'   drop a covariate that would lead to a PE above this value, FLAME stops.
+#'   Defaults to \code{Inf}.
 #' @param early_stop_bf Deprecated. A numeric value between 0 and 2. If FLAME
 #'   attempts to drop a covariate that would lead to a BF below this value,
 #'   FLAME stops. Defaults to 0.
@@ -167,7 +134,54 @@
 #'   information to impute covariates when \code{missing_data = 2} or
 #'   \code{missing_holdout = 2}. Defaults to \code{FALSE}.
 #'
-#' @return The basic object returned by \code{FLAME} is a list of 6 entries:
+#'
+#' @section Introduction: FLAME and DAME are matching algorithms for
+#'   observational causal inference on discrete data. They match units that
+#'   share identical values of certain covariates, as follows. The algorithms
+#'   first make any possible \emph{exact} matches; that is, they match units
+#'   that share identical values of all covariates (remember that this is
+#'   possible because covariates are discrete). They then iteratively drop a set
+#'   of covariates and make any possible matches on the remaining covariates,
+#'   until stopping. For each unit, DAME solves an optimization problem that
+#'   finds the largest set of covariates the unit can be matched to others on,
+#'   prioritizing matches on covariates it learns to be more important. FLAME
+#'   approximates the solution to the problem solved by DAME; at each step, it
+#'   drops the covariate leading to the smallest drop in match quality \eqn{MQ},
+#'   defined as \eqn{MQ = C · BF − PE}. Here, \eqn{PE} denotes the predictive
+#'   error, which measures how important the dropped covariate is for predicting
+#'   the outcome. The balancing factor \eqn{BF} measures the number of matches
+#'   formed by dropping that covariate and the discrepancy between the remaining
+#'   number of treated and control units after the matching. In this way, FLAME
+#'   encourages making many matches and also matching on covariates important to
+#'   the outcome. The hyperparameter \eqn{C} controls the balance between these
+#'   two objectives. In both cases, a machine learning algorithm trained on a
+#'   holdout dataset is responsible for learning the importance of covariates.
+#'   For more details on the algorithms, please see the FLAME paper
+#'   \href{https://arxiv.org/pdf/1707.06315.pdf}{here} and the DAME paper
+#'   \href{https://arxiv.org/pdf/1806.06802.pdf}{here}.
+#'
+#' @section Stopping Rules: By default, both \code{FLAME} and \code{DAME} stop
+#'   when 1. all covariates have been dropped or 2. all treatment or control
+#'   units have been matched. This behavior can be modified by the arguments
+#'   whose prefix is "early_stop". With the exception of
+#'   \code{early_stop_iterations}, all the rules come into play \emph{before}
+#'   the offending covariate set is dropped. That is, if \code{early_stop_BF =
+#'   0.2} and at the current iteration, dropping the covariate leading to
+#'   highest match quality is associated with a balancing factor of 0.1, FLAME
+#'   stops \emph{without} dropping this covariate.
+#'
+#' @section Missing Data: \code{FLAME} and \code{DAME} offer functionality for
+#'   handling missing data in the covariates, for both the \code{data} and
+#'   \code{holdout} sets. This functionality can be specified via the arguments
+#'   whose prefix is "missing" or "impute". It allows for ignoring missing data,
+#'   imputing it, or (for \code{data}) not matching on missing values. If
+#'   \code{data} is imputed, imputation will be done once and the matching
+#'   algorithm will be run on the imputed dataset If \code{holdout} is imputed,
+#'   the predictive error at an iteration will be the average of predictive
+#'   errors across all imputed \code{holdout} datasets.
+#' @name AME
+#' @return An object of type \code{ame}, which by default is a list of 4
+#'   entries:
 #' \describe{
 #' \item{data}{The original data frame with several modifications:
 #'   \enumerate{
@@ -181,31 +195,34 @@
 #'     matched group identifier for each unit. \item If, \code{estimate_CATEs =
 #'     TRUE} , a column containing the CATE estimate for each unit. }
 #'  }
-#'  \item{MGs}{A list of all the matched groups formed by FLAME. Each entry
-#'  contains the units in a single matched group}
-#'  \item{CATE}{A numeric vector with the conditional average treatment effect
-#'    of every matched group in \code{MGs}. Returned only if the outcome is
-#'    numeric.}
-#'  \item{matched_on}{A list corresponding to \code{MGs} that gives the
-#'  covariates, and their values, on which units in each matched group were
-#'  matched.}
-#'  \item{matching_covs}{A list with the covariates used for matching on every
-#'  iteration of FLAME}
-#'  \item{dropped}{A vector with the covariate dropped at each iteration of
-#'  FLAME}
+#'  \item{MGs}{A list whose \eqn{i}'th entry contains the indices of units in
+#'  the main matched group of the \eqn{i}'th unit.}
+#'  \item{cov_sets}{A list whose \eqn{i}'th entry contains the covariates set
+#'  \strong{not} matched on in the \eqn{i}'th iteration.}
+#'  \item{info}{A list containing miscellaneous information about the data and
+#'  matching specifications. Primarily for use by \code{*.ame} methods.}
 #' }
 #'
 #' @examples
 #' data <- gen_data()
 #' holdout <- gen_data()
 #' FLAME_out <- FLAME(data = data, holdout = holdout)
-#' ## Use a linear model to compute predictive error
+#'
+#' # Use a linear model to compute predictive error
 #' my_PE <- function(X, Y) {
 #'   return(lm(Y ~ ., as.data.frame(cbind(X, Y = Y)))$fitted.values)
 #' }
-#' @importFrom stats model.matrix predict rbinom rnorm var
-#' @importFrom utils flush.console read.csv write.csv
-#' @importFrom devtools load_all
+#' DAME_out <- DAME(data = data, holdout = holdout, PE_method = my_PE)
+#' @importFrom stats model.matrix predict rbinom rnorm var complete.cases median
+#'   density
+#' @importFrom utils flush.console read.csv write.csv combn
+#' @importFrom graphics abline axis barplot image legend
+NULL
+#> NULL
+#' @param C A finite, positive scalar denoting the tradeoff between BF and PE in
+#'   the FLAME algorithm. Higher C prioritizes more matches and lower C
+#'   prioritizes not dropping important covariates. Defaults to 0.1.
+#' @rdname AME
 #' @export
 FLAME <-
   function(data, holdout = 0.1, C = 0.1,
