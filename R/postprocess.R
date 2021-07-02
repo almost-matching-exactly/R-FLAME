@@ -27,17 +27,11 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
   data <-
     factor_remap(data, mapping = rev_mapping)$df
 
-  # Undoes rownames conflicting with functions in post_matching.R
-  # when holdout is taken from data
-  if (!all(rownames(data) == 1:nrow(data))) {
-    data[['original_ind']] <- rownames(data)
-    rownames(data) <- 1:nrow(data)
-  }
+  cov_inds <- which(!(colnames(data) %in%
+                        c('treated', 'outcome', 'matched',
+                          'weight', 'MG', 'CATE')))
 
-  cov_inds <-
-    which(!(colnames(data) %in%
-              c('treated', 'outcome', 'matched', 'weight', 'original_ind', 'MG', 'missing')))
-
+  # Already done in factor_remap?
   data[, cov_inds] <- lapply(data[, cov_inds, drop = FALSE], droplevels)
 
   # Replace original variable names
@@ -52,5 +46,12 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
   if (return_bf) {
     ret_list <- c(ret_list, 'BF' = list(store_bf))
   }
+
+  if (!info$estimate_CATEs || info$outcome_type != 'continuous') {
+    ret_list$data$CATE <- NULL
+  }
+
+  class(ret_list) <- 'ame'
+
   return(ret_list)
 }

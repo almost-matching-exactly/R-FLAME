@@ -147,23 +147,43 @@ exact_match_bit <- function(data, covs, replace) {
               matched = matched))
 }
 
-make_MGs <- function(MGs, valid_matches, match_vals, matched, newly_matched, data) {
+make_MGs <- function(MGs, valid_matches, match_vals,
+                     matched, newly_matched, data, info) {
+
+  if (info$estimate_CATEs && info$outcome_type == 'continuous') {
+    Tr <- data$treated
+    Y <- data$outcome
+  }
+
   # b_u values for those first matched on this cov set
   newly_matched_vals <- match_vals[match(newly_matched, valid_matches)]
 
-  MG_ids <- match(as.character(newly_matched_vals), as.character(unique(newly_matched_vals)))
+  MG_ids <- match(as.character(newly_matched_vals),
+                  as.character(unique(newly_matched_vals)))
 
   MG_counter <- max(data$MG)
+
   for (i in seq_along(newly_matched)) {
     new_MG <- valid_matches[match_vals == newly_matched_vals[i]]
     MGs[[newly_matched[i]]] <- new_MG
+
+    if (info$estimate_CATEs && info$outcome_type == 'continuous') {
+      if (Tr[newly_matched[i]] == 1) {
+        data$CATE[newly_matched[i]] <-
+          Y[newly_matched[i]] - mean(Y[new_MG[Tr[new_MG] == 0]])
+      }
+      else {
+        data$CATE[newly_matched[i]] <-
+          mean(Y[new_MG[Tr[new_MG] == 1]]) - Y[newly_matched[i]]
+      }
+    }
 
     data$MG[new_MG] <- MG_counter + MG_ids[i]
   }
   return(list(MGs, data))
 }
 
-process_matches <- function(data, replace, covs, MGs) {
+process_matches <- function(data, replace, covs, MGs, info) {
   match_out <- exact_match_bit(data, covs, replace)
   valid_matches <- match_out$valid_matches
   match_vals <- match_out$match_vals
@@ -173,7 +193,8 @@ process_matches <- function(data, replace, covs, MGs) {
   made_new_matches <- length(newly_matched) > 0
 
   if (made_new_matches) {
-    MG_out <- make_MGs(MGs, valid_matches, match_vals, matched, newly_matched, data)
+    MG_out <- make_MGs(MGs, valid_matches, match_vals,
+                       matched, newly_matched, data, info)
     MGs <- MG_out[[1]]
     data <- MG_out[[2]]
   }
@@ -183,8 +204,11 @@ process_matches <- function(data, replace, covs, MGs) {
               data = data))
 }
 
-update_matches <- function(data, replace, dropped_cov_set, n_covs, MGs, cov_sets) {
-  processed_matches <- process_matches(data, replace, setdiff(1:n_covs, dropped_cov_set), MGs)
+update_matches <- function(data, replace, dropped_cov_set,
+                           n_covs, MGs, cov_sets, info) {
+  processed_matches <-
+    process_matches(data, replace, setdiff(1:n_covs, dropped_cov_set),
+                    MGs, info)
 
   MGs <- processed_matches[[1]]
   newly_matched <- processed_matches[[2]]
@@ -247,13 +271,6 @@ sort_cols <-
       colnames(tmp_df) <- c(cov_names, 'treated')
     }
 
-    # Don't I do this twice?
-    if (type == 'data') {
-      for (j in 1:n_covs) {
-        levels(tmp_df[, j]) <- c(levels(tmp_df[, j]), '*')
-      }
-    }
-
     # covs denotes the covariates currently being matched on
     covs <- 1:n_covs
 
@@ -262,6 +279,7 @@ sort_cols <-
       tmp_df$weight <- rep(0, n)
       tmp_df$missing <- is_missing
       tmp_df$MG <- rep(0, n)
+      tmp_df$CATE <- rep(NA, n)
     }
 
     df[[i]] <- tmp_df

@@ -2,11 +2,12 @@ preprocess <- function(data, holdout, C, algo, weights,
                        treated_column_name, outcome_column_name, n_flame_iters,
                        PE_method, user_PE_fit, user_PE_fit_params,
                        user_PE_predict, user_PE_predict_params,
-                       replace, verbose, return_pe, return_bf,
+                       replace, estimate_CATEs, verbose, return_pe, return_bf,
                        early_stop_params,
                        missing_data, missing_holdout,
                        missing_holdout_imputations,
                        impute_with_outcome, impute_with_treatment) {
+
   # Get matching and holdout data, from input .csv files, if necessary
   read_data_out <-
     read_data(data, holdout, treated_column_name, outcome_column_name, weights)
@@ -105,11 +106,12 @@ preprocess <- function(data, holdout, C, algo, weights,
   covs <- sort_cols_out[[2]]
   cov_names <- sort_cols_out[[3]]
 
-  # Also sort holdout so that data and holdout columns correspond to one another
+  # Sort holdout so that data and holdout columns correspond to one another.
   holdout <-
     sort_cols(holdout, treated_column_name, outcome_column_name,
               type = 'holdout')[[1]]
 
-  return(list(data = data, holdout = holdout, covs = covs, cov_names = cov_names,
-              mapping = mapping, orig_missing = orig_missing))
+  return(list(data = data, holdout = holdout, covs = covs,
+              cov_names = cov_names, mapping = mapping,
+              orig_missing = orig_missing, info = info))
 }

@@ -22,7 +22,10 @@ check_args <-
          '`data` to use as a holdout set.')
   }
 
-  outcome_in_data <- !is.null(data[[outcome_column_name]])
+  if (info$estimate_CATEs && info$outcome_type != 'continuous') {
+    warning('CATEs are not computed if the outcome is not continuous. ',
+            'Set `estimate_CATEs` equal to FALSE to suppress this warning.')
+  }
 
   if (info$outcome_type != 'none') {
     outcome <- data[[outcome_column_name]]

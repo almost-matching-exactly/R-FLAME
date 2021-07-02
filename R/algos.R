@@ -108,6 +108,10 @@
 #'   balancing factor is computing by dividing by the total number of treatment
 #'   (control) units, instead of the number of unmatched treatment (control)
 #'   units. Defaults to \code{FALSE}.
+#' @param estimate_CATEs A logical scalar. If \code{TRUE}, CATEs for each unit
+#'   are estimated throughout the matching procedure, which will be much faster
+#'   than computing them after a call to \code{FLAME} or \code{DAME} for very
+#'   large inputs. Defaults to \code{FALSE}.
 #' @param verbose Controls how FLAME displays progress while running. If 0, no
 #'   output. If 1, only outputs the stopping condition. If 2, outputs the
 #'   iteration and number of unmatched units every 5 iterations, and the
@@ -171,14 +175,11 @@
 #'     that indicates whether or not a unit was matched.
 #'     \item An extra numeric column, \code{data$weight},
 #'     that denotes on how many different sets of covariates a unit was matched.
-#'     This will only be greater than 1 when \code{replace = TRUE}.
-#'     \item Regardless of their original names, the columns denoting treatment
-#'     and outcome in the data will be renamed 'treated' and 'outcome' and they
-#'     are moved to be located after all the covariate data.
-#'     \item Units that were not matched on all covariates will have a *
-#'     in place of their covariate value for all covariates on which they
-#'     were not matched.
-#'     }
+#'     This will only be greater than 1 when \code{replace = TRUE}. \item The
+#'     columns denoting treatment and outcome will be moved after all covariate
+#'     columns. \item If \code{replace} is \code{FALSE}, a column containing a
+#'     matched group identifier for each unit. \item If, \code{estimate_CATEs =
+#'     TRUE} , a column containing the CATE estimate for each unit. }
 #'  }
 #'  \item{MGs}{A list of all the matched groups formed by FLAME. Each entry
 #'  contains the units in a single matched group}
@@ -213,7 +214,8 @@ FLAME <-
            PE_method = 'ridge',
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
-           replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
+           replace = FALSE, estimate_CATEs = FALSE,
+           verbose = 2, return_pe = FALSE, return_bf = FALSE,
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
@@ -259,13 +261,14 @@ FLAME <-
 }
 
 DAME <-
-  function(data, holdout = 0.1, C = 0.1,
+  function(data, holdout = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
            weights = NULL,
            PE_method = 'ridge', n_flame_iters = 0,
            user_PE_fit = NULL, user_PE_fit_params = NULL,
            user_PE_predict = NULL, user_PE_predict_params = NULL,
-           replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
+           replace = FALSE,  estimate_CATEs = FALSE, verbose = 2,
+           return_pe = FALSE, return_bf = FALSE,
            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
            early_stop_control = 0, early_stop_treated = 0,
            early_stop_pe = Inf, early_stop_bf = 0,
@@ -298,23 +301,22 @@ DAME <-
     }
 
     input_args <- as.list(environment())
-    return(do.call(AME, c(list(algo = 'DAME'), input_args)))
+    return(do.call(AME, c(list(algo = 'DAME', C = 0.1), input_args)))
   }
 
-# Take out defaults?
-AME <- function(algo, data, holdout = 0.1, C = 0.1,
-            treated_column_name = 'treated', outcome_column_name = 'outcome',
-            weights = NULL,
-            PE_method = 'ridge', n_flame_iters = 0,
-            user_PE_fit = NULL, user_PE_fit_params = NULL,
-            user_PE_predict = NULL, user_PE_predict_params = NULL,
-            replace = FALSE, verbose = 2, return_pe = FALSE, return_bf = FALSE,
-            early_stop_iterations = Inf, early_stop_epsilon = 0.25,
-            early_stop_control = 0, early_stop_treated = 0,
-            early_stop_pe = Inf, early_stop_bf = 0,
-            missing_data = 0, missing_holdout = 0,
-            missing_data_imputations = 1, missing_holdout_imputations = 5,
-            impute_with_treatment = TRUE, impute_with_outcome = FALSE) {
+AME <- function(algo, data, holdout, C,
+            treated_column_name, outcome_column_name,
+            weights,
+            PE_method, n_flame_iters,
+            user_PE_fit, user_PE_fit_params,
+            user_PE_predict, user_PE_predict_params,
+            replace, estimate_CATEs, verbose, return_pe, return_bf,
+            early_stop_iterations, early_stop_epsilon,
+            early_stop_control, early_stop_treated,
+            early_stop_pe, early_stop_bf,
+            missing_data, missing_holdout,
+            missing_data_imputations, missing_holdout_imputations,
+            impute_with_treatment, impute_with_outcome) {
 
   early_stop_params <-
     list(iterations = early_stop_iterations,
@@ -325,18 +327,17 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
          BF = early_stop_bf)
 
   out <-
-    preprocess(data, holdout, C,
+    preprocess(data, holdout, C, algo, weights,
                treated_column_name, outcome_column_name, n_flame_iters,
                PE_method, user_PE_fit, user_PE_fit_params,
                user_PE_predict, user_PE_predict_params,
-               replace, verbose, return_pe, return_bf,
+               replace, estimate_CATEs, verbose, return_pe, return_bf,
                early_stop_params,
                missing_data, missing_holdout,
                missing_holdout_imputations,
                impute_with_outcome, impute_with_treatment)
 
   data <- out$data[[1]]
-
   holdout <- out$holdout
   covs <- out$covs
   mapping <- out$mapping
@@ -344,7 +345,9 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
   cov_names <- out$cov_names
   info <- out$info
 
-  n_covs <- ncol(data) - 5 - !is.null(data$outcome)
+  n_covs <- sum(!(colnames(data) %in%
+                    c('MG', 'missing', 'CATE', 'matched',
+                      'weight', 'treated', 'outcome')))
 
   # List of MGs, each entry contains the corresponding MG's entries
   MGs <- vector('list', nrow(data))
@@ -353,8 +356,6 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
   matches_out <- update_matches(data, replace, c(), n_covs, MGs, list(), info)
   data <- matches_out$data
   MGs <- matches_out$MGs
-
-  ###### DO SMM FOR PE STOPPING IF WEIGHTS NOT NULL
 
   active_cov_sets <- as.list(1:n_covs)
   processed_cov_sets <- list()
@@ -367,10 +368,9 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
     early_stop_params$baseline_PE <- baseline_PE
   }
 
-  AME_out <- run_AME(data, active_cov_sets, processed_cov_sets, early_stop_params,
-                     verbose, C, algo, weights, MGs, replace, n_flame_iters,
-                     return_pe, return_bf, n_covs,
-                     holdout,
+  AME_out <- run_AME(data, active_cov_sets, processed_cov_sets,
+                     early_stop_params, verbose, C, algo, weights, MGs, replace,
+                     n_flame_iters, return_pe, return_bf, n_covs, holdout,
                      PE_method, user_PE_fit, user_PE_fit_params,
                      user_PE_predict, user_PE_predict_params, info)
 
