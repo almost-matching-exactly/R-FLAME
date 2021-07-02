@@ -1,12 +1,16 @@
 check_args <-
-  function(data, holdout, C,
-           treated_column_name, outcome_column_name, n_flame_iters,
+  function(data, holdout, C, weights,
+           n_flame_iters,
            PE_method, user_PE_fit, user_PE_fit_params,
            user_PE_predict, user_PE_predict_params,
-           replace, verbose, want_pe, want_bf,
+           verbose, want_pe, want_bf,
            early_stop_params,
            missing_holdout_imputations,
-           impute_with_outcome, impute_with_treatment) {
+           impute_with_outcome, impute_with_treatment, info) {
+
+  treated_column_name <- info$treatment
+  outcome_column_name <- info$outcome
+  replace <- info$replacement
 
   if (!is.data.frame(data)) {
     stop('`data` must be a data frame or a character denoting a .csv file ',
@@ -20,7 +24,7 @@ check_args <-
 
   outcome_in_data <- !is.null(data[[outcome_column_name]])
 
-  if (outcome_in_data) {
+  if (info$outcome_type != 'none') {
     outcome <- data[[outcome_column_name]]
     if (is.numeric(outcome) && length(unique(outcome)) == 2) {
       if (!all(sort(unique(outcome)) == c(0, 1))) {
@@ -116,7 +120,7 @@ check_args <-
     stop('`outcome_column_name` must be a character.')
   }
 
-  if (outcome_in_data & !(outcome_column_name %in% data_cols)) {
+  if (info$outcome_type != 'none' & !(outcome_column_name %in% data_cols)) {
     stop('`outcome_column_name` must be the name of a column in `data.` ',
          'if outcome is supplied.')
   }

@@ -342,6 +342,7 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
   mapping <- out$mapping
   orig_missing <- out$orig_missing
   cov_names <- out$cov_names
+  info <- out$info
 
   n_covs <- ncol(data) - 5 - !is.null(data$outcome)
 
@@ -349,7 +350,7 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
   MGs <- vector('list', nrow(data))
 
   # Try and make matches on all covariates
-  matches_out <- update_matches(data, replace, c(), n_covs, MGs, list())
+  matches_out <- update_matches(data, replace, c(), n_covs, MGs, list(), info)
   data <- matches_out$data
   MGs <- matches_out$MGs
 
@@ -371,19 +372,10 @@ AME <- function(algo, data, holdout = 0.1, C = 0.1,
                      return_pe, return_bf, n_covs,
                      holdout,
                      PE_method, user_PE_fit, user_PE_fit_params,
-                     user_PE_predict, user_PE_predict_params)
+                     user_PE_predict, user_PE_predict_params, info)
 
-  data <- AME_out$data
-  MGs <- AME_out$MGs
-  store_pe <- AME_out$store_pe
-  store_bf <- AME_out$store_bf
-  cov_sets <- AME_out$cov_sets
-
-  AME_out <-
-    postprocess(data, MGs, n_covs, mapping, orig_missing, return_pe, return_bf,
-                store_pe, store_bf, cov_sets)
-
-  AME_out <- c(AME_out, list(call = call))
+  AME_out <- postprocess(AME_out, n_covs, mapping, orig_missing,
+                         return_pe, return_bf, info)
 
   return(AME_out)
 

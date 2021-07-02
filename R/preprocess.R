@@ -1,4 +1,4 @@
-preprocess <- function(data, holdout, C,
+preprocess <- function(data, holdout, C, algo, weights,
                        treated_column_name, outcome_column_name, n_flame_iters,
                        PE_method, user_PE_fit, user_PE_fit_params,
                        user_PE_predict, user_PE_predict_params,
@@ -9,13 +9,33 @@ preprocess <- function(data, holdout, C,
                        impute_with_outcome, impute_with_treatment) {
   # Get matching and holdout data, from input .csv files, if necessary
   read_data_out <-
-    read_data(data, holdout, treated_column_name, outcome_column_name)
+    read_data(data, holdout, treated_column_name, outcome_column_name, weights)
 
   data <- read_data_out[[1]]
   holdout <- read_data_out[[2]]
 
-  # Was outcome supplied by user (in matching data)?
-  # outcome_in_data <- !is.null(data[[outcome_column_name]])
+  if (is.null(outcome_column_name) || is.null(data[[outcome_column_name]])) {
+    outcome_type <- 'none'
+  }
+  else if (length(unique(data[[outcome_column_name]])) == 2) {
+    outcome_type <- 'binary'
+  }
+  else if (is.factor(data[[outcome_column_name]])) {
+    outcome_type <- 'categorical'
+  }
+  else {
+    outcome_type <- 'continuous'
+  }
+
+  info <- list('algo' = algo,
+               'treatment' = treated_column_name,
+               'outcome' = outcome_column_name,
+               'replacement' = replace,
+               'estimate_CATEs' = estimate_CATEs,
+               'missing_data' = missing_data,
+               'missing_holdout' = missing_holdout,
+               'outcome_type' = outcome_type)
+
   # Make sure the user didn't do anything funny
   check_args(data, holdout, C,
              treated_column_name, outcome_column_name, n_flame_iters,
@@ -24,7 +44,7 @@ preprocess <- function(data, holdout, C,
              replace, verbose, return_pe, return_bf,
              early_stop_params,
              missing_holdout_imputations,
-             impute_with_outcome, impute_with_treatment)
+             impute_with_outcome, impute_with_treatment, info)
 
   # Map everything to factor
   cov_inds_data <-

@@ -38,7 +38,12 @@
 #'   \code{NULL}.
 #'
 #' @export
-MG <- function(units, AME_out, multiple = FALSE, index_only = FALSE) {
+MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
+
+  if (multiple && !ame_out$info$replacement) {
+    stop(paste('Multiple matched groups cannot be queried if',
+               ame_out$info$algo, 'was run without replacement.'))
+  }
 
   if (any(!(units %in% as.numeric(rownames(AME_out$data))))) {
     stop('Supplied a unit not in `AME_out$data`.')

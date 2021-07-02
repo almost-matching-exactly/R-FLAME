@@ -1,5 +1,18 @@
-postprocess <- function(data, MGs, n_covs, mapping, orig_missing, return_pe, return_bf,
-                        store_pe, store_bf, cov_sets) {
+postprocess <- function(AME_out, n_covs, mapping, orig_missing,
+                        return_pe, return_bf, info) {
+
+  data <- AME_out$data
+  MGs <- AME_out$MGs
+  PE <- AME_out$PE
+  BF <- AME_out$BF
+  cov_sets <- AME_out$cov_sets
+
+  algo <- info$algo
+  replace <- info$replacement
+  treated_column_name <- info$treatment
+  outcome_column_name <- info$outcome
+  missing_data <- info$missing_data
+  missing_holdout <- info$missing_holdout
 
   data[['missing']] <- NULL
   data[['MG']][data[['MG']] == 0] <- NA
@@ -27,23 +40,11 @@ postprocess <- function(data, MGs, n_covs, mapping, orig_missing, return_pe, ret
 
   data[, cov_inds] <- lapply(data[, cov_inds, drop = FALSE], droplevels)
 
-  ret_list <-
-    list(data = data,
-         MGs = MGs,
-         cov_sets = cov_sets)
+  # Replace original variable names
+  colnames(data)[colnames(data) == 'outcome'] <- outcome_column_name
+  colnames(data)[colnames(data) == 'treated'] <- treated_column_name
 
-  # Implicitly checks that outcome exists in data;
-  #  otherwise data$outcome returns NULL
-  outcome_in_data <- is.numeric(data$outcome)
-  if (outcome_in_data) {
-    CATE <-
-      sapply(MGs, function(x) {
-        treated <- data$treated[x]
-        outcomes <- data$outcome[x]
-        mean(outcomes[treated == 1]) - mean(outcomes[treated == 0])
-      })
-    ret_list$CATE <- CATE
-  }
+  ret_list <- list(data = data, MGs = MGs, cov_sets = cov_sets, info = info)
 
   if (return_pe) {
     ret_list <- c(ret_list, 'PE' = list(store_pe))
