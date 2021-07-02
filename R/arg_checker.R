@@ -37,18 +37,64 @@ check_args <-
     }
   }
 
+  if (length(unique(data[[treated_column_name]])) == 1) {
+    stop('`data` must contain both treated and control units.')
+  }
+
+  if (length(unique(holdout[[treated_column_name]])) == 1) {
+    stop('`holdout` must contain both treated and control units.')
+  }
+
   data_cols <- colnames(data)
   holdout_cols <- colnames(holdout)
 
   # Seems like I can remove but maybe there's a reason I put it up here...?
   if (!(outcome_column_name %in% holdout_cols)) {
-    stop('`holdout` must contain outcome column with name `outcome_column_name`')
+    stop('`holdout` must contain outcome column with name ',
+         '`outcome_column_name`')
   }
 
   cov_inds_data <- which(!(colnames(data) %in%
                              c(treated_column_name, outcome_column_name)))
   cov_inds_holdout <- which(!(colnames(holdout) %in%
                                 c(treated_column_name, outcome_column_name)))
+
+  for (i in cov_inds_holdout) {
+    if (length(unique(holdout[, i])) == 1) {
+      stop(paste0('All units in `holdout` have the same value of ',
+                  'covariate ', holdout_cols[i],
+                  '. Please eliminate this covariate from the data, as it will',
+                  ' be useless for computing predictive error.\n'))
+    }
+    if (length(unique(holdout[, i][holdout[[treated_column_name]] == 1])) ==1) {
+      stop(paste0('All treated units in `holdout` have the same value of ',
+                  'covariate ', holdout_cols[i],
+                  '. Please eliminate this covariate from the data, as it will',
+                  ' be useless for computing predictive error.\n'))
+    }
+    if (length(unique(holdout[, i][holdout[[treated_column_name]] == 0])) ==1) {
+      stop(paste0('All control units in `holdout` have the same value of ',
+                  'covariate ', holdout_cols[i],
+                  '. Please eliminate this covariate from the data, as it will',
+                  ' be useless for computing predictive error.\n'))
+    }
+  }
+
+  if (!is.null(weights)) {
+    if (length(weights) != length(cov_inds_data)) {
+      stop('You must supply as many weights as there are covariates')
+    }
+    if (!is.null(user_PE_fit) || !is.null(user_PE_fit_params) ||
+        !is.null(user_PE_predict) || !is.null(user_PE_predict_params)) {
+      warning('`weights` supplied: `user_PE_*` arguments will be ignored.')
+    }
+    if (is.function(PE_method)) { # user supplied
+      warning('`weights` supplied: `PE_method` will be ignored.')
+    }
+    else if (PE_method != 'ridge')  { # the default
+      warning('`weights` supplied: `PE_method` will be ignored.')
+    }
+  }
 
   if (!identical(colnames(data)[cov_inds_data],
                  colnames(holdout[cov_inds_holdout]))) {
@@ -192,8 +238,9 @@ check_args <-
   }
 
   ## Early stop parameters
-  if (!is.numeric(early_stop_params$iterations) | early_stop_params$iterations < 0) {
-    stop('`early_stop_iterations` must be a nonnegative scalar')
+  if (!is.numeric(early_stop_params$iterations) |
+      early_stop_params$iterations < 1) {
+    stop('`early_stop_iterations` must be a positive scalar')
   }
 
   if (!is.numeric(early_stop_params$epsilon) | early_stop_params$epsilon <= 0) {
