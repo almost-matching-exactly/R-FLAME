@@ -4,31 +4,30 @@
 \alias{MG}
 \title{Matched Groups}
 \usage{
-MG(units, AME_out, multiple = FALSE, index_only = FALSE)
+MG(units, ame_out, multiple = FALSE, index_only = FALSE)
 }
 \arguments{
-\item{units}{A vector of indices for the units whose matched groups
-are desired.}
+\item{units}{A vector of units whose matched groups are desired.}
 
-\item{AME_out}{An object of class \code{AME}.}
+\item{ame_out}{An object of class \code{ame}.}
 
 \item{multiple}{A logical scalar. If \code{FALSE} (default), then \code{MG}
 will only return the main matched group for each unit. See below for
-details. Should not be set to \code{TRUE} if \code{AME_out} was generated
+details. Cannot be set to \code{TRUE} if \code{ame_out} was generated
 without replacement.}
 
-\item{index_only}{A logical scalar. If \code{TRUE} then only the indices of
-units in each matched group are returned.}
+\item{index_only}{A logical scalar. If \code{TRUE}, then only the indices of
+the units in each matched group are returned.}
 }
 \value{
 A list of length \code{length(units)}. For matched units, each entry is a
   data frame (if \code{multiple = FALSE}) or a list of data frames (if
   \code{multiple = TRUE}). For a given entry, these data frames are subsets
-  of \code{data} passed to \code{\link{FLAME}} to generate \code{FLAME_out},
-  whose rows correspond to the units in the matched group(s) of that entry
-  and whose columns are the respective values of treatment, outcome, and
-  covariates matched on. For unmatched units, the relevant list entries are
-  \code{NULL}.
+  of the data \code{data} passed to the matching algorithm that generated
+  \code{ame_out}, whose rows correspond to the units in the matched group(s)
+  of that entry and whose columns are the respective values of treatment,
+  outcome, and covariates matched on. For unmatched units, the relevant list
+  entries are \code{NULL}.
 }
 \description{
 \code{MG} returns the matched groups of the supplied units.
@@ -38,13 +37,20 @@ A list of length \code{length(units)}. For matched units, each entry is a
 units in the relevant matched groups. If only the indices of units in the
 matched groups are desired, \code{index_only} can be set to \code{TRUE}.
 
+Note that the \code{units} argument refers to units with respect to
+\code{rownames(ame_out$data)}. Typically, this will also correspond to the
+indexing of the data (i.e. passing \code{units = 3} will return the matched
+group of the 3rd unit in the matching data). However, if a separate holdout
+set was not passed to the matching algorithm or if the original matching data
+had rownames other than \code{1:nrow(data)}, then this is not the case.
+
 The \code{multiple} argument toggles whether only a unit's main matched group
 (MMG) or all matched groups a unit is part of should be returned. A unit's
-MMG contains its highest quality matches. Note that if the original call that
-generated \code{AME_out} specified \code{replace = FALSE} then units only are
-part of one matched group (their MMG) and this argument has no effect.
-Otherwise, \code{multiple = TRUE} requests that \code{MG} returns all matched
-groups and \code{multiple = FALSE} that only MMGs are returned.
+MMG contains its highest quality matches (that is, the units with which it
+matched on the greatest number of covariates). Note that if the original call
+that generated \code{ame_out} specified \code{replace = FALSE} then units
+only are part of one matched group (which is also their MMG) and
+\code{multiple} must be set to \code{FALSE}.
 }
 \seealso{
 \code{\link{FLAME}}, \code{\link{DAME}}

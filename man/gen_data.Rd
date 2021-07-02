@@ -4,7 +4,7 @@
 \alias{gen_data}
 \title{Generate Toy Data for Matching}
 \usage{
-gen_data(n = 250, p = 5, write = FALSE, path = getwd(), filename = "FLAME.csv")
+gen_data(n = 250, p = 5, write = FALSE, path = getwd(), filename = "AME.csv")
 }
 \arguments{
 \item{n}{Number of units desired in the data set. Defaults to 250.}
@@ -20,23 +20,23 @@ Defaults to \code{FALSE}.}
 \code{write = TRUE}. Defaults to \code{getwd()}.}
 
 \item{filename}{The name of the file to which the data should be written if
-\code{write = TRUE}. Defaults to FLAME.csv.}
+\code{write = TRUE}. Defaults to AME.csv.}
 }
 \value{
-A data frame that may be passed to \code{\link{FLAME}}. Covariates
-  are categorical and therefore coded as factors. Treatment is binary numeric
-  and outcome is numeric.
+A data frame that may be passed to \code{\link{FLAME}} or
+  \code{\link{DAME}}. Covariates are categorical and therefore coded as
+  factors. Treatment is binary numeric and outcome is numeric.
 }
 \description{
-\code{gen_data} generates toy data that can be used to explore FLAME's
+\code{gen_data} generates toy data that can be used to explore FLAME and DAME
 functionality.
 }
 \details{
-\code{gen_data} simulates data in the format accepted by \code{\link{FLAME}}.
-  Covariates \eqn{X_i} and treatment \eqn{T} are both independently generated
-  according to a Bernoulli(0.5) distribution. The outcome \eqn{Y} is
-  generated according to \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T + \epsilon},
-  where \eqn{\epsilon \sim N(0, I_n)}. Thus, the value of \code{p} must be at
-  least 3 and any additional covariates beyond \eqn{X_1, X_2, X_3} are
-  irrelevant.
+\code{gen_data} simulates data in the format accepted by \code{\link{FLAME}}
+and \code{link{DAME}}. Covariates \eqn{X_i} and treatment \eqn{T} are both
+independently generated according to a Bernoulli(0.5) distribution. The
+outcome \eqn{Y} is generated according to \eqn{Y = 15X_1 - 10X_2 + 5X_3 + 5T
++ \epsilon}, where \eqn{\epsilon \sim N(0, I_n)}. Thus, the value of \code{p}
+must be at least 3 and any additional covariates beyond \eqn{X_1, X_2, X_3}
+are irrelevant.
 }

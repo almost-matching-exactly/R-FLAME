@@ -4,35 +4,57 @@
 \alias{CATE}
 \title{Conditional Average Treatment Effects}
 \usage{
-CATE(units, AME_out)
+CATE(units, ame_out)
 }
 \arguments{
-\item{units}{A vector of indices for the units whose CATEs
-are desired.}
+\item{units}{A vector of units whose CATE estimates are desired.}
 
-\item{AME_out}{An object of class \code{AME}.}
+\item{ame_out}{An object of class \code{ame}.}
 }
 \value{
-A scalar numeric with the CATE estimate for \code{units}.
+A matrix whose columns correspond to CATE estimates and their
+  variances and whose rows correspond to queried units. \code{NA}'s therein
+  correspond to unestimable quantities.
 }
 \description{
 \code{CATE} returns an estimate of the conditional average treatment effect
 for the subgroup defined by \code{units}.
 }
 \details{
-This function returns a single CATE estimate for a subgroup of interest, as
-defined by the units in \code{units}. This is computed by averaging the CATE
-estimates of all specified units, weighted by the weights of their main
-matched groups. The weight of a main matched group is defined as the sum of
-the inverse weights of the constituent units. Unmatched units are omitted
-from the computation. To retrieve CATE estimates for individual units or
-matched groups, use \code{AME_out$CATE}.
+This function returns CATE estimates and the estimated variances of such
+estimates for \code{units} of interest. The CATE of a given unit is estimated
+by the difference between the average treated and the average control outcome
+in that unit's main matched group. As shown by Morucci 2021, under standard
+regularity conditions, such an estimator is asymptotically normal and unbiased
+for the true CATE, with a variance that can be estimated by the sum of the
+variance of treated and control outcomes in the matched group, each normalized
+by the number of treated and control units in the matched group, respectively.
+Note that CATEs cannot be estimated for unmatched units and estimator
+variances cannot be computed for units whose main matched group only contains
+a single treated or control unit. Note also that these CATE estimates differ
+from those that are used to compute average treatment effects in
+\code{print.ame} and \code{summary.ame} and from those that will be returned
+in \code{ame_out$data$CATE} if \code{estimate_CATEs = TRUE}. For a treated
+(control) unit \eqn{i}, the latter estimate the treated (control) outcome
+conditioned on \eqn{X = x_i} simply as \eqn{Y_i}, and do not average across
+other treated (control) units in the matched group as is done here. This
+averaging is necessary in order to compute variance estimates. The different
+estimates can always be manually compared, though they are the same in
+expectation and we expect them to be similar in practice, in the absence of
+large noise.
+
+Lastly, note that the \code{units} argument refers to units with respect to
+\code{rownames(ame_out$data)}. Typically, this will also correspond to the
+indexing of the data (i.e. passing \code{units = 3} will return the matched
+group of the 3rd unit in the matching data). However, if a separate holdout
+set was not passed to the matching algorithm or if the original matching data
+had rownames other than \code{1:nrow(data)}, then this is not the case.
 }
 \examples{
 data <- gen_data()
 holdout <- gen_data()
 FLAME_out <- FLAME(data = data, holdout = holdout)
-CATE(which(data$X1 == 1), FLAME_out)
+CATE(1:5, FLAME_out)
 }
 \seealso{
 \code{\link{FLAME}}, \code{\link{DAME}}
