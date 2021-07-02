@@ -5,3 +5,7 @@
 ^NEWS\.md$
 ^CRAN-RELEASE$
 ^\\R\\time_trial\.R$
+^\.travis\.yml$
+^natality.*$
+^%$
+^docs$
