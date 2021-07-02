@@ -38,39 +38,47 @@ preprocess <- function(data, holdout, C, algo, weights,
                'outcome_type' = outcome_type)
 
   # Make sure the user didn't do anything funny
-  check_args(data, holdout, C,
-             treated_column_name, outcome_column_name, n_flame_iters,
+  check_args(data, holdout, C, weights,
+             n_flame_iters,
              PE_method, user_PE_fit, user_PE_fit_params,
              user_PE_predict, user_PE_predict_params,
-             replace, verbose, return_pe, return_bf,
+             verbose, return_pe, return_bf,
              early_stop_params,
              missing_holdout_imputations,
              impute_with_outcome, impute_with_treatment, info)
 
-  # Map everything to factor
+  # Map covariates to factor
   cov_inds_data <-
     which(!(colnames(data) %in% c(treated_column_name, outcome_column_name)))
+
   data[, cov_inds_data] <-
     lapply(data[, cov_inds_data, drop = FALSE], as.factor)
+
+  # Drop extraneous levels, warning user if so
+  data <- warn_level_drop(data, cov_inds_data, type = 'data')
 
   ord <- c(cov_inds_data,
            which(colnames(data) == outcome_column_name),
            which(colnames(data) == treated_column_name))
 
   # Number of levels of each covariate
-  n_levels <- sapply(data[, cov_inds_data, drop = FALSE], nlevels)
+  n_levels <- vapply(data[, cov_inds_data, drop = FALSE], nlevels, numeric(1))
   if (any(n_levels > nrow(data) / 10)) {
-    warning(paste("It looks like the variables {",
+    warning(paste0("It looks like the variables { ",
                   colnames(data)[cov_inds_data][n_levels > nrow(data) / 10],
-                  "} might be continuous; you probably won't make many matches on them.",
-                  "If this is the case, please either bin variables prior to",
-                  "calling `FLAME` or do not include them at all."))
+                  " } might be continuous; you probably won't make (m)any ",
+                  "matches on them. If this is the case, please either bin the",
+                  " variables prior to calling `", algo, "` or do not include ",
+                  "them at all.\n"), call. = FALSE)
   }
 
+  # Might be different from data if no outcome
   cov_inds_holdout <-
     which(!(colnames(holdout) %in% c(treated_column_name, outcome_column_name)))
   holdout[, cov_inds_holdout] <-
     lapply(holdout[, cov_inds_holdout, drop = FALSE], as.factor)
+
+  holdout <- warn_level_drop(holdout, cov_inds_holdout, type = 'holdout')
 
   # Map the factor levels of the covariates as supplied by the user to 0:k
   #   so that bit matching works properly.
