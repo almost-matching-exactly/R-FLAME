@@ -41,10 +41,10 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
   ret_list <- list(data = data, MGs = MGs, cov_sets = cov_sets, info = info)
 
   if (return_pe) {
-    ret_list <- c(ret_list, 'PE' = list(store_pe))
+    ret_list <- c(ret_list, 'PE' = list(PE))
   }
   if (return_bf) {
-    ret_list <- c(ret_list, 'BF' = list(store_bf))
+    ret_list <- c(ret_list, 'BF' = list(BF))
   }
 
   if (!info$estimate_CATEs || info$outcome_type != 'continuous') {
@@ -55,3 +55,4 @@ postprocess <- function(AME_out, n_covs, mapping, orig_missing,
 
   return(ret_list)
 }
+
