@@ -255,11 +255,19 @@ FLAME <-
               'be removed in a future release. Please use `early_stop_epsilon`',
               ' to early stop based off predictive error.', call. = FALSE)
     }
+
     input_args <- as.list(environment())
 
-    return(do.call(AME, c(list(algo = 'FLAME'), input_args)))
+    return(do.call(AME, c(list(algo = 'FLAME',
+                               n_flame_iters = Inf), input_args)))
 }
 
+#' @param n_flame_iters Specifies that this many iterations of FLAME should be
+#'   run before switching to DAME. This can be used to speed up the matching
+#'   procedure as FLAME rapidly eliminates irrelevant covariates, after which
+#'   DAME will make higher quality matches on the remaining variables.
+#' @rdname AME
+#' @export
 DAME <-
   function(data, holdout = 0.1,
            treated_column_name = 'treated', outcome_column_name = 'outcome',
