@@ -16,7 +16,8 @@ test_that("runs without error", {
 })
 
 test_that("column names are correct", {
-  expect_equal(colnames(flout$data), c('X', 'outcome', 'treated', 'matched', 'weight'))
+  expect_equal(colnames(flout$data),
+               c('X', 'outcome', 'treated', 'matched', 'weight', 'MG'))
 })
 
 df$X <- sample(c('Red', 'White', 'Green'), n, TRUE)
