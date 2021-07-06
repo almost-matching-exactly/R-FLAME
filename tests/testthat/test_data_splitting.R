@@ -10,32 +10,32 @@ test_that("pre-splitting data doesn't affect post matching", {
   data <- data[-holdout_inds, ]
 
   flout <- FLAME(data, holdout, weights = weights)
+  rnames <- rownames(flout$data)
   for (i in seq_len(nrow(flout$data))) {
-    i <- as.numeric(i)
     inds <- flout$MGs[[i]]
-    tmp <-
-      MG(as.numeric(rownames(flout$data))[i], flout, index_only = TRUE)[[1]]
+    tmp <- MG(as.numeric(rnames)[i], flout, id_only = TRUE)[[1]]
     if (is.null(inds)) {
       expect_null(tmp)
     }
     else {
-      expect_equivalent(sort(inds), sort(tmp))
+      expect_equivalent(sort(as.numeric(rnames[inds])), sort(as.numeric(tmp)))
     }
   }
 })
 
 test_that("auto-splitting data doesn't affect post matching", {
   flout <- FLAME(data, weights = weights)
+  rnames <- rownames(flout$data)
   for (i in seq_len(nrow(flout$data))) {
     i <- as.numeric(i)
     inds <- flout$MGs[[i]]
     tmp <-
-      MG(as.numeric(rownames(flout$data))[i], flout, index_only = TRUE)[[1]]
+      MG(as.numeric(rownames(flout$data))[i], flout, id_only = TRUE)[[1]]
     if (is.null(inds)) {
       expect_null(tmp)
     }
     else {
-      expect_equivalent(sort(inds), sort(tmp))
+      expect_equivalent(sort(as.numeric(rnames[inds])), sort(as.numeric(tmp)))
     }
   }
 })
@@ -46,16 +46,17 @@ test_that("scrambled rownames and auto-splitting data
   rownames(data) <- sample(nrow(data))
 
   flout <- FLAME(data, weights = weights)
+  rnames <- rownames(flout$data)
   for (i in seq_len(nrow(flout$data))) {
     i <- as.numeric(i)
     inds <- flout$MGs[[i]]
     tmp <-
-      MG(as.numeric(rownames(flout$data))[i], flout, index_only = TRUE)[[1]]
+      MG(as.numeric(rownames(flout$data))[i], flout, id_only = TRUE)[[1]]
     if (is.null(inds)) {
       expect_null(tmp)
     }
     else {
-      expect_equivalent(sort(inds), sort(tmp))
+      expect_equivalent(sort(as.numeric(rnames[inds])), sort(as.numeric(tmp)))
     }
   }
 })

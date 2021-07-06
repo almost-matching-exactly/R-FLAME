@@ -2,11 +2,7 @@
 #'
 #' \code{MG} returns the matched groups of the supplied units.
 #'
-#' \code{MG} returns the treatment, outcome, and covariates matched on for all
-#' units in the relevant matched groups. If only the indices of units in the
-#' matched groups are desired, \code{index_only} can be set to \code{TRUE}.
-#'
-#' Note that the \code{units} argument refers to units with respect to
+#' The \code{units} argument refers to units with respect to
 #' \code{rownames(ame_out$data)}. Typically, this will also correspond to the
 #' indexing of the data (i.e. passing \code{units = 3} will return the matched
 #' group of the 3rd unit in the matching data). However, if a separate holdout
@@ -16,12 +12,10 @@
 #' The \code{multiple} argument toggles whether only a unit's main matched group
 #' (MMG) or all matched groups a unit is part of should be returned. A unit's
 #' MMG contains its highest quality matches (that is, the units with which it
-#' matched on the greatest number of covariates). Note that if the original call
-#' that generated \code{ame_out} specified \code{replace = FALSE} then units
-#' only are part of one matched group (which is also their MMG) and
+#' first matched in the sequence of considered covariate sets). If the original
+#' call that generated \code{ame_out} specified \code{replace = FALSE} then
+#' units only are part of one matched group (which is also their MMG) and
 #' \code{multiple} must be set to \code{FALSE}.
-#'
-#' @seealso \code{\link{FLAME}}, \code{\link{DAME}}
 #'
 #' @param units A vector of units whose matched groups are desired.
 #' @param ame_out An object of class \code{ame}.
@@ -29,22 +23,43 @@
 #'   will only return the main matched group for each unit. See below for
 #'   details. Cannot be set to \code{TRUE} if \code{ame_out} was generated
 #'   without replacement.
-#' @param index_only A logical scalar. If \code{TRUE}, then only the indices of
-#' the units in each matched group are returned.
+#' @param id_only A logical scalar. If \code{TRUE}, then only the IDs of the
+#'   units in each matched group are returned, and not their treatment, outcome,
+#'   or covariate information.
+#' @param index_only Defunct. Use `id_only` instead.
 #'
 #' @return
 #'
-#'   A list of length \code{length(units)}. For matched units, each entry is a
-#'   data frame (if \code{multiple = FALSE}) or a list of data frames (if
-#'   \code{multiple = TRUE}). For a given entry, these data frames are subsets
-#'   of the data \code{data} passed to the matching algorithm that generated
-#'   \code{ame_out}, whose rows correspond to the units in the matched group(s)
-#'   of that entry and whose columns are the respective values of treatment,
-#'   outcome, and covariates matched on. For unmatched units, the relevant list
-#'   entries are \code{NULL}.
+#'   A list of length \code{length(units)}, each entry of which corresponds to a
+#'   different unit in \code{units}. For matched units, if \code{multiple =
+#'   FALSE}, each entry is 1. a data frame containing the treatment and outcome
+#'   information of members of the matched group, along with covariates they
+#'   were matched on if \code{id_only = FALSE} or 2. a vector of the IDs of
+#'   matched units if \code{id_only = TRUE} . If \code{multiple = TRUE}, each
+#'   entry of the returned list is a list containing the previously described
+#'   information, but with each entry corresponding to a different matched
+#'   group. In either case, entries corresponding to unmatched units are
+#'   \code{NULL}.
+#' @examples
+#' \dontrun{
+#' data <- gen_data()
+#' holdout <- gen_data()
+#' FLAME_out <- FLAME(data = data, holdout = holdout, replace = TRUE)
 #'
+#' # Only the main matched group of unit 1
+#' MG(1, FLAME_out, multiple = F)
+#'
+#' # All matched groups of unit 1
+#' MG(1, FLAME_out, multiple = T)
+#' }
 #' @export
-MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
+MG <- function(units, ame_out, multiple = FALSE,
+               id_only = FALSE, index_only) {
+
+  if (!missing(index_only)) {
+    stop('Argument `index_only` is defunct and will be removed in a later',
+         'release; please use `id_only` instead.')
+  }
 
   if (multiple && !ame_out$info$replacement) {
     stop(paste('Multiple matched groups cannot be queried if',
@@ -59,8 +74,15 @@ MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
   # or that a holdout set was not explicitly passed to the algo
   units <- match(units, rownames(ame_out$data))
 
-  if (index_only & !multiple) {
-    return(ame_out$MGs[units])
+  if (id_only & !multiple) {
+    return(lapply(ame_out$MGs[units], function(z) {
+      if (is.null(z)) {
+        NULL
+      }
+      else {
+        rownames(ame_out$data)[z]
+      }
+    }))
   }
 
   outcome_name <- ame_out$info$outcome
@@ -91,8 +113,9 @@ MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
 
     for (j in seq_along(MGs_to_return)) {
 
-      if (index_only) {
-        all_MGs[[i]][[j]] <- ame_out$MGs[[MGs_to_return[j]]]
+      if (id_only) {
+        all_MGs[[i]][[j]] <-
+          rownames(ame_out$data)[ame_out$MGs[[MGs_to_return[j]]]]
         next
       }
 
@@ -153,8 +176,8 @@ MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
 #'other treated (control) units in the matched group as is done here. This
 #'averaging is necessary in order to compute variance estimates. The different
 #'estimates can always be manually compared, though they are the same in
-#'expectation and we expect them to be similar in practice, in the absence of
-#'large noise.
+#'expectation (assuming mean 0 noise) and we expect them to be similar in
+#'practice, in the absence of large noise.
 #'
 #' Lastly, note that the \code{units} argument refers to units with respect to
 #' \code{rownames(ame_out$data)}. Typically, this will also correspond to the
@@ -168,15 +191,17 @@ MG <- function(units, ame_out, multiple = FALSE, index_only = FALSE) {
 #' @param units A vector of units whose CATE estimates are desired.
 #' @param ame_out An object of class \code{ame}.
 #'
-#' @return A matrix whose columns correspond to CATE estimates and their
+#' @return A matrix whose columns correspond to CATE estimaes and their
 #'   variances and whose rows correspond to queried units. \code{NA}'s therein
-#'   correspond to unestimable quantities.
+#'   correspond to inestimable quantities.
 #'
 #' @examples
+#' \dontrun{
 #' data <- gen_data()
 #' holdout <- gen_data()
 #' FLAME_out <- FLAME(data = data, holdout = holdout)
 #' CATE(1:5, FLAME_out)
+#' }
 #' @export
 CATE <- function(units, ame_out) {
 

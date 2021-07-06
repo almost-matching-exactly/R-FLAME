@@ -57,7 +57,7 @@ data[replace_inds_data[1], replace_inds_data[2]] <- NA
 holdout[replace_inds_holdout[1], replace_inds_holdout[2]] <- NA
 
 # Former matched group of now missing unit
-MG_of_missing <- MG(replace_inds_data[1], flout, index_only = TRUE)
+MG_of_missing <- MG(replace_inds_data[1], flout, id_only = TRUE)
 
 # Did the unit originally match on the value they're now missing
 matched_on_missing <-
@@ -90,7 +90,7 @@ test_that("not matching on missing data works", {
     # the missingness may have made me eligible
     # for someone else that didn't otherwise get matched
     if (length(MG_of_missing) > 2 &
-        length(MG(replace_inds_data[1], flout2, index_only = TRUE)) > 2) {
+        length(MG(replace_inds_data[1], flout2, id_only = TRUE)) > 2) {
       expect_identical(flout$data[-replace_inds_data[1], ],
                        flout2[[i]]$data[-replace_inds_data[1], ])
     }
@@ -112,7 +112,7 @@ test_that("missing option 3 works", {
 
   if (matched_on_missing) {
     if (length(MG_of_missing) > 2 &
-        length(MG(replace_inds_data[1], flout3, index_only = TRUE)) > 2) {
+        length(MG(replace_inds_data[1], flout3, id_only = TRUE)) > 2) {
       expect_identical(flout$data[-replace_inds_data[1], ],
                        flout3$data[-replace_inds_data[1], ])
     }
