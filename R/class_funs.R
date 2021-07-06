@@ -90,10 +90,12 @@ get_average_effects <- function(x) {
 #'   \code{\link{FLAME}} or \code{\link{DAME}}.
 #' @param digits Number of significant digits for printing the average treatment
 #' effect.
+#' @param linewidth Maximum number of characters on line; output will be wrapped
+#' accordingly.
 #' @param ... Additional arguments to be passed to other methods.
 #' @rdname AME
 #' @export
-print.ame <- function(x, digits = getOption("digits"), ...) {
+print.ame <- function(x, digits = getOption("digits"), linewidth = 80, ...) {
 
   df <- x$data
 
@@ -108,20 +110,27 @@ print.ame <- function(x, digits = getOption("digits"), ...) {
   n_matched <- sum(df$matched)
   n_total <- nrow(df)
 
-  cat('An object of class `ame`:\n',
-      '  ', algo, ' ran for ', n_iters, ' iterations, matching ',
-      n_matched, ' out of ', n_total, ' units ',
-      ifelse(replacement, 'with', 'without'), ' replacement.\n', sep = '')
-
+  indentation <- 2
+  cat('An object of class `ame`:\n')
+  # cat(rep(' ', indentation))
+  cat(strwrap(paste(' ', algo, 'ran for', n_iters, 'iterations, matching',
+                    n_matched, 'out of', n_total, 'units',
+                    ifelse(replacement, 'with', 'without'), 'replacement.'),
+              width = linewidth, indent = indentation, exdent = indentation),
+      sep = '\n ')
 
   if (outcome_type == 'continuous') {
-    cat('  The average treatment effect of treatment `', x$info$treatment,
-        '` on outcome `', x$info$outcome, '` is estimated to be ',
-        round(ifelse(x$info$estimate_CATEs && outcome_type == 'continuous',
-                      mean(x$data$CATE, na.rm = TRUE),
-                      get_average_effects(x)['All', 'Mean']),
-               digits = digits),
-        '.\n', sep = '')
+    cat(strwrap(paste0('  The average treatment effect of treatment `',
+                       x$info$treatment, '` on outcome `', x$info$outcome,
+                       '` is estimated to be ',
+                       round(ifelse(x$info$estimate_CATEs &&
+                                      outcome_type == 'continuous',
+                                    mean(x$data$CATE, na.rm = TRUE),
+                                    get_average_effects(x)['All', 'Mean']),
+                             digits = digits),
+                       '.'),
+                width = linewidth, indent = indentation, exdent = indentation),
+        sep = '\n ')
   }
 
   if (x$info$missing_data == 'drop') {
@@ -153,14 +162,14 @@ print.ame <- function(x, digits = getOption("digits"), ...) {
   }
 
   if (!is.null(missing_data_message)) {
-    cat('  ')
-    cat(missing_data_message)
-    cat('\n')
+    cat(strwrap(missing_data_message,
+                width = linewidth, indent = indentation, exdent = indentation),
+        sep = '\n ')
   }
   if (!is.null(missing_holdout_message)) {
-    cat('  ')
-    cat(missing_holdout_message)
-    cat('\n')
+    cat(strwrap(missing_holdout_message,
+                width = linewidth, indent = indentation, exdent = indentation),
+        sep = '\n ')
   }
 
   return(invisible(x))
@@ -178,8 +187,8 @@ print.ame <- function(x, digits = getOption("digits"), ...) {
 #' across matched treated or matched control units, respectively. Variances of
 #' these estimates are computed as in Abadie, Drukker, Herr, and Imbens (The
 #' Stata Journal, 2004) assuming constant treatment effect and homoscedasticity.
-#' Note that the implemented estimator is \strong{not} =asymptotically normal and
-#' so in particular, asymptotically valid confidence intervals or hypothesis
+#' Note that the implemented estimator is \strong{not} =asymptotically normal
+#' and so in particular, asymptotically valid confidence intervals or hypothesis
 #' tests cannot be conducted on its basis. In the future, the estimation
 #' procedure will be changed to employ the nonparametric regression bias
 #' adjustment estimator of Abadie and Imbens 2011 which is asymptotically
@@ -283,6 +292,7 @@ summary.ame <- function(object, ...) {
       rownames(object$data)[units_matched_on_max[sorted_quality$ix[1:2]]]
   }
 
+  object$MGs <- object$MGs[!duplicated(object$MGs)]
   MG_size <- vapply(object$MGs, length, FUN.VALUE = numeric(1))
   MG_number <- sum(MG_size > 0)
   MG_median_size <- median(MG_size[MG_size > 0])
@@ -318,12 +328,14 @@ print.summary.ame <- function(x, digits = 3, ...) {
 
     ATE_meanstr <- format(x$TEs['All', 1], digits = digits, justify = 'right')
     ATE_varstr <- format(x$TEs['All', 2], digits = digits, justify = 'right')
-    ATT_meanstr <- format(x$TEs['Treated', 1], digits = digits, justify = 'right')
-    ATT_varstr <- format(x$TEs['Treated', 2], digits = digits, justify = 'right')
-    ATC_meanstr <- format(x$TEs['Control', 1], digits = digits, justify = 'right')
-    ATC_varstr <- format(x$TEs['Control', 2], digits = digits, justify = 'right')
 
-    max_meanlen <- max(max_meanlen, nchar(c(ATE_meanstr, ATT_meanstr, ATC_meanstr)))
+    ATT_meanstr <- format(x$TEs['Treated', 1], digits = digits, justify='right')
+    ATT_varstr <- format(x$TEs['Treated', 2], digits = digits, justify='right')
+    ATC_meanstr <- format(x$TEs['Control', 1], digits = digits, justify='right')
+    ATC_varstr <- format(x$TEs['Control', 2], digits = digits, justify='right')
+
+    max_meanlen <- max(max_meanlen,
+                       nchar(c(ATE_meanstr, ATT_meanstr, ATC_meanstr)))
     max_varlen <- max(max_varlen, nchar(c(ATE_varstr, ATT_varstr, ATC_varstr)))
   }
 
@@ -331,23 +343,30 @@ print.summary.ame <- function(x, digits = 3, ...) {
 
   cat('Number of Units:\n')
 
-  cat(format('', width = lablen), format('Control', width = max_meanlen, justify = 'right'),
+  cat(format('', width = lablen),
+      format('Control', width = max_meanlen, justify = 'right'),
       format('Treated', width = max_varlen, justify = 'right'))
   cat('\n')
 
   cat(format('  All', width = lablen, justify = 'left'),
-      format(x$n_matches['All', 'Control'], width = max_meanlen, justify = 'right'),
-      format(x$n_matches['All', 'Treated'], width = max_varlen, justify = 'right'),
+      format(x$n_matches['All', 'Control'],
+             width = max_meanlen, justify = 'right'),
+      format(x$n_matches['All', 'Treated'],
+             width = max_varlen, justify = 'right'),
       '\n')
 
   cat(format('  Matched', width = lablen, justify = 'left'),
-      format(x$n_matches['Matched', 'Control'], width = max_meanlen, justify = 'right'),
-      format(x$n_matches['Matched', 'Treated'], width = max_varlen, justify = 'right'),
+      format(x$n_matches['Matched', 'Control'],
+             width = max_meanlen, justify = 'right'),
+      format(x$n_matches['Matched', 'Treated'],
+             width = max_varlen, justify = 'right'),
       '\n')
 
   cat(format('  Unmatched', width = lablen, justify = 'left'),
-      format(x$n_matches['Unmatched', 'Control'], width = max_meanlen, justify = 'right'),
-      format(x$n_matches['Unmatched', 'Treated'], width = max_varlen, justify = 'right'),
+      format(x$n_matches['Unmatched', 'Control'],
+             width = max_meanlen, justify = 'right'),
+      format(x$n_matches['Unmatched', 'Treated'],
+             width = max_varlen, justify = 'right'),
       '\n')
 
   if ('TEs' %in% names(x)) {
@@ -359,8 +378,10 @@ print.summary.ame <- function(x, digits = 3, ...) {
         '\n')
 
     cat(format('  All', width = lablen),
-        format(x$TEs['All', 1], digits = digits, width = max_meanlen, justify = 'right'),
-        format(x$TEs['All', 2], digits = digits, width = max_varlen, justify = 'right'),
+        format(x$TEs['All', 1], digits = digits,
+               width = max_meanlen, justify = 'right'),
+        format(x$TEs['All', 2], digits = digits,
+               width = max_varlen, justify = 'right'),
         '\n')
 
     cat(format('  Treated', width = lablen),
@@ -384,7 +405,8 @@ print.summary.ame <- function(x, digits = 3, ...) {
       '\n')
 
   cat(format('  Median size', width = lablen),
-      format(x$MG$median_size, width = total_line_len - lablen, justify = 'right'),
+      format(x$MG$median_size,
+             width = total_line_len - lablen, justify = 'right'),
       '\n')
   cat('  Highest quality:', format(ifelse(length(x$MG$highest_quality) == 1,
                                    as.character(x$MG$highest_quality),
@@ -504,17 +526,19 @@ plot.ame <- function(x, which_plots = c(1, 2, 3, 4), ...) {
     }
 
 
-    abline(h = ATE, lty = 2)
+    abline(h = ATE, lty = 2, col = 'blue')
     if (include_null) {
-      abline(h = 0, lty = 3)
+      abline(h = 0, lty = 3, col = 'red')
     }
 
     if (include_null) {
       legend('topright',
-             legend = c('Estimated ATE', 'Null Effect'), lty = c(2, 3))
+             legend = c('Estimated ATE', 'Null Effect'),
+             lty = c(2, 3),
+             col = c('blue', 'red'))
     }
     else {
-      legend('topright', legend = c('Estimated ATE'), lty = c(2))
+      legend('topright', legend = c('Estimated ATE'), lty = 2, col = 'blue')
     }
 
     n_plotted <- n_plotted + 1
@@ -542,17 +566,18 @@ plot.ame <- function(x, which_plots = c(1, 2, 3, 4), ...) {
          ylab = '', main = '',
          zero.line = FALSE)
 
-    abline(v = ATE, lty = 2)
+    abline(v = ATE, lty = 2, col = 'blue')
     if (include_null) {
-      abline(v = 0, lty = 3)
+      abline(v = 0, lty = 3, col = 'red')
     }
 
     if (include_null) {
       legend('topright',
-             legend = c('Estimated ATE', 'Null Effect'), lty = c(2, 3))
+             legend = c('Estimated ATE', 'Null Effect'),
+             lty = c(2, 3), col = c('blue', 'red'))
     }
     else {
-      legend('topright', legend = c('Estimated ATE'), lty = c(2))
+      legend('topright', legend = c('Estimated ATE'), lty = 2, col = 'blue')
     }
 
     n_plotted <- n_plotted + 1
@@ -575,14 +600,22 @@ plot.ame <- function(x, which_plots = c(1, 2, 3, 4), ...) {
       covs_dropped[x$cov_sets[[i]], i] <- 0
     }
 
+    # Thanks to: https://stackoverflow.com/questions/5506046
+
+    new_margin <- par(mar = c(5, 7, 4, 2) + 0.1)
+
     image(z = t(covs_dropped), col = c('black', 'white'),
           xaxt = 'n', yaxt = 'n',
-          xlab = 'Iteration', ylab = 'Variables Dropped')
+          xlab = 'Iteration', cex.lab = 1.2)
 
     axis(side = 1, at = seq(0, 1, length.out = ncol(covs_dropped)),
          labels = seq_len(ncol(covs_dropped)))
     axis(side = 2, at = seq(0, 1, length.out = nrow(covs_dropped)),
          labels = rownames(covs_dropped), las = 1)
+
+    title(ylab = 'Variables Dropped', line = 6, cex.lab = 1.2)
+
+    par(new_margin)
 
     return(invisible(x))
   }
