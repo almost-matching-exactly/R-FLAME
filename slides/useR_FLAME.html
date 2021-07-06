@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>FLAME: Interpretable Matching for Causal Inference</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Vittorio Orlandi" />
+    <meta name="date" content="2021-07-09" />
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, title-slide
+
+# FLAME: Interpretable Matching for Causal Inference
+### Vittorio Orlandi
+### The AME Lab @ Duke University
+### 07/09/2021
+
+---
+
+exclude: true
+class: center, middle
+
+## FLAME: Fast, interpretable, and accurate methods for estimating causal effects from observational data
+
+---
+
+class: inverse, middle, center, hide-logo
+
+# The Methodology
+
+---
+
+# Causal Inference
+
+Goal: quantify effect of treatment `\(T \in \{0, 1\}\)` on outcome `\(Y\)`
+
+--
+
+Two potential outcomes for each unit: `\(\{Y_i(1), Y_i(0)\}\)`, denoting response under treatment, control
+
+--
+
+- Only one -- denoted `\(Y_i\)` -- is actually observed
+
+--
+
+- The other, the *counterfactual*, must be estimated from the data
+
+--
+
+In observational data, covariates `\(\mathbf{X}\)` might be confounders
+
+???
+Can't naively compare the average outcome of control units to estimate a control counterfactual
+
+---
+# (Exact) Matching
+
+One approach to estimating counterfactuals under confounding: *matching*
+
+If, for treated unit `\(i\)`, there existed control unit `\(k\)` such that `\(\mathbf{x}_k = \mathbf{x}_i\)`, then:
+
+--
+- `\(k\)` is a 'good match' for `\(i\)`: `\(Y_k\)` is a good estimate of `\(Y_i(0)\)`
+
+--
+
+But exact matches are unlikely in high dimensional settings
+
+--
+
+- Settle for `\(\mathbf{x}_k \approx \mathbf{x}_i\)`
+
+--
+
+Define a distance metric that:
+
+--
+- Prioritizes matches on relevant covariates 
+
+--
+- Matches exactly on covariates when possible
+    
+---
+# Almost Matching Exactly
+
+Given a unit `\(i\)`, covariate weights `\(\mathbf{w}\)`, and a covariate selection vector `\(\boldsymbol{\theta}\)`, define the AME problem:
+
+`$$\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}\quad\text{s.t.}\\\quad \color{blue}{\exists k\;\:\text{with}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}} \;\:\text{and}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}}}$$`
+
+---
+# Almost Matching Exactly
+
+Given a unit `\(i\)`, covariate weights `\(\mathbf{w}\)`, and a covariate selection vector `\(\boldsymbol{\theta}\)`, define the AME problem:
+
+`$$\color{blue}{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}\quad\text{s.t.}}\\\quad \exists k\;\:\text{with}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}} \;\:\text{and}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}}$$`
+--
+exclude: true
+In practice, don't have `\(\mathbf{w}\)`; run ML algorithm on _separate_ **holdout** set 
+
+- Compute _Predictive Error_ ( `\(\mathtt{PE}\)` ): error in using a covariate set to predict the outcome
+
+- Determines next covariate set to match on
+
+- Learning a distance metric
+
+???
+Going to try and solve the AME problem for units. Way this is going to work in practice is that we're going to pick a theta, starting with a theta of all 1s, which corresponds to exact matching -- the best possible thing we can do -- and match all possible units. Then we're going to choose another theta, and match those units. Bc in practice we don't have fixed covariate weights, for each of these thetas, ..
+
+---
+# Almost Matching Exactly: The Algorithms
+--
+
+## DAME (Dynamic Almost Matching Exactly)
+
+--
+
+Solves the AME problem *exactly* for each unit
+
+--
+
+Efficient solution via _downward closure_ property
+- Only consider dropping a covariate set after all supersets.
+
+--
+
+## FLAME (Fast, Large-scale Almost Matching Exactly)
+--
+
+Approximates the exact solution via backwards stepwise selection.
+
+--
+
+At each iteration, eliminate an entire covariate, balancing weights of covariates matched on with the number of matches made
+
+???
+Given all this background, it's now very natural and easy to explain two of our methods
+
+---
+# Almost Matching Exactly: Dynamic Weights
+In practice, don't have `\(\mathbf{w}\)`; run ML algorithm on _separate_ **holdout** set 
+--
+
+- Compute _Predictive Error_ ( `\(\mathtt{PE}\)` ): error in using a covariate set to predict the outcome
+--
+
+- Determines next covariate set to match on
+--
+
+- Learning a distance metric
+
+---
+exclude: true
+# Almost Matching Exactly: Dynamic Weights
+Oftentimes don't have a priori measures of covariate importance
+
+--
+exclude: true
+At every iteration, run ML algorithm on _separate_ **holdout** set to model how well a covariate set predicts the outcome
+
+--
+exclude: true
+The _Predictive Error_ ( `\(\mathtt{PE}\)` ) measures the error in doing so and determines what covariate set next to match on.
+
+---
+exclude: true
+# Other Distance Metrics
+- Propensity score matching: match on estimates of `\(\mathrm{P}(T_i = 1 | \mathbf{X} = \mathbf{x}_i)\)`
+- Prognostic score matching: match on estimates of `\(Y_i(0)\)`
+- Coarsened exact matching: Coarsen covariates and do exact matching
+
+---
+class: inverse, middle, center, hide-logo
+
+# The Package
+
+---
+# Overview of `FLAME`
+`FLAME` and `DAME` are the workhorses of the package
+
+Match input data under a wide variety of specifications
+
+Efficient bit-vectors routine for making matches    
+
+Return S3 objects of class `ame` with `print`, `plot`, and `summary` methods
+
+---
+# Installation
+CRAN
+
+```r
+install.packages('FLAME')
+```
+GitHub
+
+```r
+library(devtools)
+
+install_github('https://github.com/vittorioorlandi/FLAME')
+# Or (mirror of the above)
+install_github('https://github.com/almost-matching-exactly/R-FLAME')
+```
+
+
+---
+# Natality Data
+
+
+
+
+US 2010 Natality Data (National Center for Health Statistics, NCHS, 2010)
+
+Data on neonatal health outcomes Neonatal Intensive Care Unit (NICU)
+
+Effect of "extreme smoking" ( `\(\geq 10\)` cigarettes a day during pregnancy) on birth weight (Kondracki 2020)
+
+Subset of ~500k observations with 16 covariates including sex of infant, races of parents, previous Cesarean deliveries, and others.
+
+---
+# Missing Data
+- `missing_data` controls how missing values in `data` are treated
+  - 'drop': effectively drop units with missingness from the data
+  - 'impute': impute missing values and match on complete dataset
+  - 'keep': keep missing values but do not match on them
+- `missing_holdout` is analogous, with 'impute' and 'keep' options
+
+---
+# Computing Predictive Error
+Two implemented options for computing `\(\mathtt{PE}\)`
+- `glmnet::cv.glmnet` with 5-fold cross-validation (default)
+- `xgboost::xgb.cv` with 5-fold cross-validation
+Supply your own function:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+```
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+  FLAME(data = natality, holdout = 0.25, replace = FALSE,
+        treated_column_name = 'smokes10', 
+        outcome_column_name = 'dbwt'
+        missing_data = 'drop', missing_holdout = 'drop',
+        PE_method = my_PE_lm,
+        estimate_CATEs = TRUE)
+```
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+* FLAME(data = natality, holdout = 0.25, replace = FALSE,
+        treated_column_name = 'smokes10', 
+        outcome_column_name = 'dbwt'
+        missing_data = 'drop', missing_holdout = 'drop',
+        PE_method = my_PE_lm,
+        estimate_CATEs = TRUE)
+```
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+  FLAME(data = natality, holdout = 0.25, replace = FALSE,
+*       treated_column_name = 'smokes10',
+*       outcome_column_name = 'dbwt'
+        missing_data = 'drop', missing_holdout = 'drop',
+        PE_method = my_PE_lm,
+        estimate_CATEs = TRUE)
+```
+
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+  FLAME(data = natality, holdout = 0.25, replace = FALSE,
+        treated_column_name = 'smokes10', 
+        outcome_column_name = 'dbwt' 
+*       missing_data = 'drop', missing_holdout = 'drop',
+        PE_method = my_PE_lm,
+        estimate_CATEs = TRUE)
+```
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+  FLAME(data = natality, holdout = 0.25, replace = FALSE,
+        treated_column_name = 'smokes10', 
+        outcome_column_name = 'dbwt' 
+        missing_data = 'drop', missing_holdout = 'drop',
+*       PE_method = my_PE_lm
+        estimate_CATEs = TRUE) 
+```
+
+
+---
+# Calling FLAME and DAME
+Full call to use FLAME to match natality data:
+
+```r
+my_PE_lm &lt;- function(X, Y) {
+  df &lt;- as.data.frame(cbind(X, Y = Y))
+  return(lm(Y ~ ., df)$fitted.values)
+}
+
+natality_out &lt;-
+  FLAME(data = natality, holdout = 0.25, replace = FALSE,
+        treated_column_name = 'smokes10', 
+        outcome_column_name = 'dbwt' 
+        missing_data = 'drop', missing_holdout = 'drop',
+        PE_method = my_PE_lm
+*       estimate_CATEs = TRUE)
+```
+???
+Estimate of the treatment effect for units that share certain covariate values 
+
+---
+# Methods: Print
+
+```r
+print(natality_out, linewidth = 60, digits = 1)
+```
+
+```
+## An object of class `ame`:
+##   FLAME ran for 16 iterations, matching 33504 out of 357535
+##    units without replacement.
+##   The average treatment effect of treatment `smokes10` on
+##    outcome `dbwt` is estimated to be -175.7.
+##   Units with missingness in the matching data were not
+##    matched.
+##   Units with missingness in the holdout data were not used
+##    to compute PE.
+```
+
+---
+# Methods: Plot
+
+
+```r
+plot(natality_out, which_plots = 1)
+```
+
+![](useR_FLAME_files/figure-html/plot-1-1.png)&lt;!-- --&gt;
+
+---
+# Methods: Plot
+
+```r
+plot(natality_out, which_plots = 2)
+```
+
+![](useR_FLAME_files/figure-html/plot-2-1.png)&lt;!-- --&gt;
+
+---
+# Methods: Plot
+
+```r
+plot(natality_out, which_plots = 3)
+```
+
+![](useR_FLAME_files/figure-html/plot-3-1.png)&lt;!-- --&gt;
+
+---
+# Methods: Plot
+
+```r
+plot(natality_out, which_plots = 4)
+```
+
+![](useR_FLAME_files/figure-html/plot-4-1.png)&lt;!-- --&gt;
+
+---
+# Methods: Summary
+
+
+
+```r
+(natality_summ &lt;- summary(natality_out))
+```
+
+
+```
+## Number of Units:
+##               Control  Treated
+##   All          355373     2162 
+##   Matched       31885     1619 
+##   Unmatched    323488      543 
+## 
+## Average Treatment Effects:
+##                  Mean Variance 
+##   All            -176      671 
+##   Treated        -233      178 
+##   Control        -173      733 
+## 
+## Matched Groups:
+##   Number                  33504 
+##   Median size                82 
+##   Highest quality: 880 and 3287
+```
+
+---
+exclude:true
+&lt;style type="text/css"&gt;
+pre {
+  background: #FFFFFF;
+  max-width: 100%;
+  overflow-x: scroll;
+}
+&lt;/style&gt;
+
+---
+# Querying Matched Groups
+
+
+
+```r
+high_quality_MG &lt;- 
+  MG(natality_summ$MG$highest_quality[1], natality_out, 
+*    multiple = FALSE, index_only = FALSE)[[1]]
+
+head(high_quality_MG, n = 14)
+```
+
+```
+##       fagerec11 meduc dob_wk mager9 fbrace mar rf_diab rf_cesar tbo_rec rf_phyp urf_chyper lbo_rec rf_ppterm sex mbrace bfacil3 smokes10 dbwt
+## 880           2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 2945
+## 3946          2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3215
+## 3954          2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 2890
+## 6054          2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3623
+## 6979          2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3912
+## 9748          2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3040
+## 10961         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3617
+## 14499         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 2866
+## 16632         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3390
+## 22234         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3345
+## 23142         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3190
+## 24825         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3730
+## 28503         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 3410
+## 31610         2     2      3      2      1   2       N        N       1       N          2       1         N   M      1       1    FALSE 2760
+```
+
+
+
+---
+# Conclusion and Future Work
+FLAME and DAME are accurate, scalable algorithms for observational causal inference that learn a distance metric to create high quality matched groups
+
+Check out papers and vignette for more details
+
+Future work:
+- Database implementation
+- Algorithms for mixed data
+
+---
+
+class: middle, center
+# Thank You!
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+<style>
+  .logo {
+    background-image: url(AME-Logo.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    width: 220px;
+    height: 256px;
+    z-index: 0;
+  }
+</style>
+
+  <script>
+  document
+.querySelectorAll(
+  '.remark-slide-content' +
+    ':not(.title-slide)' +
+    // add additional classes to exclude here, e.g.
+  // ':not(.inverse)' +
+    ':not(.hide-logo)'
+)
+.forEach(el => {
+  el.innerHTML += '<div class="logo"></div>';
+});
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
