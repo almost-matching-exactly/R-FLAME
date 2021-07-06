@@ -296,7 +296,7 @@ Almost Matching Exactly (AME) Algorithms for Discrete, Observational Data
   that set of covariates predicts the outcome. FLAME approximates the
   solution to the problem solved by DAME; at each step, it drops the
   covariate leading to the smallest drop in match quality \eqn{MQ}, defined
-  as \eqn{MQ = C · BF − PE}. Here, \eqn{PE} denotes the predictive error,
+  as \eqn{MQ = C · BF - PE}. Here, \eqn{PE} denotes the predictive error,
   which measures how important the dropped covariate is for predicting the
   outcome. The balancing factor \eqn{BF} measures the number of matches
   formed by dropping that covariate. In this way, FLAME encourages matching
