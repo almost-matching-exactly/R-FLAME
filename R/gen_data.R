@@ -23,8 +23,8 @@
 #'   \code{write = TRUE}. Defaults to AME.csv.
 #'
 #' @return A data frame that may be passed to \code{\link{FLAME}} or
-#'   \code{\link{DAME}}. Covariates are categorical and therefore coded as
-#'   factors. Treatment is binary numeric and outcome is numeric.
+#'   \code{\link{DAME}}. Covariates are numeric, treatment is binary numeric and
+#'   outcome is numeric.
 #' @export
 gen_data <- function(n = 250, p = 5,
                      write = FALSE, path = getwd(), filename = 'AME.csv') {
