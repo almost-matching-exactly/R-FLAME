@@ -12,9 +12,9 @@ CATE(units, ame_out)
 \item{ame_out}{An object of class \code{ame}.}
 }
 \value{
-A matrix whose columns correspond to CATE estimates and their
+A matrix whose columns correspond to CATE estimaes and their
   variances and whose rows correspond to queried units. \code{NA}'s therein
-  correspond to unestimable quantities.
+  correspond to inestimable quantities.
 }
 \description{
 \code{CATE} returns an estimate of the conditional average treatment effect
@@ -40,8 +40,8 @@ conditioned on \eqn{X = x_i} simply as \eqn{Y_i}, and do not average across
 other treated (control) units in the matched group as is done here. This
 averaging is necessary in order to compute variance estimates. The different
 estimates can always be manually compared, though they are the same in
-expectation and we expect them to be similar in practice, in the absence of
-large noise.
+expectation (assuming mean 0 noise) and we expect them to be similar in
+practice, in the absence of large noise.
 
 Lastly, note that the \code{units} argument refers to units with respect to
 \code{rownames(ame_out$data)}. Typically, this will also correspond to the
@@ -51,10 +51,12 @@ set was not passed to the matching algorithm or if the original matching data
 had rownames other than \code{1:nrow(data)}, then this is not the case.
 }
 \examples{
+\dontrun{
 data <- gen_data()
 holdout <- gen_data()
 FLAME_out <- FLAME(data = data, holdout = holdout)
 CATE(1:5, FLAME_out)
+}
 }
 \seealso{
 \code{\link{FLAME}}, \code{\link{DAME}}

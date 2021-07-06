@@ -69,44 +69,43 @@ DAME(
   impute_with_outcome = FALSE
 )
 
-\method{print}{ame}(x, digits = getOption("digits"), ...)
+\method{print}{ame}(x, digits = getOption("digits"), linewidth = 80, ...)
 }
 \arguments{
 \item{data}{Data to be matched. Either a data frame or a path to a .csv file
 to be read into a data frame. Treatment must be described by a logical or
-binary numeric column with name \code{treated_column_name}. Outcome must be
-described by a column with name \code{outcome_column_name}. The outcome
-will be treated as continuous if numeric with more than two values, as
-binary if a two-level factor or numeric with values 0 and 1 exclusively,
-and as multi-class if a factor with more than two levels. The outcome
-column may be omitted, in which case matching will be performed but
-treatment effect estimation will not be possible. All columns not
-containing outcome or treatment will be treated as covariates for matching.
-Covariates are assumed to be categorical and will be coerced to factors,
-though they may be passed as either factors or numeric; if the former,
-unused levels will automatically be dropped. If you wish to use continuous
-covariates for matching, they should be binned prior to matching.}
+binary numeric column with name \code{treated_column_name}. If supplied,
+outcome must be described by a column with name \code{outcome_column_name}.
+The outcome will be treated as continuous if numeric with more than two
+values, as binary if a two-level factor or numeric with values 0 and 1
+exclusively, and as multi-class if a factor with more than two levels. If
+the outcome column is omitted, matching will be performed but treatment
+effect estimation will not be possible. All columns not containing outcome
+or treatment will be treated as covariates for matching. Covariates are
+assumed to be categorical and will be coerced to factors, though they may
+be passed as either factors or numeric; if the former, unused levels will
+automatically be dropped. If you wish to use continuous covariates for
+matching, they should be binned prior to matching.}
 
 \item{holdout}{Holdout data to be used to compute predictive error, if
 \code{weights} is not supplied. If a numeric scalar between 0 and 1, that
 proportion of \code{data} will be made into a holdout set and only the
-remaining proportion of \code{data} will be matched. Otherwise, a data
-frame or a path to a .csv file. The holdout data must contain an outcome
-column with name \code{outcome_column_name}; other restrictions on column
-types are as for \code{data}. Covariate columns must have the same column
-names and order as \code{data}. This data will \emph{not} be matched.
-Defaults to 0.1.}
+\emph{remaining proportion} of \code{data} will be matched. Otherwise, a
+data frame or a path to a .csv file. The holdout data must contain an
+outcome column with name \code{outcome_column_name}; other restrictions on
+column types are as for \code{data}. Covariate columns must have the same
+column names and order as \code{data}. This data will \emph{not} be
+matched. Defaults to 0.1.}
 
 \item{C}{A finite, positive scalar denoting the tradeoff between BF and PE in
 the FLAME algorithm. Higher C prioritizes more matches and lower C
 prioritizes not dropping important covariates. Defaults to 0.1.}
 
-\item{treated_column_name}{A character with the name of the treatment column
-in \code{data} and \code{holdout}. Defaults to 'treated'.}
+\item{treated_column_name}{Name of the treatment column in \code{data} and
+\code{holdout}. Defaults to 'treated'.}
 
-\item{outcome_column_name}{A character with the name of the outcome column in
-\code{holdout} and also in \code{data}, if supplied in the latter.
-Defaults to 'outcome'.}
+\item{outcome_column_name}{Name of the outcome column in \code{holdout} and
+also in \code{data}, if supplied in the latter. Defaults to 'outcome'.}
 
 \item{weights}{A positive numeric vector representing covariate importances.
 Supplying this argument prevents PE from being computed as it determines
@@ -124,7 +123,7 @@ via \code{xgboost::xgb.cv} and the best parameters with respect to RMSE
 outcomes) are chosen. In both cases, the default \code{predict} method is
 used to generate in-sample predictions. If a function, denotes a
 user-supplied function that should be used for computing PE. This function
-will be passed a data frame of covariates as its first argument and a
+must be passed a data frame of covariates as its first argument and a
 vector of outcome values as its second argument. It must return a vector of
 in-sample predictions, which, if the outcome is binary or multi-class, must
 be maximum probability class labels. See below for examples.}
@@ -153,10 +152,10 @@ named list of optional parameters to be used by \code{user_PE_predict}.
 Defaults to \code{NULL}.}
 
 \item{replace}{A logical scalar. If \code{TRUE}, allows the same unit to be
-matched multiple times, on different sets of covariates. In this case,
-balancing factor is computing by dividing by the total number of treatment
-(control) units, instead of the number of unmatched treatment (control)
-units. Defaults to \code{FALSE}.}
+matched multiple times, on different sets of covariates. In this case, the
+balancing factor for \code{FLAME} is computing by dividing by the total
+number of treatment (control) units, instead of the number of unmatched
+treatment (control) units. Defaults to \code{FALSE}.}
 
 \item{estimate_CATEs}{A logical scalar. If \code{TRUE}, CATEs for each unit
 are estimated throughout the matching procedure, which will be much faster
@@ -248,6 +247,9 @@ DAME will make higher quality matches on the remaining variables.}
 \item{digits}{Number of significant digits for printing the average treatment
 effect.}
 
+\item{linewidth}{Maximum number of characters on line; output will be wrapped
+accordingly.}
+
 \item{...}{Additional arguments to be passed to other methods.}
 }
 \value{
@@ -256,15 +258,18 @@ An object of type \code{ame}, which by default is a list of 4
 \describe{
 \item{data}{The original data frame with several modifications:
   \enumerate{
-    \item An extra logical column, \code{data$matched},
-    that indicates whether or not a unit was matched.
-    \item An extra numeric column, \code{data$weight},
-    that denotes on how many different sets of covariates a unit was matched.
-    This will only be greater than 1 when \code{replace = TRUE}. \item The
-    columns denoting treatment and outcome will be moved after all covariate
-    columns. \item If \code{replace} is \code{FALSE}, a column containing a
-    matched group identifier for each unit. \item If, \code{estimate_CATEs =
-    TRUE} , a column containing the CATE estimate for each unit. }
+    \item An extra logical column, \code{data$matched}, that indicates
+    whether or not a unit was matched.
+    \item An extra numeric column, \code{data$weight}, that denotes on how
+    many different sets of covariates a unit was matched. This will only be
+    greater than 1 when \code{replace = TRUE}.
+    \item The columns denoting treatment and outcome will be moved after all
+    covariate columns.
+    \item If \code{replace} is \code{FALSE}, a column containing a matched
+    group identifier for each unit.
+    \item If, \code{estimate_CATEs = TRUE}, a column containing the CATE
+    estimate for each unit.
+   }
  }
  \item{MGs}{A list whose \eqn{i}'th entry contains the indices of units in
  the main matched group of the \eqn{i}'th unit.}
@@ -279,29 +284,29 @@ Almost Matching Exactly (AME) Algorithms for Discrete, Observational Data
 }
 \section{Introduction}{
  FLAME and DAME are matching algorithms for
-  observational causal inference on discrete data. They match units that
-  share identical values of certain covariates, as follows. The algorithms
-  first make any possible \emph{exact} matches; that is, they match units
-  that share identical values of all covariates (remember that this is
-  possible because covariates are discrete). They then iteratively drop a set
-  of covariates and make any possible matches on the remaining covariates,
-  until stopping. For each unit, DAME solves an optimization problem that
-  finds the largest set of covariates the unit can be matched to others on,
-  prioritizing matches on covariates it learns to be more important. FLAME
-  approximates the solution to the problem solved by DAME; at each step, it
-  drops the covariate leading to the smallest drop in match quality \eqn{MQ},
-  defined as \eqn{MQ = C · BF − PE}. Here, \eqn{PE} denotes the predictive
-  error, which measures how important the dropped covariate is for predicting
-  the outcome. The balancing factor \eqn{BF} measures the number of matches
-  formed by dropping that covariate and the discrepancy between the remaining
-  number of treated and control units after the matching. In this way, FLAME
-  encourages making many matches and also matching on covariates important to
-  the outcome. The hyperparameter \eqn{C} controls the balance between these
-  two objectives. In both cases, a machine learning algorithm trained on a
-  holdout dataset is responsible for learning the importance of covariates.
-  For more details on the algorithms, please see the FLAME paper
-  \href{https://arxiv.org/pdf/1707.06315.pdf}{here} and the DAME paper
-  \href{https://arxiv.org/pdf/1806.06802.pdf}{here}.
+  observational causal inference on data with discrete (categorical)
+  covariates. They match units that share identical values of certain
+  covariates, as follows. The algorithms first make any possible \emph{exact}
+  matches; that is, they match units that share identical values of all
+  covariates (this is possible because covariates are discrete). They then
+  iteratively drop a set of covariates and make any possible matches on the
+  remaining covariates, until stopping. For each unit, DAME solves an
+  optimization problem that finds the highest quality set of covariates the
+  unit can be matched to others on, where quality is determined by how well
+  that set of covariates predicts the outcome. FLAME approximates the
+  solution to the problem solved by DAME; at each step, it drops the
+  covariate leading to the smallest drop in match quality \eqn{MQ}, defined
+  as \eqn{MQ = C · BF − PE}. Here, \eqn{PE} denotes the predictive error,
+  which measures how important the dropped covariate is for predicting the
+  outcome. The balancing factor \eqn{BF} measures the number of matches
+  formed by dropping that covariate. In this way, FLAME encourages matching
+  on covariates more important to the outcome and also making many matches.
+  The hyperparameter \eqn{C} controls the balance between these two
+  objectives. In both cases, a machine learning algorithm trained on a
+  holdout dataset is responsible for learning the quality / importance of
+  covariates. For more details on the algorithms, please see the vignette,
+  the FLAME paper \href{https://arxiv.org/pdf/1707.06315.pdf}{here} and/or
+  the DAME paper \href{https://arxiv.org/pdf/1806.06802.pdf}{here}.
 }
 
 \section{Stopping Rules}{
@@ -310,10 +315,11 @@ Almost Matching Exactly (AME) Algorithms for Discrete, Observational Data
   units have been matched. This behavior can be modified by the arguments
   whose prefix is "early_stop". With the exception of
   \code{early_stop_iterations}, all the rules come into play \emph{before}
-  the offending covariate set is dropped. That is, if \code{early_stop_BF =
-  0.2} and at the current iteration, dropping the covariate leading to
-  highest match quality is associated with a balancing factor of 0.1, FLAME
-  stops \emph{without} dropping this covariate.
+  the offending covariate set is dropped. For example, if
+  \code{early_stop_control = 0.2} and at the current iteration, dropping the
+  covariate leading to highest match quality is associated with a unmatched
+  control proportion of 0.1, FLAME will stop \emph{without} dropping this
+  covariate.
 }
 
 \section{Missing Data}{
@@ -323,19 +329,26 @@ Almost Matching Exactly (AME) Algorithms for Discrete, Observational Data
   whose prefix is "missing" or "impute". It allows for ignoring missing data,
   imputing it, or (for \code{data}) not matching on missing values. If
   \code{data} is imputed, imputation will be done once and the matching
-  algorithm will be run on the imputed dataset If \code{holdout} is imputed,
+  algorithm will be run on the imputed dataset. If \code{holdout} is imputed,
   the predictive error at an iteration will be the average of predictive
-  errors across all imputed \code{holdout} datasets.
+  errors across all imputed \code{holdout} datasets. Units with missingness
+  in the treatment or outcome will be dropped.
 }
 
 \examples{
+\dontrun{
 data <- gen_data()
 holdout <- gen_data()
-FLAME_out <- FLAME(data = data, holdout = holdout)
+# FLAME with replacement, stopping after dropping a single covariate
+FLAME_out <- FLAME(data = data, holdout = holdout,
+                   replace = TRUE, early_stop_iterations = 2)
 
-# Use a linear model to compute predictive error
+# Use a linear model to compute predictive error. Call DAME without
+# replacement, returning predictive error at each iteration.
 my_PE <- function(X, Y) {
   return(lm(Y ~ ., as.data.frame(cbind(X, Y = Y)))$fitted.values)
 }
-DAME_out <- DAME(data = data, holdout = holdout, PE_method = my_PE)
+DAME_out <- DAME(data = data, holdout = holdout,
+                 PE_method = my_PE, return_PE = TRUE)
+}
 }

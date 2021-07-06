@@ -51,8 +51,8 @@ the treated (ATT) and average treatment effect on controls (ATC) average only
 across matched treated or matched control units, respectively. Variances of
 these estimates are computed as in Abadie, Drukker, Herr, and Imbens (The
 Stata Journal, 2004) assuming constant treatment effect and homoscedasticity.
-Note that the implemented estimator is \strong{not} =asymptotically normal and
-so in particular, asymptotically valid confidence intervals or hypothesis
+Note that the implemented estimator is \strong{not} =asymptotically normal
+and so in particular, asymptotically valid confidence intervals or hypothesis
 tests cannot be conducted on its basis. In the future, the estimation
 procedure will be changed to employ the nonparametric regression bias
 adjustment estimator of Abadie and Imbens 2011 which is asymptotically

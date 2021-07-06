@@ -24,8 +24,8 @@ Defaults to \code{FALSE}.}
 }
 \value{
 A data frame that may be passed to \code{\link{FLAME}} or
-  \code{\link{DAME}}. Covariates are categorical and therefore coded as
-  factors. Treatment is binary numeric and outcome is numeric.
+  \code{\link{DAME}}. Covariates are numeric, treatment is binary numeric and
+  outcome is numeric.
 }
 \description{
 \code{gen_data} generates toy data that can be used to explore FLAME and DAME
