@@ -206,7 +206,7 @@ get_PE <- function(covs_to_drop, covs, holdout, PE_method,
         else {
           family <- 'gaussian'
         }
-        PE_fit_params <- list(family = family, nfolds = 5)
+        PE_fit_params <- list(family = family, nfolds = 5, alpha = 0)
       }
       else if (PE_method == 'xgb') {
         PE_fit <- cv_xgboost
