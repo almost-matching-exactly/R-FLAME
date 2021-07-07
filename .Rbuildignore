@@ -2,7 +2,6 @@
 ^\.Rproj\.user$
 ^cran-comments\.md$
 ^README\.md$
-^NEWS\.md$
 ^CRAN-RELEASE$
 ^\\R\\time_trial\.R$
 ^\.travis\.yml$
