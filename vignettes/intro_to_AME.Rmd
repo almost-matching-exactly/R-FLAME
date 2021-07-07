@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 ```
 
 # Introduction
-Matching methods for causal inference match similar units together before estimating treatment effects from observational data, in order to reduce the bias introduced by confounding variables. Crucially, a distance measure must be chosen that determines what it means for units to be "similar". While many matching methods match units based off one-dimensional summaries of their covariates (such as propensity or prognostic scores), Almost Matching Exactly (AME) methods match units that are directly similar in their covariates, with similarity on more important covariates prioritized. This results in matches that are both interpretable and high quality. For more details on Almost Matching Exactly, visit our website [here](http://almost-matching-exactly.github.io).
+Matching methods for causal inference match similar units together before estimating treatment effects from observational data, in order to reduce the bias introduced by confounding variables. Crucially, a distance measure must be chosen that determines what it means for units to be "similar". While many matching methods match units based off one-dimensional summaries of their covariates (such as propensity or prognostic scores), Almost Matching Exactly (AME) methods match units that are directly similar in their covariates, with similarity on more important covariates prioritized. This results in matches that are both interpretable and high quality. For more details on Almost Matching Exactly, visit our website [here](https://almost-matching-exactly.github.io).
 
 This package has implementations for two algorithms in the AME framework that are designed for _discrete_ observational data (that is, with discrete, or categorical, covariates): FLAME (Fast, Large-scale Almost Matching Exactly) and DAME (Dynamic Almost Matching Exactly). FLAME and DAME are efficient algorithms that match units via a learned, weighted Hamming distance that determines which covariates are more important to match on. DAME finds optimal sets of covariates that units can match on, where optimality is determined by how important covariates are. FLAME approximates the DAME solution, greedily searching for good covariate sets. More specifically, for each treated unit $t$, DAME solves the following optimization problem:
 
@@ -169,7 +169,7 @@ Here we discuss additional considerations that may be taken into account when ma
 
 ## Matching With Replacement
 In the code we displayed above, matching was by default performed without replacement, meaning that once a MMG is constructed for a unit, it cannot be matched again. We can toggle this behavior using the `replace` argument to `FLAME` and `DAME`:
-```{r, cache=TRUE}
+```{r}
 FLAME_wo_replace <- FLAME_out # From previous run with replace = FALSE, as per the default
 FLAME_w_replace <- FLAME(data, holdout, replace = TRUE)
 ```
@@ -209,7 +209,7 @@ This is because when matching with replacement such a column is insufficient to 
 ## The PE - BF Tradeoff
 As mentioned in the Introduction, FLAME drops covariate that lead to the greatest match quality, defined: $\mathtt{MQ} := C \cdot \mathtt{BF} - \mathtt{PE}$. The hyperparameter $C$ controls the weight given to making many matches and making high quality matches in the FLAME objective. In an extreme case, a value of $C = 0$ only makes matches that are as high quality as possible; however, doing so may result in only very few units being matched. On the other extreme, $C$ tending to positive infinity will push FLAME to make as many matches as possible. To illustrate: 
 
-```{r, cache=TRUE}
+```{r}
 # early_stop arguments for illustration only
 
 (FLAME_C_small <- 
@@ -228,7 +228,7 @@ We have found $C = 0.1$ to be a good default. However, because the matching proc
 By default, `FLAME` and `DAME` use ridge regression with 5-fold cross validation to compute PE from the holdout data. The other implemented option, selected by specifying `PE_method = "xgb"` uses gradient boosting, cross-validated over a wide range of parameter values to do so. However, a user may want to supply other functions, either for efficiency reasons or because they believe they are better suited to outcome regression for their data. This can be done by passing a function to the `PE_method` argument. This function must accept two arguments -- a data frame of covariates and a vector of outcome values, in that order -- and return a vector of in-sample predictions which, if the outcome is binary or multi-class, must be maximum probability class labels.
 
 For example, we can compute PE using linear models as follows:
-```{r, cache=TRUE}
+```{r}
 my_PE_linear <- function(X, Y) {
   fit <- lm(Y ~ ., data = as.data.frame(cbind(X, Y = Y)))
   return(fit$fitted.values)
@@ -242,7 +242,7 @@ that covariates be passed in matrix form, with factor variables binarized. In
 such cases, the function passed to `PE_method` should convert the data frame
 appropriately, as with `model.matrix`. Such an example, in which LASSO is used
 to compute PE, is shown below:
-```{r, cache=TRUE}
+```{r}
 my_PE_lasso <- function(X, Y) {
   df <- as.data.frame(cbind(X, Y = Y))
   X <- model.matrix(Y ~ ., data = df)
@@ -257,7 +257,7 @@ If the outcome is binary or multiclass, the supplied function must return the ma
 probability class instead of, for example, class probabilities. As an example,
 we use LASSO-penalized logistic regression with the outcome coded as binary 0-1
 and ensure the `predict` method is called with argument `type = 'class'`. 
-```{r, cache=TRUE}
+```{r}
 # Recode the outcome to numeric 0 1
 data$outcome <- ifelse(data$outcome > median(data$outcome), 1, 0)
 holdout$outcome <- ifelse(holdout$outcome > median(holdout$outcome), 1, 0)
@@ -297,7 +297,7 @@ data[, 1:p] <- covs
 ```
 
 The `missing_data` argument governs which of 3 methods should be used to handle missingness in the data to be matched. If `missing_data = 'drop'`, units with _any_ missing data are effectively _dropped_ from the data and not matched:
-```{r, cache=TRUE}
+```{r}
 FLAME_drop <- FLAME(data, holdout, missing_data = 'drop')
 units_with_missingness <- which(apply(covs, 1, function(x) any(is.na(x))))
 all(!FLAME_drop$data$matched[units_with_missingness])
@@ -311,14 +311,14 @@ MG(57, FLAME_out)
 ```
 
 Running with `missing_data = 'keep'`, we are still able to make matches on this unit, however only on a smaller subset of covariates which necessarily excludes any that unit 57 was missing:
-```{r, cache=TRUE}
+```{r}
 DAME_keep <- DAME(data, holdout, missing_data = 'keep', verbose = 0)
 print(data[DAME_keep$MGs[[57]], ])
 print(MG(57, DAME_keep))
 ```
 
 Lastly, running with `missing_data = 'impute'`, missing values are imputed via MICE (`mice::mice`).
-```{r, cache=TRUE}
+```{r}
 DAME_impute <- DAME(data, holdout, missing_data = 'impute', verbose = 0)
 print(DAME_impute$data[57, ])
 print(MG(57, DAME_impute))
@@ -328,6 +328,6 @@ The unit has had a value imputed for `X5` and now can make matches on that covar
 For missingness in the holdout data, 'drop' and 'impute' flags can also be supplied to `missing_holdout`, where they ignore rows with missingness when computing PE and use imputed values to do so, respectively. The `missing_holdout_imputations` argument also controls how many imputations should be performed if `missing_holdout = 'impute'`; the predictive error at an iteration will be computed as the average across all iterations. 
 
 # Conclusion
-In this package, we present implementations of the DAME and FLAME algorithms for causal inference on discrete observational data. The algorithms are efficient and create high-quality, interpretable matches that can be used to estimate treatment effects, with many options for controlling how matches are to be formed, and tools for post-matching analysis. Future work will consist of a database implementation of these algorithms, allowing for analysis of datasets too large to fit in memory, treatment effect estimation for binary outcomes, the ability to parallelize PE computation, and more. Additional information on Almost Matching Exactly, including algorithms for mixed data, academic papers, and introductory videos, can be found on the Almost Matching Exactly [website](http://almost-matching-exactly.github.io).
+In this package, we present implementations of the DAME and FLAME algorithms for causal inference on discrete observational data. The algorithms are efficient and create high-quality, interpretable matches that can be used to estimate treatment effects, with many options for controlling how matches are to be formed, and tools for post-matching analysis. Future work will consist of a database implementation of these algorithms, allowing for analysis of datasets too large to fit in memory, treatment effect estimation for binary outcomes, the ability to parallelize PE computation, and more. Additional information on Almost Matching Exactly, including algorithms for mixed data, academic papers, and introductory videos, can be found on the Almost Matching Exactly [website](https://almost-matching-exactly.github.io).
 
 # References
