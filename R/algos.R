@@ -30,7 +30,7 @@
 #'   Supplying this argument prevents PE from being computed as it determines
 #'   dropping order by forcing covariate subsets with lower weights to be
 #'   dropped first. The weight of a covariate subset is defined to be the sum of
-#'   the weights of the constitutent covariates. Ties are broken at random.
+#'   the weights of the constituent covariates. Ties are broken at random.
 #' @param PE_method Denotes how predictive error (PE) is to be computed. Either
 #'   a string -- one of "ridge" (default) or "xgb" -- or a function. If "ridge",
 #'   ridge regression is used to fit a an outcome regression model via
@@ -90,7 +90,7 @@
 #'   on a covariate set whose error is above \code{early_stop_epsilon}, where in
 #'   this case the error is defined as: \eqn{1 - weight(covariate set matched
 #'   on) / weight(all covariates)}. Otherwise, if \code{weights} is \code{NULL},
-#'   if FLAME or DAME attemts to drop a covariate set that would raise the PE
+#'   if FLAME or DAME attempts to drop a covariate set that would raise the PE
 #'   above (1 + \code{early_stop_epsilon}) times the baseline PE (the PE before
 #'   any covariates have been dropped), the algorithm will stop. Defaults to
 #'   0.25.

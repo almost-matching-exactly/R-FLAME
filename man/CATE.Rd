@@ -12,7 +12,7 @@ CATE(units, ame_out)
 \item{ame_out}{An object of class \code{ame}.}
 }
 \value{
-A matrix whose columns correspond to CATE estimaes and their
+A matrix whose columns correspond to CATE estimates and their
   variances and whose rows correspond to queried units. \code{NA}'s therein
   correspond to inestimable quantities.
 }

@@ -191,7 +191,7 @@ MG <- function(units, ame_out, multiple = FALSE,
 #' @param units A vector of units whose CATE estimates are desired.
 #' @param ame_out An object of class \code{ame}.
 #'
-#' @return A matrix whose columns correspond to CATE estimaes and their
+#' @return A matrix whose columns correspond to CATE estimates and their
 #'   variances and whose rows correspond to queried units. \code{NA}'s therein
 #'   correspond to inestimable quantities.
 #'
