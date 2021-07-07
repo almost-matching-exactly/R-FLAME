@@ -1,29 +1,16 @@
 ## Test environments
-* local MacOS install, R 3.6.1
-* win-builder (devel and release)
-* Debian GNU/Linux 9 (stretch), R 3.5.2
+- local OS X install (R 4.0.2)
+- win-builder (r-devel and r-release)
+- R-hub debian-gcc-devel (r-devel)
+- R-hub debian-gcc-release (r-release)
+- R-hub windows-x86_64-devel (r-devel)
+- R-hub windows-x86_64-release (r-release)
+- R-hub ubuntu-gcc-release (r-release)
+- R-hub ubuntu-gcc-devel (r-devel)
+- R-hub macos-highsierra-release-cran (r-release)
 
 ## R CMD check results
-There were no ERRORs or WARNINGs.
-
-There was 1 NOTE:
-
-* checking CRAN incoming feasibility ... NOTE
-
-Maintainer: 'Vittorio Orlandi <almost.matching.exactly@gmail.com>'
-New submission
-Package was archived on CRAN
-Possibly mis-spelled words in DESCRIPTION:
-  * Interpretable (3:8)
-  * interpretable (24:43)
-
-CRAN repository db overrides:
-  X-CRAN-Comment: Archived on 2020-04-03 as check problems were not
-    corrected in time.
-Errors in \donttest parts of examples.
-
-This is my first submission, which will be replacing the archived package
-referenced above.
+0 errors ✓ | 0 warnings ✓ | 0 notes ✓
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package
