@@ -58,10 +58,12 @@ Can't naively compare the average outcome of control units to estimate a control
 
 One approach to estimating counterfactuals under confounding: *matching*
 
+--
+
 If, for treated unit $i$, there existed control unit $k$ such that $\mathbf{x}_k = \mathbf{x}_i$, then:
 
 --
-- $k$ is a 'good match' for $i$: $Y_k$ is a good estimate of $Y_i(0)$
+- $Y_k$ is a good estimate of $Y_i(0)$
 
 --
 
@@ -70,30 +72,34 @@ But exact matches are unlikely in high dimensional settings
 --
 
 - Settle for $\mathbf{x}_k \approx \mathbf{x}_i$
-
---
-
-Define a distance metric that:
-
---
-- Prioritizes matches on relevant covariates 
-
---
-- Matches exactly on covariates when possible
     
 ---
 # Almost Matching Exactly
 
 Given a unit $i$, covariate weights $\mathbf{w}$, and a covariate selection vector $\boldsymbol{\theta}$, define the AME problem:
 
-$$\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}\quad\text{s.t.}\\\quad \color{blue}{\exists k\;\:\text{with}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}} \;\:\text{and}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}}}$$
+$$\overbrace{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}}^{\text{most important covariate set}}\quad\text{s.t.}\\\quad \color{blue}{\exists k\;\:\text{with}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}} \;\:\text{and}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}}}$$
 
 ---
 # Almost Matching Exactly
 
 Given a unit $i$, covariate weights $\mathbf{w}$, and a covariate selection vector $\boldsymbol{\theta}$, define the AME problem:
 
-$$\color{blue}{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}\quad\text{s.t.}}\\\quad \exists k\;\:\text{with}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}} \;\:\text{and}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}}$$
+$$\color{blue}{\overbrace{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}}^{\text{most important covariate set}}}\quad\text{s.t.}\\\quad \exists k\;\:\text{with}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}} \;\:\text{and}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}}$$
+
+--
+
+Implicitly defines a distance metric that:
+
+1. Prioritizes matches on relevant covariates 
+
+--
+2. Matches exactly when possible
+
+--
+
+Iterate over covariate sets, starting with more important ones
+
 --
 exclude: true
 In practice, don't have $\mathbf{w}$; run ML algorithm on _separate_ **holdout** set 
@@ -103,6 +109,8 @@ In practice, don't have $\mathbf{w}$; run ML algorithm on _separate_ **holdout**
 - Determines next covariate set to match on
 
 - Learning a distance metric
+
+    - test
 
 ???
 Going to try and solve the AME problem for units. Way this is going to work in practice is that we're going to pick a theta, starting with a theta of all 1s, which corresponds to exact matching -- the best possible thing we can do -- and match all possible units. Then we're going to choose another theta, and match those units. Bc in practice we don't have fixed covariate weights, for each of these thetas, ..
@@ -131,7 +139,7 @@ Approximates the exact solution via backwards stepwise selection.
 
 --
 
-At each iteration, eliminate an entire covariate, balancing weights of covariates matched on with the number of matches made
+At each iteration, eliminate an entire covariate
 
 ???
 Given all this background, it's now very natural and easy to explain two of our methods
@@ -139,15 +147,15 @@ Given all this background, it's now very natural and easy to explain two of our 
 ---
 # Almost Matching Exactly: Dynamic Weights
 In practice, don't have $\mathbf{w}$; run ML algorithm on _separate_ **holdout** set 
+
 --
 
-- Compute _Predictive Error_ ( $\mathtt{PE}$ ): error in using a covariate set to predict the outcome
+Compute _Predictive Error_ ( $\mathtt{PE}$ ): error using covariate set to predict outcome
+
 --
 
-- Determines next covariate set to match on
---
+Determines next covariate set to match on
 
-- Learning a distance metric
 
 ---
 exclude: true
@@ -220,17 +228,27 @@ Subset of ~500k observations with 16 covariates including sex of infant, races o
 
 ---
 # Missing Data
-- `missing_data` controls how missing values in `data` are treated
-  - 'drop': effectively drop units with missingness from the data
-  - 'impute': impute missing values and match on complete dataset
-  - 'keep': keep missing values but do not match on them
-- `missing_holdout` is analogous, with 'impute' and 'keep' options
+`missing_data`: how missing values in `data` to be matched are treated
+
+--
+- _drop_: effectively drop units with missingness from the data
+
+--
+- _impute_: impute missing values and match on complete dataset
+
+--
+- _keep_: keep missing values but do not match on them
+  
+--
+
+`missing_holdout` is analogous, with _impute_ and _keep_ options
 
 ---
 # Computing Predictive Error
 Two implemented options for computing $\mathtt{PE}$
 - `glmnet::cv.glmnet` with 5-fold cross-validation (default)
 - `xgboost::xgb.cv` with 5-fold cross-validation
+
 Supply your own function:
 ```{r, my-PE, eval=FALSE}
 my_PE_lm <- function(X, Y) {
@@ -398,7 +416,7 @@ print(natality_summ)
 ```
 
 ---
-exclude:true
+# Examining Matched Groups
 ```{css, echo=FALSE}
 pre {
   background: #FFFFFF;
@@ -406,22 +424,18 @@ pre {
   overflow-x: scroll;
 }
 ```
-
----
-# Querying Matched Groups
 ```{r, scroll-opts, include=FALSE}
 op <- options('width' = 250)
 ```
 
 ```{r, MG}
 high_quality_MG <- 
-  MG(natality_summ$MG$highest_quality[1], natality_out, 
-     multiple = FALSE, id_only = FALSE)[[1]] #<<
+  MG(natality_summ$MG$highest_quality[1], natality_out)[[1]]
 
 head(high_quality_MG, n = 14)
 ```
 
-```{r, reset-opts, include=FALSE}
+```{r, reset-opts, eval=FALSE,include=FALSE}
 options(op)
 ```
 
