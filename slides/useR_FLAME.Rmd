@@ -23,7 +23,6 @@ class: center, middle
 ## FLAME: Fast, interpretable, and accurate methods for estimating causal effects from observational data
 
 ---
-
 class: inverse, middle, center, hide-logo
 
 # The Methodology
@@ -48,7 +47,7 @@ Two potential outcomes for each unit: $\{Y_i(1), Y_i(0)\}$, denoting response un
 
 --
 
-In observational data, covariates $\mathbf{X}$ might be confounders
+In observational data, covariates $\mathbf{X} \in \mathbb{R}^p$ might be confounders
 
 ???
 Can't naively compare the average outcome of control units to estimate a control counterfactual
@@ -63,7 +62,7 @@ One approach to estimating counterfactuals under confounding: *matching*
 If, for treated unit $i$, there existed control unit $k$ such that $\mathbf{x}_k = \mathbf{x}_i$, then:
 
 --
-- $Y_k$ is a good estimate of $Y_i(0)$
+- $Y_k$ (observed) is a good estimate of $Y_i(0)$ (unobserved)
 
 --
 
@@ -78,7 +77,13 @@ But exact matches are unlikely in high dimensional settings
 
 Given a unit $i$, covariate weights $\mathbf{w}$, and a covariate selection vector $\boldsymbol{\theta}$, define the AME problem:
 
-$$\overbrace{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}}^{\text{most important covariate set}}\quad\text{s.t.}\\\quad \color{blue}{\exists k\;\:\text{with}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}} \;\:\text{and}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}}}$$
+$$\overbrace{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}}^{\text{most important covariate set}}\quad\text{s.t.}\\\quad \exists k\;\:\text{with}\;\: \color{blue}{\underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}}} \;\:\text{and}\;\: \underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}}$$
+---
+# Almost Matching Exactly
+
+Given a unit $i$, covariate weights $\mathbf{w}$, and a covariate selection vector $\boldsymbol{\theta}$, define the AME problem:
+
+$$\overbrace{\text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}}^{\text{most important covariate set}}\quad\text{s.t.}\\\quad \exists k\;\:\text{with}\;\: \underbrace{\mathbf{x}_{k} \circ \boldsymbol{\theta} = \mathbf{x}_{i} \circ \boldsymbol{\theta}}_{\text{exact matching on }\boldsymbol{\theta}} \;\:\text{and}\;\: \color{blue}{\underbrace{T_{k} = 1 -T_i}_{\text{opposite treatment}}}$$
 
 ---
 # Almost Matching Exactly
@@ -128,7 +133,6 @@ Solves the AME problem *exactly* for each unit
 --
 
 Efficient solution via _downward closure_ property
-- Only consider dropping a covariate set after all supersets.
 
 --
 
@@ -220,7 +224,7 @@ natality_out <- readRDS('../natality/natality_out_500k_lm.rds')
 
 US 2010 Natality Data (National Center for Health Statistics, NCHS, 2010)
 
-Data on neonatal health outcomes Neonatal Intensive Care Unit (NICU)
+Data on neonatal health outcomes in Neonatal Intensive Care Unit (NICU)
 
 Effect of "extreme smoking" ( $\geq 10$ cigarettes a day during pregnancy) on birth weight (Kondracki 2020)
 
@@ -228,7 +232,7 @@ Subset of ~500k observations with 16 covariates including sex of infant, races o
 
 ---
 # Missing Data
-`missing_data`: how missing values in `data` to be matched are treated
+`missing_data`: how missing values in `data` to be matched are handled
 
 --
 - _drop_: effectively drop units with missingness from the data
@@ -440,21 +444,23 @@ options(op)
 ```
 
 ---
-# Conclusion and Future Work
-FLAME and DAME are accurate, scalable algorithms for observational causal inference that learn a distance metric to create high quality matched groups
+# Conclusion 
+FLAME and DAME are scalable algorithms for observational causal inference 
 
-Check out papers and vignette for more details
+Use ML on a holdout set to learn a distance metric that prioritizes matches on more important covariates 
+
+Resulting matched groups are interpretable and high quality
 
 Future work:
 - Database implementation
 - Algorithms for mixed data
-
 ---
 
 class: middle, center
-# Thank You!
 
+<h1 style="font-size:8vw">Thank You!</h1>
+.center[<img src="AME-QR.png" style="width:250px;height:250px;">]
+[almost-matching-exactly.github.io](https://almost-matching-exactly.github.io)
+???
 
-
-
-
+Documentation, links to papers, Python package

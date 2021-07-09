@@ -1,0 +1,39 @@
+---
+title: "A Cool Presentation"
+output:
+  xaringan::moon_reader:
+    css: [default, metropolis, metropolis-fonts]
+    seal: true
+    self_contained: true
+    yolo: false
+    nature:
+      autoplay: 30000
+      beforeInit: "macros.js"
+---
+
+- Hello world 
+
+---
+
+--- 
+
+# new slide??
+
+This works:
+
+
+.center[![trachoma](./AME-QR.png)]
+
+---
+
+But this does not work:
+
+
+
+Nor this
+
+
+
+one more slide
+
+---
