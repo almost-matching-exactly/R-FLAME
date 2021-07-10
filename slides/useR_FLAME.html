@@ -30,11 +30,15 @@ class: inverse, middle, center, hide-logo
 
 # The Methodology
 
+
+
 ---
 
 # Causal Inference
 
 Goal: quantify effect of treatment `\(T \in \{0, 1\}\)` on outcome `\(Y\)`
+
+
 
 --
 
@@ -223,11 +227,11 @@ install_github('https://github.com/almost-matching-exactly/R-FLAME')
 
 
 
-US 2010 Natality Data (National Center for Health Statistics, NCHS, 2010)
+US 2010 Natality Data (National Center for Health Statistics, NCHS, 2010).
 
 Data on neonatal health outcomes in Neonatal Intensive Care Unit (NICU)
 
-Effect of "extreme smoking" ( `\(\geq 10\)` cigarettes a day during pregnancy) on birth weight (Kondracki 2020)
+Effect of "extreme smoking" ( `\(\geq 10\)` cigarettes a day during pregnancy) on birth weight (Kondracki, 2020).
 
 Subset of ~500k observations with 16 covariates including sex of infant, races of parents, previous Cesarean deliveries, and others.
 
@@ -526,6 +530,19 @@ class: middle, center
 ???
 
 Documentation, links to papers, Python package
+
+---
+# References
+Dieng, A., Y. Liu, S. Roy, et al. (2019). "Interpretable Almost-Exact Matching for Causal Inference". In: _The 22nd International Conference on Artificial Intelligence and Statistics, AISTATS 2019, 16-18 April 2019, Naha,
+Okinawa, Japan_. , pp. 2445-2453.
+
+Kondracki, A. J. (2020). "Low birthweight in term singletons mediates the association between maternal smoking intensity exposure status and immediate neonatal intensive care unit admission: the E-value assessment". In: _BMC
+Pregnancy and Childbirth_ 20, pp. 1-9.
+
+National Center for Health Statistics, NCHS (2010). _User Guide to the 2010 Natality Public Use File_. Centers for Disease Control and Prevention (CDC).
+
+Wang, T., M. Morucci, M. U. Awan, et al. (2020). "FLAME: A Fast Large-scale Almost Matching Exactly Approach to Causal Inference". In: _Journal of Machine Learning Research_ 21, pp. 1-41. URL:
+[https://arxiv.org/abs/1707.06315](https://arxiv.org/abs/1707.06315).
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

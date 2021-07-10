@@ -15,7 +15,7 @@ output:
       highlightLines: true
       countIncrementalSlides: false
       titleSlideClass: [center, middle]
-
+bibliography: biblio.bibtex
 ---
 exclude: true
 class: center, middle
@@ -27,11 +27,24 @@ class: inverse, middle, center, hide-logo
 
 # The Methodology
 
+```{r, load_refs, include=FALSE, cache=FALSE}
+library(RefManageR)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           cite.style = "authoryear",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = FALSE)
+myBib <- ReadBib("./biblio.bibtex", check = FALSE)
+```
+
 ---
 
 # Causal Inference
 
 Goal: quantify effect of treatment $T \in \{0, 1\}$ on outcome $Y$
+
+`r NoCite(myBib, 'DAME', 'FLAME')`
 
 --
 
@@ -222,11 +235,11 @@ library(FLAME)
 natality_out <- readRDS('../natality/natality_out_500k_lm.rds')
 ```
 
-US 2010 Natality Data (National Center for Health Statistics, NCHS, 2010)
+US 2010 Natality Data `r Citep(myBib, 'natality2010')`.
 
 Data on neonatal health outcomes in Neonatal Intensive Care Unit (NICU)
 
-Effect of "extreme smoking" ( $\geq 10$ cigarettes a day during pregnancy) on birth weight (Kondracki 2020)
+Effect of "extreme smoking" ( $\geq 10$ cigarettes a day during pregnancy) on birth weight `r Citep(myBib, 'kondracki2020')`.
 
 Subset of ~500k observations with 16 covariates including sex of infant, races of parents, previous Cesarean deliveries, and others.
 
@@ -464,3 +477,9 @@ class: middle, center
 ???
 
 Documentation, links to papers, Python package
+
+---
+# References
+```{r refs, echo=FALSE, results="asis"}
+PrintBibliography(myBib)
+```
