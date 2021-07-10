@@ -3,7 +3,8 @@
  title: Getting Started
  nav_order: 2
  description: ""
- permalink: /getting-started
+ permalink: /
+ mathjax: true
  ---
 
  # Getting Started
