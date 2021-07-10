@@ -4,9 +4,6 @@ r:
 
 warnings_are_errors: false
 
-script:
-  - echo "skipping_tests"
-
 r_packages:
   - covr
 
