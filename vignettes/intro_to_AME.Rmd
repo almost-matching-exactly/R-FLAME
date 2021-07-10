@@ -1,7 +1,11 @@
 ---
 title: "Introduction to Almost Matching Exactly"
 author: "Vittorio Orlandi"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
+    toc: false
+  md_document:
+    toc: false
 vignette: >
   %\VignetteIndexEntry{intro_to_AME}
   %\VignetteEngine{knitr::rmarkdown}
