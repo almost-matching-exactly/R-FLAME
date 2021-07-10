@@ -1,3 +1,5 @@
+# FLAME 2.1.0.9000
+
 # FLAME 2.1.0
 ## Major Changes
 1. The Dynamic Almost Matching Exactly (DAME) algorithm has been implemented. This algorithm has the same features as FLAME and is more computationally intensive as it is _guaranteed_ to find the best set of covariates to match on for each unit. The `n_flame_iters` argument in `DAME` specifies that FLAME should be run for a certain number of iterations to more rapidly eliminate irrelevant covariates, before switching to DAME. See the DAME paper [here](https://arxiv.org/pdf/1806.06802.pdf) for more details. 
