@@ -246,6 +246,10 @@ CATE <- function(units, ame_out) {
 
 #' Average Treatment Effect estimates
 #'
+#' These functions are deprecated and will be made defunct at a later release.
+#' See \code{summary.ame} for average treatment effects estimates and their
+#' variance.
+#'
 #' \code{ATE}, \code{ATT}, and \code{ATC} estimate the average treatment effect
 #' (ATE), average treatment effect on the treated (ATT), and average treatment
 #' effect on the controls (ATC), respectively, of a matched dataset.

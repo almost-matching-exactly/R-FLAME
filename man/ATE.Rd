@@ -16,11 +16,15 @@ ATC(ame_out)
 \item{ame_out}{An object of class \code{ame}.}
 }
 \description{
+These functions are deprecated and will be made defunct at a later release.
+See \code{summary.ame} for average treatment effects estimates and their
+variance.
+}
+\details{
 \code{ATE}, \code{ATT}, and \code{ATC} estimate the average treatment effect
 (ATE), average treatment effect on the treated (ATT), and average treatment
 effect on the controls (ATC), respectively, of a matched dataset.
-}
-\details{
+
 The ATE is estimated as the average CATE estimate across all matched units in
 the data, while the ATT and ATC average only across matched treated or
 matched control units, respectively.
