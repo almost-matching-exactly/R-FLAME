@@ -5,7 +5,7 @@
  description: ""
  permalink: /
  mathjax: true
- ---
+---
 
  # Getting Started
  {: .no_toc }
