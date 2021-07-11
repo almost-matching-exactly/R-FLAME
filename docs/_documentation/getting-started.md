@@ -295,7 +295,7 @@ can be selected via the `which_plots` argument. They illustrate:
 
     plot(FLAME_out, which_plots = 1)
 
-![](intro_to_AME_files/figure-markdown_strict/unnamed-chunk-12-1.png)
+![](https://raw.githubusercontent.com/vittorioorlandi/FLAME/master/vignettes/intro_to_AME_files/figure-markdown_strict/unnamed-chunk-12-1.png)
 
 1.  Estimated CATEs as a function of matched group size. This can be
     useful for determining if larger matched groups – which have more
@@ -306,7 +306,7 @@ can be selected via the `which_plots` argument. They illustrate:
 
     plot(FLAME_out, which_plots = 2)
 
-![](intro_to_AME_files/figure-markdown_strict/unnamed-chunk-13-1.png)
+![](https://raw.githubusercontent.com/vittorioorlandi/FLAME/master/docs/_documentation/intro_to_AME_files/figure-markdown_strict/unnamed-chunk-13-1.png)
 
 1.  An estimated density of CATE estimates, with the ATE marked. This
     gives insight into the variance of an ATE estimate and other
@@ -317,7 +317,7 @@ can be selected via the `which_plots` argument. They illustrate:
 
     plot(FLAME_out, which_plots = 3)
 
-![](intro_to_AME_files/figure-markdown_strict/unnamed-chunk-14-1.png)
+![](https://raw.githubusercontent.com/vittorioorlandi/FLAME/master/docs/_documentation/intro_to_AME_files/figure-markdown_strict/unnamed-chunk-14-1.png)
 
 1.  A heatmap showing the order in which covariate sets are dropped.
     Without manually looking at PE values returned from the algorithm,
@@ -332,7 +332,7 @@ can be selected via the `which_plots` argument. They illustrate:
 
     plot(FLAME_out, which_plots = 4)
 
-![](intro_to_AME_files/figure-markdown_strict/unnamed-chunk-15-1.png)
+![](https://raw.githubusercontent.com/vittorioorlandi/FLAME/master/docs/_documentation/intro_to_AME_files/figure-markdown_strict/unnamed-chunk-15-1.png)
 
 Lastly, the functions `MG` and `CATE` take in vectors of units and
 return their matched groups and CATE estimates. Based off the `summary`
