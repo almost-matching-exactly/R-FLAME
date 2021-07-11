@@ -7,7 +7,6 @@
  mathjax: true
 ---
 
- # Getting Started
  {: .no_toc }
 
  <details open markdown="block">
@@ -47,9 +46,9 @@ approximates the DAME solution, greedily searching for good covariate
 sets. More specifically, for each treated unit $t$, DAME solves the
 following optimization problem:
 
-$$
-\\text{argmax}\_{\\boldsymbol{\\theta} \\in \\{0, 1\\}^p}\\;\\boldsymbol{\\theta}^T\\mathbf{w}\\quad\\text{s.t.}\\\\\\quad \\exists \\ell\\;\\:\\text{with}\\;\\: T\_{\\ell} = 0 \\;\\:\\text{and}\\;\\: \\mathbf{x}\_{\\ell} \\circ \\boldsymbol{\\theta} = \\mathbf{x}\_{t} \\circ \\boldsymbol{\\theta}
-$$
+  $$
+  \text{argmax}_{\boldsymbol{\theta} \in \{0, 1\}^p}\;\boldsymbol{\theta}^T\mathbf{w}\quad\text{s.t.}\\ \quad \exists \ell\;\:\text{with}\;\: T_{\ell} = 0 \;\:\text{and}\;\: \mathbf{x}_{\ell} \circ \boldsymbol{\theta} = \mathbf{x}_{t} \circ \boldsymbol{\theta}
+  $$
 
 where $\circ$ denotes the Hadamard product, $T_{\ell}$ denotes treatment
 of unit $\ell$, and $\mathbf{x}_t \in \mathbb{R}^p$ denotes the
