@@ -277,7 +277,7 @@ check_args <-
            " select different options for `missing_data`.",
            call. = FALSE)
   }
-  else if (info$missing_HOLDOUT == 'impute' &&
+  else if (info$missing_holdout == 'impute' &&
            !requireNamespace("mice", quietly = TRUE)) {
     stop("Package `mice` needed to impute missing values. Please install it or",
          " select different options for `missing_holdout`.",
