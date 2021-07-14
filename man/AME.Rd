@@ -188,13 +188,9 @@ above (1 + \code{early_stop_epsilon}) times the baseline PE (the PE before
 any covariates have been dropped), the algorithm will stop. Defaults to
 0.25.}
 
-\item{early_stop_control}{A numeric value between 0 and 1. If
-the proportion of control units that are unmatched falls below this value,
-FLAME stops. Defaults to 0.}
-
-\item{early_stop_treated}{A numeric value between 0 and 1. If the proportion
-of treatment units that are unmatched falls below this value, FLAME stops.
-Defaults to 0.}
+\item{early_stop_control, early_stop_treated}{If the proportion of control,
+treated units, respectively, that are unmatched falls below this value, the
+matching algorithm will stop. Default to 0.}
 
 \item{early_stop_pe}{Deprecated. A positive numeric. If FLAME attempts to
 drop a covariate that would lead to a PE above this value, FLAME stops.
@@ -228,13 +224,10 @@ removed in a future release.}
 performs this many imputations of the missing data in \code{holdout} via
 \code{mice::mice}. Defaults to 5.}
 
-\item{impute_with_treatment}{A logical scalar. If \code{TRUE}, uses treatment
-assignment to impute covariates when \code{missing_data = 2} or
-\code{missing_holdout = 2}. Defaults to \code{TRUE}.}
-
-\item{impute_with_outcome}{A logical scalar. If \code{TRUE}, uses outcome
-information to impute covariates when \code{missing_data = 2} or
-\code{missing_holdout = 2}. Defaults to \code{FALSE}.}
+\item{impute_with_treatment, impute_with_outcome}{If \code{TRUE}, use
+treatment, outcome, respectively, to impute covariates when either
+\code{missing_data} or \code{missing_holdout} is equal to \code{'impute'}.
+Default to \code{TRUE}, \code{FALSE}, respectively.}
 
 \item{n_flame_iters}{Specifies that this many iterations of FLAME should be
 run before switching to DAME. This can be used to speed up the matching
