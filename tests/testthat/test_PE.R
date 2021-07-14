@@ -1,5 +1,5 @@
 # Thanks to Dirk Eddelbuettel:
-#  https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally
+#https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally
 if (length(strsplit(packageDescription("FLAME")$Version, "\\.")[[1]]) > 3) {
   skipping_on_cran <- FALSE
 } else {

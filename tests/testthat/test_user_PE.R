@@ -13,7 +13,7 @@
 #'   be maximum probability class labels. See below for examples.
 
 # Thanks to Dirk Eddelbuettel:
-#  https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally
+#https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally
 if (length(strsplit(packageDescription("FLAME")$Version, "\\.")[[1]]) > 3) {
   skipping_on_cran <- FALSE
 } else {
@@ -69,7 +69,8 @@ if (!skipping_on_cran) {
     data <- gen_data(500, 4)
     holdout <- gen_data(500, 4)
     data$outcome <- cut(data$outcome, breaks = 3, labels = c('A', 'B', 'C'))
-    holdout$outcome <- cut(holdout$outcome, breaks = 3, labels = c('A', 'B', 'C'))
+    holdout$outcome <- cut(holdout$outcome, breaks = 3,
+                           labels = c('A', 'B', 'C'))
     flout <- FLAME(data, holdout, PE_method = my_PE_multiclass)
     expect_true(TRUE)
   })
@@ -134,7 +135,8 @@ if (!skipping_on_cran) {
     data <- gen_data(500, 4)
     holdout <- gen_data(500, 4)
     data$outcome <- cut(data$outcome, breaks = 3, labels = c('A', 'B', 'C'))
-    holdout$outcome <- cut(holdout$outcome, breaks = 3, labels = c('A', 'B', 'C'))
+    holdout$outcome <- cut(holdout$outcome, breaks = 3,
+                           labels = c('A', 'B', 'C'))
     my_fit <- glmnet::cv.glmnet
     my_fit_params <- list(nfolds = 5, family = 'multinomial')
     my_predict <- predict
