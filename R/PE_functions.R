@@ -28,7 +28,11 @@ cv_xgboost <- function(X, Y, obj) {
                    alpha = param_combs$alpha[i],
                    subsample = param_combs$subsample[i])
     if (obj == 'multi:softmax') {
-      params <- c(params, list(num_class = length(unique(Y))))
+      params <- c(params, list(eval_metric = 'mlogloss',
+                               num_class = length(unique(Y))))
+    }
+    else if (obj == 'binary:logistic') {
+      params <- c(params, list(eval_metric = 'logloss'))
     }
 
     cv <-
@@ -44,8 +48,14 @@ cv_xgboost <- function(X, Y, obj) {
   best_params <- param_combs[which.min(error), ]
   params <- c(best_params, list(objective = obj))
   if (obj == 'multi:softmax') {
-    params <- c(params, list(num_class = length(unique(Y))))
+    params <- c(params, list(eval_metric = 'mlogloss',
+                             num_class = length(unique(Y))))
   }
+
+  else if (obj == 'binary:logistic') {
+    params <- c(params, list(eval_metric = 'logloss'))
+  }
+
   params$nrounds <- NULL
   fit <- xgboost::xgboost(data = X,
                   label = Y,
