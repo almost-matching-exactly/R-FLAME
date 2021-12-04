@@ -10,3 +10,4 @@
 ^docs$
 ^slides$
 ^NEWS\.md$
+^R/speedup\.R$
