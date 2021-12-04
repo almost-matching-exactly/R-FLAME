@@ -271,17 +271,28 @@ check_args <-
 
   ## Missing data parameters
 
-  if (info$missing_data == 'impute' &&
-      !requireNamespace("mice", quietly = TRUE)) {
-    stop("Package `mice` needed to impute missing values. Please install it or",
-           " select different options for `missing_data`.",
+  if (info$missing_data == 'impute') {
+    if (!requireNamespace("mice", quietly = TRUE)) {
+      stop("Package `mice` needed to impute missing values. Please install it or",
+           " select different options for `missing_data`.", call. = FALSE)
+    }
+    if (!requireNamespace("nnet", quietly = TRUE)) {
+      stop("Package `nnet` needed to impute categorical data via `mice`.",
+           " Please install it or select different options for `missing_data`.",
            call. = FALSE)
+    }
   }
-  else if (info$missing_holdout == 'impute' &&
-           !requireNamespace("mice", quietly = TRUE)) {
-    stop("Package `mice` needed to impute missing values. Please install it or",
-         " select different options for `missing_holdout`.",
-         call. = FALSE)
+
+  if (info$missing_holdout == 'impute') {
+    if (!requireNamespace("mice", quietly = TRUE)) {
+      stop("Package `mice` needed to impute missing values. Please install it or",
+           " select different options for `missing_holdout`.", call. = FALSE)
+    }
+    if (!requireNamespace("nnet", quietly = TRUE)) {
+      stop("Package `nnet` needed to impute categorical data via `mice`.",
+           " Please install it or select different options for `missing_holdout`.",
+           call. = FALSE)
+    }
   }
 
   if (!is.numeric(missing_holdout_imputations) |

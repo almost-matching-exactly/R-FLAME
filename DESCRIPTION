@@ -33,6 +33,7 @@ Imports:
   gmp
 RoxygenNote: 7.1.1
 Suggests: 
+    nnet,
     knitr,
     mice,
     rmarkdown,
