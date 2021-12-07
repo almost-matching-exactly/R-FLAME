@@ -1,4 +1,7 @@
-# FLAME 2.1.0.9000
+# FLAME 2.1.1
+## Minor Changes
+1. PE computation now based off new `xgboost::xgboost()` defaults.  
+2. Introduced `nnet` as a dependency for compatibility with `mice::mice.impute.polyreg()` for imputing categorical variables. 
 
 # FLAME 2.1.0
 ## Major Changes
